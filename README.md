@@ -9,9 +9,9 @@ Community-driven web platform for real-time lost animal reporting, smart matchin
 |---|---|
 | Andrea Schwarz | 245024 |
 | Matteo Zambon | 243376 |
-
+| Alessandro Weber | 244841 |
 
 
 ## Corso
-Ingegneria del Software — Prof. Sandro Fiore  
+Ingegneria del Software — Prof. Sandro Fiore
 A.A. 2025/2026 — Università di Trento
