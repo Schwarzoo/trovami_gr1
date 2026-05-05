@@ -8,6 +8,7 @@ Community-driven web platform for real-time lost animal reporting, smart matchin
 | Nome | Matricola |
 |---|---|
 | Andrea Schwarz | 245024 |
+| Matteo Zambon | 243376 |
 
 
 
