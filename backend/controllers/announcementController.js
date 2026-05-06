@@ -4,8 +4,8 @@ const Announcement = require('../models/Announcement');
 exports.getAnnouncements = async (req, res) => {
   try {
     const announcements = await Announcement.find({ status: 'ACTIVE' })
-      .populate('animalId')    // popola i dati dell'animale
-      .populate('publisherId', 'name email'); // popola solo nome/email
+      .populate('animalId')    //  dati dell'animale
+      .populate('publisherId', 'name email'); // solo nome/email
 
     res.json(announcements);
   } catch (err) {

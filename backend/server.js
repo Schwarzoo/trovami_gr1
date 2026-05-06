@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/announcements', require('./routes/announcementRoutes')); // ← aggiunta
+app.use('/api/announcements', require('./routes/announcementRoutes')); 
 
 
 mongoose.connect(process.env.DB_URL)
