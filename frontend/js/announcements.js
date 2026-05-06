@@ -1,4 +1,4 @@
-const API_BASE = '/api/announcements';
+const API_BASE = 'http://localhost:3000/api/announcements';
 
 let allAnnouncements = [];
 
