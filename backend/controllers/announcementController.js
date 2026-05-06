@@ -1,4 +1,6 @@
 const Announcement = require('../models/Announcement');
+const Animal = require('../models/Animal'); // ← aggiunta questa riga
+
 
 // GET /api/announcements
 exports.getAnnouncements = async (req, res) => {
