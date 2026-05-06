@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { getAnnouncements, createAnnouncement } = require('../controllers/announcementController');
-const auth = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth');
 
 router.get('/',  getAnnouncements);           // pubblica
-router.post('/', auth, createAnnouncement);   // richiede login
+router.post('/', authMiddleware, createAnnouncement);
 
 module.exports = router;
