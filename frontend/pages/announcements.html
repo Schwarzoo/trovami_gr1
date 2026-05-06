@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annunci — Trovami</title>
+    <link rel="stylesheet" href="../css/announcements.css">
+
+</head>
+<body>
+
+<header>
+    <a href="/"><span class="logo">Trovami</span></a>
+    <nav>
+        <a href="/pages/map.html">Mappa</a>
+        <a href="/pages/announcements.html" class="active">Annunci</a>
+    </nav>
+</header>
+
+<main class="page">
+
+    <div class="page-header">
+        <h1>Annunci attivi</h1>
+        <p>Segnalazioni e avvistamenti nel Comune di Trento</p>
+    </div>
+
+    <div class="filters">
+        <div class="filter-group">
+            <label for="filter-type">Tipo</label>
+            <select id="filter-type">
+                <option value="">Tutti</option>
+                <option value="LostAnimal">Smarriti</option>
+                <option value="Sighting">Avvistamenti</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter-species">Specie</label>
+            <input type="text" id="filter-species" placeholder="Es. Cane, Gatto…">
+        </div>
+        <span id="result-count">— annunci trovati</span>
+    </div>
+
+    <div id="error-banner"></div>
+    <div id="empty-state">
+        <div class="empty-icon">🔍</div>
+        <p>Nessun annuncio trovato con i filtri selezionati.</p>
+    </div>
+
+    <div id="announcements-grid"></div>
+
+</main>
+
+<!-- MODAL -->
+<div id="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modal-title"></h2>
+            <button id="modal-close" aria-label="Chiudi">✕</button>
+        </div>
+        <div id="modal-gallery"></div>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<script src="../js/announcements.js"></script>
+</body>
+</html>

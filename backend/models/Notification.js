@@ -1,10 +1,16 @@
 const mongoose = require('mongoose');
 
-const announcementSchema = new mongoose.Schema({
-    idAnnoucement: { 
-        type: Number, 
-        required: true, 
-        unique: true 
+const notificationSchema = new mongoose.Schema({
+    announcementId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Announcement',
+        required: true 
+    },
+
+    recipientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
 
     date: { 
@@ -13,27 +19,22 @@ const announcementSchema = new mongoose.Schema({
         default: Date.now 
     },
 
-    description: { 
+    message: { 
         type: String, 
         required: true 
     },
-    
-    location: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], required: true } // [Long, Lat]
+
+    isRead: {
+        type: Boolean,
+        default: false
     },
-    
-    // Status deve riflettere l'enumerazione Status del diagramma
-    status: { 
-        type: String, 
-        enum: ['ACTIVE', 'RESOLVED', 'ARCHIVED'], 
-        required: true,
-        default: 'ACTIVE' 
+
+    type: {
+        type: String,
+        enum: ['SMART_MATCH', 'SHELTER_CONTACT', 'ADMIN_ACTION'],
+        required: true
     }
-    
+
 }, { timestamps: true });
 
-// Indice fondamentale per le query spaziali su Trento (RF2)[cite: 1]
-announcementSchema.index({ location: '2dsphere' });
-
-module.exports = mongoose.model('Announcement', announcementSchema);
+module.exports = mongoose.model('Notification', notificationSchema);
