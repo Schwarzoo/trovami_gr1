@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/register.css" />
+  <title>Registrazione - TrovaMi</title>
+</head>
+<body>
+  <main class="auth-page">
+    <form id="registerForm" class="auth-card">
+      <h1>Crea account</h1>
+      <p>Registrati per iniziare a usare TrovaMi.</p>
+
+      <label for="username">Nome utente</label>
+      <input type="text" id="username" name="username" placeholder="Il tuo nome utente" required />
+
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" placeholder="nome@email.com" required />
+
+      <label for="phoneNumber">Telefono</label>
+      <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Facoltativo" />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Minimo 8 caratteri" required />
+
+      <label for="confirmPassword">Conferma password</label>
+      <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Ripeti la password" required />
+
+      <button type="submit">Registrati</button>
+      <p id="registerError" class="error"></p>
+      <p id="registerSuccess" class="success"></p>
+    </form>
+  </main>
+
+  <script src="../js/register.js"></script>
+</body>
+</html>

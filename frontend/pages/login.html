@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/login.css" />
+  <title>Login - TrovaMi</title>
+</head>
+<body>
+  <main class="auth-page">
+    <form id="loginForm" class="auth-card">
+      <h1>Accedi</h1>
+
+      <label>Email</label>
+      <input type="email" id="email" required />
+
+      <label>Password</label>
+      <input type="password" id="password" required />
+
+      <button type="submit">Entra</button>
+      <p id="loginError" class="error"></p>
+      <p>Non hai un account? <a href="register.html">Registrati</a></p>
+    </form>
+    
+  </main>
+
+  <script src="../js/login.js"></script>
+</body>
+</html>
