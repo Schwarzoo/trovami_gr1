@@ -1,26 +1,43 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../css/announcements.css" />
   <link rel="stylesheet" href="../css/style.css" />
-  <title>TrovaMi</title>
+  <title>Mappa — Trovami</title>
 </head>
+
 <body>
-  <div class="page">
-    <header class="header">
-      <h1>TrovaMi</h1>
+  <header>
+    <a href="/"><span class="logo">Trovami</span></a>
+    <nav>
+      <a href="/pages/map.html" class="active">Mappa</a>
+      <a href="/pages/announcements.html">Annunci</a>
+      <a href="/pages/login.html" title="Accedi" aria-label="Accedi">
+        <!-- simple profile/user icon (inline SVG) -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true">
+          <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" fill="#000" fill-opacity="0.8" />
+          <path d="M4 20c0-3.314 2.686-6 6-6h4c3.314 0 6 2.686 6 6v1H4v-1z" fill="#000" fill-opacity="0.8" />
+        </svg>
+      </a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div class="page-header">
+      <h1>Mappa</h1>
       <p>Mappa segnalazioni animali smarriti</p>
-      <nav>
-        <a href="/pages/map.html" class="active">Mappa</a>
-        <a href="/pages/announcements.html">Annunci</a>
-    </header>
+    </div>
 
     <div id="map"></div>
-  </div>
+  </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/map.js"></script>
 </body>
+
 </html>
