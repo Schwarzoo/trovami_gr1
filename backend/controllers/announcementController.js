@@ -38,7 +38,7 @@ exports.createAnnouncement = async (req, res) => {
 
     const announcement = new Announcement({
       type,
-      publisherId: req.user.id,  // viene dal middleware auth
+      publisherId: req.user.userId,  // viene dal middleware auth
       animalId,
       description,
       location: {
