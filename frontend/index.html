@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./css/announcements.css" />
+  <link rel="stylesheet" href="./css/home.css" />
+  <title>Trovami</title>
+</head>
+
+<body>
+  <div data-include="header"></div>
+
+  <main class="home-page">
+    <section class="hero">
+      <h1>Trovami!</h1>
+      <p>
+        Trovami è la soluzione digitale per chi cerca o vuole segnalare animali smarriti a Trento. Unisciti alla comunità e aiuta a riportare a casa i nostri amici a quattro zampe.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="/pages/map.html">Apri la mappa</a>
+        <a class="button" href="/pages/announcements.html">Vedi tutti gli annunci</a>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-header">
+        <div>
+          <h2>Mappa live</h2>
+          <p>Visualizza avvistamenti e segnalazioni in tempo reale.</p>
+        </div>
+        <a class="button" href="/pages/map.html">Vai alla mappa</a>
+      </div>
+      <div class="map-shell">
+        <div id="map"></div>
+      </div>
+    </section>
+
+    <section class="home-announcements">
+      <div class="section-header">
+        <div>
+          <h2>Annunci recenti</h2>
+          <p>Le ultime segnalazioni condivise dalla comunita.</p>
+        </div>
+        <a class="button" href="/pages/announcements.html">Vedi tutti</a>
+      </div>
+      <div id="home-empty" class="home-empty">Nessun annuncio disponibile al momento.</div>
+      <div id="home-announcements-grid" class="home-grid"></div>
+    </section>
+  </main>
+
+  <div data-include="footer"></div>
+
+  <script src="/js/includes.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/home.js"></script>
+</body>
+
+</html>

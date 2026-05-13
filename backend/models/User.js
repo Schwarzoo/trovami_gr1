@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
     passwordHash: { type: String, required: true },
     phoneNumber:  { type: String, default: null },
     isActive:     { type: Boolean, default: true },
-    role:         { type: String, enum: ['Segnalatore', 'Ricercatore', 'Shelter', 'Administrator'], default: 'Ricercatore' },
+    role:         { type: String, enum: ['Segnalatore', 'Ricercatore', 'Shelter', 'Administrator'], default: 'Segnalatore' },
     sessionToken: { type: String, default: null},
 
     shelterData: {

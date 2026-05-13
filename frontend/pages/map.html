@@ -11,21 +11,7 @@
 </head>
 
 <body>
-  <header>
-    <a href="/"><span class="logo">Trovami</span></a>
-    <nav>
-      <a href="/pages/map.html" class="active">Mappa</a>
-      <a href="/pages/announcements.html">Annunci</a>
-      <a href="/pages/login.html" title="Accedi" aria-label="Accedi">
-        <!-- simple profile/user icon (inline SVG) -->
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-          aria-hidden="true">
-          <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" fill="#000" fill-opacity="0.8" />
-          <path d="M4 20c0-3.314 2.686-6 6-6h4c3.314 0 6 2.686 6 6v1H4v-1z" fill="#000" fill-opacity="0.8" />
-        </svg>
-      </a>
-    </nav>
-  </header>
+  <div data-include="header"></div>
 
   <main class="page">
     <div class="page-header">
@@ -36,6 +22,9 @@
     <div id="map"></div>
   </main>
 
+  <div data-include="footer"></div>
+
+  <script src="/js/includes.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="../js/map.js"></script>
 </body>

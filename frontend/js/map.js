@@ -17,6 +17,17 @@ const redIcon = L.divIcon({
   popupAnchor: [0, -40]
 });
 
+const greenIcon = L.divIcon({
+  className: '',
+  html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38">
+    <path d="M14 0C6.27 0 0 6.27 0 14c0 9.25 14 24 14 24S28 23.25 28 14C28 6.27 21.73 0 14 0z" fill="#3B6D11"/>
+    <circle cx="14" cy="14" r="6" fill="white"/>
+  </svg>`,
+  iconSize: [28, 38],
+  iconAnchor: [14, 38],
+  popupAnchor: [0, -40]
+});
+
 
 async function loadAnnouncements() {
   const res = await fetch('http://localhost:3000/api/announcements');
@@ -81,10 +92,12 @@ async function loadAnnouncements() {
     </div>
   `;
 
-  L.marker([lat, lng], { icon: redIcon })
+  const markerIcon = isLost ? redIcon : greenIcon;
+
+  L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
-});
+  });
 //   announcements.forEach(a => {
 //     const [lng, lat] = a.location.coordinates;
 //     const animal = a.animalId;
