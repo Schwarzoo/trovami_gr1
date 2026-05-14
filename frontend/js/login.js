@@ -1,6 +1,17 @@
 const form = document.getElementById('loginForm');
 const errorBox = document.getElementById('loginError');
 
+function getQueryParam(name) {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(name);
+}
+
+const alreadyToken = localStorage.getItem('token');
+if (alreadyToken) {
+  const nxt = getQueryParam('next') || './map.html';
+  window.location.href = nxt;
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorBox.textContent = '';
@@ -23,6 +34,6 @@ form.addEventListener('submit', async (e) => {
 
   localStorage.setItem('token', data.token);
   localStorage.setItem('role', data.role);
-
-  window.location.href = './map.html';
+  const next = getQueryParam('next');
+  window.location.href = next || './map.html';
 });
