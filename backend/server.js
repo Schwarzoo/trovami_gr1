@@ -14,6 +14,7 @@ app.use(cors());
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/animals', require('./routes/animalRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 app.use(express.static(path.join(__dirname, '../frontend')));// ← aggiunta
 
 

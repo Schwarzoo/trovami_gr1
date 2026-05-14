@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<link rel="stylesheet" href="../css/announcements.css" />
+	<link rel="stylesheet" href="../css/style.css" />
+	<link rel="stylesheet" href="../css/profile.css" />
+	<title>Profilo — Trovami</title>
+</head>
+
+<body>
+	<div data-include="header"></div>
+
+	<main class="page">
+		<div class="page-header">
+			<h1>Il mio profilo</h1>
+			<p>Visualizza e gestisci il tuo account e i tuoi annunci</p>
+		</div>
+
+		<div class="profile-grid">
+			<section id="profile-section" class="section-card">
+				<h2>Dati profilo</h2>
+				<form id="profileForm">
+					<label>Username</label>
+					<input id="username" />
+
+					<label>Email (readonly)</label>
+					<input id="email" readonly />
+
+					<label>Telefono</label>
+					<input id="phoneNumber" />
+
+					<div style="display:flex;gap:8px;margin-top:8px;">
+						<button type="submit" class="btn btn--primary">Salva</button>
+						<span id="profileMessage" style="align-self:center;color:var(--text-muted);"></span>
+					</div>
+				</form>
+			</section>
+
+			<section id="my-announcements" class="section-card">
+				<h2>I miei annunci</h2>
+				<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
+
+				<div id="createForm" style="display:none;margin-top:12px;">
+					<h3>Nuovo annuncio</h3>
+					<label>Tipo</label>
+					<select id="new-type">
+						<option value="LostAnimal">Smarrito</option>
+						<option value="Sighting">Avvistamento</option>
+					</select>
+					<label>Descrizione</label>
+					<textarea id="new-description"></textarea>
+					<label>Coordinate (lng,lat)</label>
+					<input id="new-coords" placeholder="11.12,46.07" />
+					<label>Immagine (URL)</label>
+					<input id="new-photo" placeholder="https://...jpg" />
+					<label>Specie</label>
+					<input id="new-species" placeholder="Cane, Gatto..." />
+					<label>Breed</label>
+					<input id="new-breed" placeholder="Razza..." />
+					<button id="createSubmit" class="btn btn--primary">Pubblica</button>
+					<div id="createMsg"></div>
+				</div>
+
+				<div id="announcements-grid" style="margin-top:16px;"></div>
+		</div>
+		</section>
+
+	</main>
+
+	<script src="../js/profile.js"></script>
+	<script src="/js/includes.js"></script>
+	<div data-include="footer"></div>
+</body>
+
+</html>

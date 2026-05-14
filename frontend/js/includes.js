@@ -17,6 +17,8 @@ async function loadPartials() {
     })
   );
 
+  // personalize and set active nav after partials are in DOM
+  personalizeNav();
   setActiveNav();
 }
 
@@ -33,6 +35,23 @@ function setActiveNav() {
 
     if (path === target || isHome) {
       link.classList.add('active');
+    }
+  });
+}
+
+// Adjust header links based on auth state (replace login with profile link)
+function personalizeNav() {
+  const token = localStorage.getItem('token');
+  const loginAnchors = Array.from(document.querySelectorAll('[data-login-target]'));
+  loginAnchors.forEach(a => {
+    const target = a.getAttribute('data-login-target') || '/pages/profile.html';
+    if (token) {
+      // user seems logged-in: point directly to profile
+      a.setAttribute('href', target);
+      a.setAttribute('title', 'Profilo');
+    } else {
+      // not logged: when clicked, go to login with ?next=target
+      a.setAttribute('href', '/pages/login.html?next=' + encodeURIComponent(target));
     }
   });
 }
