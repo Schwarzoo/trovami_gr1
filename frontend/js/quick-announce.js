@@ -23,13 +23,7 @@ function openQuickAnnounceModal() {
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   
-  // Set current datetime
-  const now = new Date();
-  const dateTimeInput = document.getElementById('qa-datetime');
-  const isoDateTime = now.toISOString().slice(0, 16);
-  dateTimeInput.value = isoDateTime;
-  
-  // Request geolocation
+  // Request geolocation silently
   requestGeolocation();
 }
 
@@ -44,6 +38,7 @@ function closeQuickAnnounceModal() {
 function requestGeolocation() {
   const locationDisplay = document.getElementById('qa-location-display');
   
+  if (!locationDisplay) return;
   if (!navigator.geolocation) {
     locationDisplay.innerHTML = '<span class="location-status" style="color: var(--text-muted);">⚠️ Geolocalizzazione non disponibile</span>';
     return;
@@ -120,8 +115,7 @@ async function handleQuickAnnounceSubmit(e) {
     description: formData.get('description') || '',
     healthCondition: formData.get('healthCondition'),
     animalBehaviour: formData.get('animalBehaviour') || 'indifferente',
-    coordinates: currentLocation.coordinates,
-    datetime: formData.get('datetime')
+    coordinates: currentLocation.coordinates
   };
 
   try {
@@ -177,7 +171,7 @@ async function submitQuickAnnounce(data) {
     coordinates: data.coordinates,
     healthCondition: data.healthCondition,
     animalBehaviour: data.animalBehaviour,
-    lastSeenDate: new Date(data.datetime).toISOString()
+    lastSeenDate: new Date().toISOString()
   };
 
   const announcementRes = await fetch('http://localhost:3000/api/announcements', {
