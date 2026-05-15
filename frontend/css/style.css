@@ -7,12 +7,11 @@ html, body {
 .page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
 }
 
 #map {
-  flex: 1;
-  min-height: 500px;
+  height: 80vh;
+  min-height: 400px;
   width: 100%;
 }
 
@@ -24,7 +23,7 @@ html, body {
   position: absolute;
   right: 18px;
   top: 18px;
-  z-index: 900; /* above leaflet controls */
+  z-index: 900;
   background: var(--accent);
   color: white;
   border: none;
