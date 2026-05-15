@@ -10,14 +10,42 @@ html, body {
   height: 100vh;
 }
 
-
-
-
-
 #map {
   flex: 1;
   min-height: 500px;
   width: 100%;
+}
+
+.map-wrapper {
+  position: relative;
+}
+
+#locate-btn {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  z-index: 900; /* above leaflet controls */
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(200,90,40,0.12);
+}
+
+#locate-btn:active { transform: translateY(1px); }
+
+.user-label {
+  background: #ffffff !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.12) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
 }
 
 .custom-popup .leaflet-popup-content-wrapper {
