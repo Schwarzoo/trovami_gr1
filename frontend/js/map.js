@@ -1,4 +1,6 @@
 const map = L.map('map').setView([46.0667, 11.1333], 13);
+const urlParams = new URLSearchParams(window.location.search);
+const highlightId = urlParams.get('highlight');
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -35,6 +37,7 @@ async function loadAnnouncements() {
 
   const announcements = await res.json();
   console.log(`Annunci ricevuti: ${announcements.length}`, announcements); // ← aggiunto
+  let highlightedMarker = null;
 
   // remove existing markers
   if (window._tm_markers) { window._tm_markers.forEach(m => map.removeLayer(m)); }
@@ -97,12 +100,21 @@ async function loadAnnouncements() {
   `;
 
   const markerIcon = isLost ? redIcon : greenIcon;
-
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
   window._tm_markers.push(marker);
+  if (highlightId === a._id) {
+    highlightedMarker = marker;
+  }
   });
+
+  if (highlightedMarker) {
+    const { lat, lng } = highlightedMarker.getLatLng();
+    map.setView([lat, lng], 16, { animate: false });
+    map.panBy([0, -140], { animate: false });
+    highlightedMarker.openPopup();
+  }
 //   announcements.forEach(a => {
 //     const [lng, lat] = a.location.coordinates;
 //     const animal = a.animalId;

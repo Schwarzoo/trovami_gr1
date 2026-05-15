@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
         availableSlots: { type: Number }, 
         location: {
             type: { type: String, enum: ['Point'] },
-            coordinates: { type: [Number] }
+            coordinates: { type: [Number] , default: undefined }
         }
     }
 }, { timestamps: true });

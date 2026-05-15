@@ -1,6 +1,8 @@
 const API_BASE = 'http://localhost:3000/api/announcements';
 
 let allAnnouncements = [];
+let currentLocation = null;
+let sortByProximity = false;
 
 // --- Fetch ---
 
@@ -45,6 +47,9 @@ function renderCards(announcements) {
 function buildCard(ann) {
     const animal = ann.animalId;
     const isLost = ann.type === 'LostAnimal';
+    const distanceLabel = typeof ann._distance === 'number'
+        ? `<div class="card-distance">${ann._distance < 1000 ? `${Math.round(ann._distance)} m` : `${(ann._distance / 1000).toFixed(1)} km`} da te</div>`
+        : '';
 
     const photo = animal?.photos?.[0] || null;
     const date = new Date(ann.date).toLocaleDateString('it-IT', {
@@ -72,6 +77,7 @@ function buildCard(ann) {
             </div>
             <h3 class="card-breed">${animal?.breed || '—'}</h3>
             <p class="card-description">${ann.description}</p>
+            ${distanceLabel}
             <div class="card-tags">
                 ${animal?.color ? `<span class="tag">${animal.color}</span>` : ''}
                 ${animal?.gender ? `<span class="tag">${animal.gender}</span>` : ''}
@@ -86,15 +92,23 @@ function buildCard(ann) {
 
 // --- Modal ---
 
-function openModal(ann) {
+async function openModal(ann) {
     const animal = ann.animalId;
     const publisher = ann.publisherId;
     const isLost = ann.type === 'LostAnimal';
-    const isLoggedIn = !!localStorage.getItem('sessionToken'); // check auth
+    const isLoggedIn = !!localStorage.getItem('token'); // check auth
 
     const date = new Date(ann.date).toLocaleDateString('it-IT', {
         day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
+
+    let locationInfo = '';
+    const coords = ann.location?.coordinates;
+
+    if (coords?.length === 2) {
+        const link = `map.html?highlight=${encodeURIComponent(ann._id)}`;
+        locationInfo = `<dt>Posizione</dt><dd><a class="position-link" href="${link}"><em>trovami</em></a></dd>`;
+    }
 
     document.getElementById('modal-title').textContent =
         isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`;
@@ -113,6 +127,7 @@ function openModal(ann) {
             <dt>Sesso</dt><dd>${animal?.gender || '—'}</dd>
             ${animal?.microchipId ? `<dt>Microchip</dt><dd>${animal.microchipId}</dd>` : ''}
             ${animal?.distinctiveFeatures ? `<dt>Caratteristiche</dt><dd>${animal.distinctiveFeatures}</dd>` : ''}
+            ${locationInfo}
             <dt>Data</dt><dd>${date}</dd>
             ${ann.healthCondition ? `<dt>Condizioni</dt><dd>${ann.healthCondition}</dd>` : ''}
         </dl>
@@ -139,7 +154,7 @@ function closeModal() {
 
 // --- Filtri ---
 
-function applyFilters() {
+function getFilteredAnnouncements() {
     const type    = document.getElementById('filter-type').value;
     const species = document.getElementById('filter-species').value.trim();
 
@@ -150,6 +165,15 @@ function applyFilters() {
         a.animalId?.species?.toLowerCase().includes(species.toLowerCase())
     );
 
+    if (sortByProximity && currentLocation) {
+        filtered = sortAnnouncementsByDistance(filtered, currentLocation);
+    }
+
+    return filtered;
+}
+
+function applyFilters() {
+    const filtered = getFilteredAnnouncements();
     renderCards(filtered);
     updateCount(filtered.length);
 }
@@ -161,6 +185,58 @@ function updateCount(n) {
 
 // --- Error ---
 
+function clearError() {
+    const banner = document.getElementById('error-banner');
+    banner.textContent = '';
+    banner.style.display = 'none';
+}
+
+function updateLocationStatus(text) {
+    const status = document.getElementById('location-status');
+    status.textContent = text || '';
+}
+
+function getUserLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Geolocalizzazione non supportata')); 
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => resolve([position.coords.latitude, position.coords.longitude]),
+            (error) => reject(error),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        );
+    });
+}
+
+function computeDistanceMeters(lat1, lon1, lat2, lon2) {
+    const toRad = (deg) => deg * Math.PI / 180;
+    const R = 6371000;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function sortAnnouncementsByDistance(announcements, [userLat, userLng]) {
+    return announcements
+        .map((ann) => {
+            const coords = ann.location?.coordinates;
+            if (!coords || coords.length !== 2) return { ...ann, _distance: Infinity };
+
+            const [lng, lat] = coords;
+            return { ...ann, _distance: computeDistanceMeters(userLat, userLng, lat, lng) };
+        })
+        .sort((a, b) => (a._distance || 0) - (b._distance || 0));
+}
+
+function sortAnnouncementsByDate(announcements) {
+    return [...announcements].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
 function showError(msg) {
     const banner = document.getElementById('error-banner');
     banner.textContent = msg;
@@ -171,11 +247,42 @@ function showError(msg) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     allAnnouncements = await fetchAnnouncements();
+    allAnnouncements = sortAnnouncementsByDate(allAnnouncements);
     renderCards(allAnnouncements);
     updateCount(allAnnouncements.length);
 
     document.getElementById('filter-type').addEventListener('change', applyFilters);
     document.getElementById('filter-species').addEventListener('input', applyFilters);
+    document.getElementById('nearby-button').addEventListener('click', async () => {
+        const button = document.getElementById('nearby-button');
+        if (sortByProximity) {
+            sortByProximity = false;
+            currentLocation = null;
+            updateLocationStatus('');
+            applyFilters();
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Ricerca posizione...';
+        clearError();
+        updateLocationStatus('Sto cercando la tua posizione…');
+
+        try {
+            currentLocation = await getUserLocation();
+            sortByProximity = true;
+            updateLocationStatus('Annunci ordinati dai più vicini');
+            applyFilters();
+        } catch (err) {
+            sortByProximity = false;
+            currentLocation = null;
+            updateLocationStatus('');
+            showError('Impossibile ottenere la tua posizione. Controlla i permessi del browser.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Più vicini a me';
+        }
+    });
 
     document.getElementById('modal-overlay').addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeModal();
