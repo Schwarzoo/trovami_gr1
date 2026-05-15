@@ -23,6 +23,7 @@
       <div class="hero-actions">
         <a class="button primary" href="/pages/map.html">Apri la mappa</a>
         <a class="button" href="/pages/announcements.html">Vedi tutti gli annunci</a>
+        <button id="quick-announce-btn" class="button button-large button-accent">Segnala ora</button>
       </div>
     </section>
 
@@ -54,10 +55,127 @@
 
   <div data-include="footer"></div>
 
+  <!-- MODAL: Quick Announcement -->
+  <div id="quick-announce-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Segnala un animale</h2>
+        <button id="quick-announce-close" class="modal-close" aria-label="Chiudi">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="quick-announce-form">
+          <!-- Campi obbligatori in evidenza -->
+          <fieldset class="form-section">
+            <legend>Informazioni essenziali *</legend>
+            
+            <div class="form-group">
+              <label for="qa-type">Tipo di segnalazione *</label>
+              <select id="qa-type" name="type" required>
+                <option value="">-- Seleziona --</option>
+                <option value="LostAnimal">Animale smarrito</option>
+                <option value="Sighting">Avvistamento</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-species">Specie *</label>
+              <input type="text" id="qa-species" name="species" placeholder="Es. Cane, Gatto, Coniglio..." required>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-color">Colore *</label>
+              <input type="text" id="qa-color" name="color" placeholder="Es. Bianco, Nero, Marrone..." required>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-health">Condizioni di salute *</label>
+              <select id="qa-health" name="healthCondition" required>
+                <option value="">-- Seleziona --</option>
+                <option value="in salute">In salute</option>
+                <option value="ferito">Ferito</option>
+                <option value="malnutrito">Malnutrito</option>
+              </select>
+            </div>
+          </fieldset>
+
+          <!-- Campi aggiuntivi -->
+          <fieldset class="form-section">
+            <legend>Informazioni aggiuntive</legend>
+            
+            <div class="form-group">
+              <label for="qa-breed">Razza</label>
+              <input type="text" id="qa-breed" name="breed" placeholder="Es. Labrador, Persiano...">
+            </div>
+
+            <div class="form-group">
+              <label for="qa-gender">Genere</label>
+              <select id="qa-gender" name="gender">
+                <option value="">-- Seleziona --</option>
+                <option value="Maschio">Maschio</option>
+                <option value="Femmina">Femmina</option>
+                <option value="Sconosciuto">Sconosciuto</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-hair">Lunghezza pelo</label>
+              <select id="qa-hair" name="lunghezzaPelo">
+                <option value="">-- Seleziona --</option>
+                <option value="Corto">Corto</option>
+                <option value="Medio">Medio</option>
+                <option value="Lungo">Lungo</option>
+                <option value="Senza">Senza</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-behaviour">Comportamento</label>
+              <select id="qa-behaviour" name="animalBehaviour">
+                <option value="">-- Seleziona --</option>
+                <option value="tranquillo">Tranquillo</option>
+                <option value="spaventato">Spaventato</option>
+                <option value="indifferente">Indifferente</option>
+                <option value="aggressivo">Aggressivo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-features">Segni particolari</label>
+              <textarea id="qa-features" name="distinctiveFeatures" placeholder="Es. collare rosso, zoppo, cicatrice..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-description">Descrizione</label>
+              <textarea id="qa-description" name="description" placeholder="Descrivi la situazione, dove è stato visto l'animale, qualsiasi dettaglio utile..."></textarea>
+            </div>
+
+            <div class="form-group" id="qa-location-group">
+              <label>Posizione</label>
+              <div id="qa-location-display" class="location-display">
+                <span class="location-status">🔍 Localizzazione in corso...</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="qa-datetime">Data e ora</label>
+              <input type="datetime-local" id="qa-datetime" name="datetime" required>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="button" id="quick-announce-cancel" class="button button-secondary">Annulla</button>
+            <button type="submit" class="button button-primary">Pubblica annuncio</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/includes.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/js/map.js"></script>
   <script src="/js/home.js"></script>
+  <script src="/js/quick-announce.js"></script>
 </body>
 
 </html>
