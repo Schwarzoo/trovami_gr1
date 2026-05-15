@@ -39,6 +39,10 @@ async function loadAnnouncements() {
   console.log(`Annunci ricevuti: ${announcements.length}`, announcements); // ← aggiunto
   let highlightedMarker = null;
 
+  // remove existing markers
+  if (window._tm_markers) { window._tm_markers.forEach(m => map.removeLayer(m)); }
+  window._tm_markers = [];
+
   announcements.forEach(a => {
   const [lng, lat] = a.location.coordinates;
   const animal = a.animalId;
@@ -99,7 +103,7 @@ async function loadAnnouncements() {
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
-
+  window._tm_markers.push(marker);
   if (highlightId === a._id) {
     highlightedMarker = marker;
   }
@@ -132,3 +136,13 @@ async function loadAnnouncements() {
 }
 
 loadAnnouncements();
+
+// Listen for updates from other pages (profile) and refresh
+window.addEventListener('storage', (e) => {
+  if (e.key === 'announcements:update') {
+    loadAnnouncements();
+  }
+});
+
+// Also refresh when tab becomes visible (helpful after redirect)
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAnnouncements(); });

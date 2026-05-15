@@ -6,7 +6,9 @@
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<link rel="stylesheet" href="../css/announcements.css" />
 	<link rel="stylesheet" href="../css/style.css" />
+	<link rel="stylesheet" href="../css/header.css" />
 	<link rel="stylesheet" href="../css/profile.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 	<title>Profilo — Trovami</title>
 </head>
 
@@ -77,6 +79,68 @@
 	</main>
 
 	<script src="../js/profile.js"></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+	<!-- Modal for create/edit announcement -->
+	<div id="modal-overlay" class="modal-overlay" style="display:none;">
+		<div class="modal-card">
+			<div class="modal-header">
+				<h3 id="modal-title">Annuncio</h3><button id="modal-close">✕</button>
+			</div>
+			<div class="modal-body">
+				<form id="modalForm">
+					<label>Tipo</label>
+					<select id="modal-type">
+						<option value="LostAnimal">Smarrito</option>
+						<option value="Sighting">Avvistamento</option>
+					</select>
+					<label>Descrizione</label>
+					<textarea id="modal-description"></textarea>
+					<label>Specie</label>
+					<input id="modal-species" />
+					<label>Breed</label>
+					<input id="modal-breed" />
+					<label>Foto (URL)</label>
+					<input id="modal-photo" />
+					<img id="modal-photo-preview" src="" alt="preview"
+						style="display:none;max-width:100%;border-radius:8px;margin-top:8px;" />
+					<label>Ultima data vista</label>
+					<input id="modal-lastSeenDate" type="date" />
+					<label style="display:flex;align-items:center;gap:8px;"><input id="modal-isCurrentlyThere" type="checkbox" />
+						Attualmente presente</label>
+					<label>Comportamento</label>
+					<select id="modal-animalBehaviour">
+						<option value="indifferente">indifferente</option>
+						<option value="tranquillo">tranquillo</option>
+						<option value="spaventato">spaventato</option>
+						<option value="aggressivo">aggressivo</option>
+					</select>
+					<label>Condizione salute</label>
+					<select id="modal-healthCondition">
+						<option value="in salute">in salute</option>
+						<option value="ferito">ferito</option>
+						<option value="malnutrito">malnutrito</option>
+					</select>
+					<label>Stato annuncio</label>
+					<select id="modal-status">
+						<option value="ACTIVE">ACTIVE</option>
+						<option value="RESOLVED">RESOLVED</option>
+						<option value="ARCHIVED">ARCHIVED</option>
+					</select>
+					<label>Coordinate (lng,lat)</label>
+					<div style="display:flex;gap:8px;align-items:center;">
+						<input id="modal-coords" placeholder="11.1333,46.0667" />
+						<button type="button" id="pickOnMap" class="btn btn--ghost">Seleziona su mappa</button>
+					</div>
+					<div id="modal-map" style="height:220px;margin-top:8px;display:none;border-radius:8px;overflow:hidden;"></div>
+					<div style="display:flex;gap:8px;margin-top:12px;">
+						<button id="modal-save" class="btn btn--primary" type="button">Salva</button>
+						<button id="modal-cancel" class="btn btn--ghost" type="button">Annulla</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 	<script src="/js/includes.js"></script>
 	<div data-include="footer"></div>
 </body>
