@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema({
     isActive:     { type: Boolean, default: true },
     role:         { type: String, enum: ['Segnalatore', 'Ricercatore', 'Shelter', 'Administrator'], default: 'Segnalatore' },
     sessionToken: { type: String, default: null},
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
 
     shelterData: {
         shelterName:    { type: String },

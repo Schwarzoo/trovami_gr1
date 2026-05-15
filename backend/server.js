@@ -2,6 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const express = require('express');
 const cors = require('cors');
+const { forgotPassword, resetPassword } = require('./controllers/authController');
 
 //
 const path = require('path');
@@ -12,6 +13,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use('/api/auth', require('./routes/authRoutes'));
+app.post('/api/auth/forgot-password', forgotPassword);
+app.post('/api/auth/reset-password', resetPassword);
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/animals', require('./routes/animalRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
