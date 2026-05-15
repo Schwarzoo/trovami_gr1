@@ -14,8 +14,6 @@ async function fetchAnnouncements(params = {}) {
         const res = await fetch(url);
         const json = await res.json();
         return Array.isArray(json) ? json : json.data || [];
-        if (!json.success) throw new Error(json.message);
-        return json.data;
     } catch (err) {
         showError('Impossibile caricare gli annunci. Riprova più tardi.');
         return [];
@@ -199,7 +197,7 @@ function updateLocationStatus(text) {
 function getUserLocation() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
-            reject(new Error('Geolocalizzazione non supportata')); 
+            reject(new Error('Geolocalizzazione non supportata'));
             return;
         }
 
@@ -292,4 +290,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
     });
+
+    // If the page was opened with a highlight query param, open that announcement
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const highlight = params.get('highlight');
+        if (highlight) {
+            // Wait a tick to ensure DOM is rendered
+            setTimeout(() => {
+                // find announcement by id
+                const ann = allAnnouncements.find(a => a._id === highlight);
+                if (ann) {
+                    // render cards already done; scroll card into view if exists
+                    const card = document.querySelector(`.card[data-id="${highlight}"]`);
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // briefly highlight the card
+                        card.style.transition = 'box-shadow 250ms ease';
+                        card.style.boxShadow = '0 6px 20px rgba(26,115,232,0.25)';
+                        setTimeout(() => card.style.boxShadow = '', 2000);
+                        // open modal for the announcement
+                        openModal(ann);
+                    } else {
+                        // fallback: open modal anyway
+                        openModal(ann);
+                    }
+                }
+            }, 120);
+        }
+    } catch (err) {
+        console.warn('Error handling highlight param', err);
+    }
 });

@@ -1,11 +1,27 @@
-const map = L.map('map').setView([46.0667, 11.1333], 13);
+// Initialize map centered on Trento (approx) and clamp to world bounds to avoid repeated worlds when zooming out
+const europeBounds = L.latLngBounds(
+  [34.0, -25.0],
+  [72.0, 45.0]
+);
+
+const map = L.map('map', {
+  worldCopyJump: false,
+  maxBounds: europeBounds,
+  maxBoundsViscosity: 1.0,
+  minZoom: 4,
+  maxZoom: 15
+}).setView([46.0667, 11.1333], 13);
 const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get('highlight');
 
+// Disable tile wrapping (noWrap: true) to prevent seeing multiple copies of the world
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors'
+  attribution: '&copy; OpenStreetMap contributors',
+  noWrap: true
 }).addTo(map);
+
+
 
 
 const redIcon = L.divIcon({
@@ -44,6 +60,9 @@ const secondaryIcon = L.divIcon({
 
 
 let allAnnouncements = [];
+
+// Keep track of current visible markers bounds so we can restrict zoom/pan
+let _visibleBounds = null;
 
 function normalizeText(value) {
   return (value || '').toString().toLowerCase().trim();
@@ -159,6 +178,7 @@ function renderAnnouncements(announcements) {
   // remove existing markers
   if (window._tm_markers) { window._tm_markers.forEach(m => map.removeLayer(m)); }
   window._tm_markers = [];
+  const bounds = L.latLngBounds([]);
 
   announcements.forEach(a => {
   const [lng, lat] = a.location.coordinates;
@@ -184,7 +204,7 @@ function renderAnnouncements(announcements) {
 
   const popupHTML = `
     <div style="width:260px;font-family:sans-serif;border-radius:12px;overflow:hidden;cursor:pointer;"
-         onclick="window.location.href='/annuncio/${a._id}'">
+         onclick="window.location.href='/pages/announcements.html?highlight=${a._id}'">
 
       <div style="position:relative;">
         ${mediaBlock}
@@ -221,18 +241,52 @@ function renderAnnouncements(announcements) {
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
   window._tm_markers.push(marker);
+  bounds.extend([lat, lng]);
   if (highlightId === a._id) {
     highlightedMarker = marker;
   }
   });
 
-  if (highlightedMarker) {
-    const { lat, lng } = highlightedMarker.getLatLng();
-    map.setView([lat, lng], 16, { animate: false });
-    map.panBy([0, -140], { animate: false });
-    highlightedMarker.openPopup();
+
+  if (window._tm_markers.length > 0 && bounds.isValid()) {
+    if (highlightedMarker) {
+      const { lat, lng } = highlightedMarker.getLatLng();
+      map.setView([lat, lng], 16, { animate: false });
+      map.panBy([0, -140], { animate: false });
+      highlightedMarker.openPopup();
+    } else {
+      map.fitBounds(bounds, {
+        paddingTopLeft: [120, 120],
+        paddingBottomRight: [120, 120],
+        animate: true,
+        maxZoom: 12
+      });
+    }
   }
+
+  // // If we have markers, fit map to them but do not constrain user movement
+  // if (window._tm_markers.length > 0 && bounds.isValid()) {
+  //   if (highlightedMarker) {
+  //     const { lat, lng } = highlightedMarker.getLatLng();
+  //     map.setView([lat, lng], 16, { animate: false });
+  //     map.panBy([0, -140], { animate: false });
+  //     highlightedMarker.openPopup();
+  //   } else {
+  //     map.fitBounds(bounds, {
+  //       paddingTopLeft: [120, 120],
+  //       paddingBottomRight: [120, 120],
+  //       animate: true,
+  //       maxZoom: 12
+  //     });
+  //   }
+  // }
+  // try {
+  //   map.setMinZoom(2);
+  // } catch (err) {
+  //   console.warn('Could not set min zoom', err);
+  // }
 }
+
 
 function buildSelectOptions(selectEl, values, placeholder) {
   if (!selectEl) return;
