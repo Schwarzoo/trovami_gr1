@@ -4,13 +4,15 @@ const europeBounds = L.latLngBounds(
   [72.0, 45.0]
 );
 
+const TRENTO_CENTER = [46.0667, 11.08];
+
 const map = L.map('map', {
   worldCopyJump: false,
   maxBounds: europeBounds,
   maxBoundsViscosity: 1.0,
   minZoom: 4,
   maxZoom: 15
-}).setView([46.0667, 11.1333], 13);
+}).setView(TRENTO_CENTER , 13);
 const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get('highlight');
 
@@ -256,8 +258,8 @@ function renderAnnouncements(announcements) {
       highlightedMarker.openPopup();
     } else {
       map.fitBounds(bounds, {
-        paddingTopLeft: [120, 120],
-        paddingBottomRight: [120, 120],
+        paddingTopLeft: [60, 180],
+        paddingBottomRight: [280, 60],
         animate: true,
         maxZoom: 12
       });
