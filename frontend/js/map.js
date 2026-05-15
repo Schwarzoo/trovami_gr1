@@ -4,13 +4,15 @@ const europeBounds = L.latLngBounds(
   [72.0, 45.0]
 );
 
+const TRENTO_CENTER = [46.0667, 11.08];
+
 const map = L.map('map', {
   worldCopyJump: false,
   maxBounds: europeBounds,
   maxBoundsViscosity: 1.0,
   minZoom: 4,
   maxZoom: 15
-}).setView([46.0667, 11.1333], 13);
+}).setView(TRENTO_CENTER , 13);
 const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get('highlight');
 
@@ -256,8 +258,8 @@ function renderAnnouncements(announcements) {
       highlightedMarker.openPopup();
     } else {
       map.fitBounds(bounds, {
-        paddingTopLeft: [120, 120],
-        paddingBottomRight: [120, 120],
+        paddingTopLeft: [60, 180],
+        paddingBottomRight: [280, 60],
         animate: true,
         maxZoom: 12
       });
@@ -397,6 +399,53 @@ window.addEventListener('storage', (e) => {
     loadAnnouncements();
   }
 });
+
+// --- User locate button: geolocation, marker and centering ---
+const locateBtn = document.getElementById('locate-btn');
+let _userMarker = null;
+
+function showUserLocation(lat, lng) {
+  try {
+    if (_userMarker) {
+      map.removeLayer(_userMarker);
+      _userMarker = null;
+    }
+    const circle = L.circleMarker([lat, lng], {
+      radius: 6,
+      color: '#1e3a8a',
+      fillColor: '#1e3a8a',
+      fillOpacity: 1,
+      weight: 2
+    }).addTo(map);
+
+    circle.bindTooltip('Tu sei qui', { permanent: true, direction: 'right', offset: [10, 0], className: 'user-label' });
+    _userMarker = circle;
+  } catch (err) {
+    console.error('Errore mostrando posizione utente', err);
+  }
+}
+
+if (locateBtn) {
+  locateBtn.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('Geolocalizzazione non supportata dal browser');
+      return;
+    }
+
+    locateBtn.disabled = true;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      locateBtn.disabled = false;
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      showUserLocation(lat, lng);
+      map.setView([lat, lng], 14, { animate: true });
+    }, (err) => {
+      locateBtn.disabled = false;
+      console.error('Geolocation error', err);
+      alert('Impossibile ottenere la posizione: ' + (err.message || err.code));
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
 
 // Also refresh when tab becomes visible (helpful after redirect)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAnnouncements(); });
