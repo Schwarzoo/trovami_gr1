@@ -1,0 +1,352 @@
+FORMAT: 1A
+HOST: http://localhost:3000/api
+
+# API Gestione Trovami!
+Questa è la documentazione ufficiale dell'applicazione Trovami!. Di seguito sono elencate tutte le API utilizzate all'interno del software.
+
+# Group Autenticazione
+Risorse dedicate alla registrazione, login e logout degli utenti.
+
+## Registrazione Utente [/auth/register]
+### Registra Account [POST]
+Permette a un nuovo utente di registrarsi sulla piattaforma.
+
++ Request (application/json)
+
+        {
+            "username": "mario_rossi",
+            "email": "mario@example.com",
+            "password": "passwordSicura123",
+            "phoneNumber": "+393331234567"
+        }
+
++ Response 201 (application/json)
+
+        {
+            "message": "Account creato con successo",
+            "userId": "645a1b2c3d4e5f6g7h8i9j0k"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "message": "Email già registrata"
+        }
+
+## Login [/auth/login]
+### Effettua Login [POST]
+Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
+
++ Request (application/json)
+
+        {
+            "email": "mario@example.com",
+            "password": "passwordSicura123"
+        }
+
++ Response 200 (application/json)
+
+        {
+            "message": "Login effettuato",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "role": "USER"
+        }
+
++ Response 401 (application/json)
+
+        {
+            "message": "Credenziali non valide"
+        }
+
+## Logout [/auth/logout]
+### Effettua Logout [POST]
+Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Bearer Token.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "message": "Logout effettuato"
+        }
+
+
+# Group Profilo Utente
+Operazioni sul profilo dell'utente loggato.
+
+## Gestione Profilo [/user/me]
+### Recupera Profilo [GET]
+Restituisce i dati dell'utente attualmente autenticato.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "username": "mario_rossi",
+            "email": "mario@example.com",
+            "phoneNumber": "+393331234567",
+            "isActive": true,
+            "role": "USER"
+        }
+
+### Aggiorna Profilo [PUT]
+Permette di modificare lo username o il numero di telefono dell'utente loggato.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "username": "mario_rossi_updated",
+                "phoneNumber": "+393339876543"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "username": "mario_rossi_updated",
+            "email": "mario@example.com",
+            "phoneNumber": "+393339876543",
+            "isActive": true,
+            "role": "USER"
+        }
+
+
+# Group Animali
+Risorse per la gestione delle anagrafiche degli animali legati agli annunci.
+
+## Creazione Animale [/animals]
+### Registra Animale [POST]
+Crea la scheda di un animale che sarà successivamente associato a un annuncio.
+
++ Request (application/json)
+
+        {
+            "species": "Cane",
+            "breed": "Pastore Tedesco",
+            "gender": "M",
+            "color": "Nero e Focato",
+            "lunghezzaPelo": "Medio",
+            "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
+            "microchipId": "380260000123456",
+            "photos": ["https://example.com/dog1.jpg"],
+            "shelterId": null
+        }
+
++ Response 201 (application/json)
+
+        {
+            "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+            "species": "Cane",
+            "breed": "Pastore Tedesco",
+            "gender": "M",
+            "color": "Nero e Focato",
+            "lunghezzaPelo": "Medio",
+            "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
+            "microchipId": "380260000123456",
+            "photos": ["https://example.com/dog1.jpg"],
+            "shelterId": null,
+            "createdAt": "2026-05-15T09:00:00.000Z"
+        }
+
+
+# Group Annunci
+Risorse per creare, visualizzare, modificare o eliminare annunci di smarrimento o avvistamento.
+
+## Lista e Creazione Annunci [/announcements{?type,species,status}]
+### Elenco Annunci [GET]
+Recupera gli annunci inseriti sulla piattaforma. Permette il filtraggio tramite Query Parameters. Di default mostra solo quelli `ACTIVE`.
+
++ Parameters
+    + type (string, optional) - Filtra per tipo di annuncio (es. 'LOST', 'FOUND')
+    + species (string, optional) - Filtra per specie dell'animale (es. 'Cane')
+    + status (string, optional) - Stato dell'annuncio (Default: 'ACTIVE')
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+                "type": "LOST",
+                "status": "ACTIVE",
+                "publisherId": {
+                    "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                    "username": "mario_rossi",
+                    "email": "mario@example.com",
+                    "phoneNumber": "+393331234567"
+                },
+                "animalId": {
+                    "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                    "species": "Cane",
+                    "breed": "Pastore Tedesco"
+                },
+                "description": "Smarrito in zona parco centrale",
+                "location": {
+                    "type": "Point",
+                    "coordinates": [11.12108, 46.06787]
+                },
+                "lastSeenDate": "2026-05-14T18:30:00.000Z",
+                "isCurrentlyThere": false,
+                "animalBehaviour": "Spaventato ma docile",
+                "healthCondition": "Buona, collare rosso presente",
+                "createdAt": "2026-05-15T08:15:00.000Z"
+            }
+        ]
+
+### Crea Annuncio [POST]
+Crea un nuovo annuncio. Richiede autenticazione (il publisherId viene estratto dal token).
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "type": "LOST",
+                "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
+                "description": "Smarrito in zona parco centrale",
+                "coordinates": [11.12108, 46.06787],
+                "lastSeenDate": "2026-05-14T18:30:00.000Z",
+                "isCurrentlyThere": false,
+                "animalBehaviour": "Spaventato ma docile",
+                "healthCondition": "Buona, collare rosso presente"
+            }
+
++ Response 201 (application/json)
+
+        {
+            "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+            "type": "LOST",
+            "status": "ACTIVE",
+            "publisherId": "645a1b2c3d4e5f6g7h8i9j0k",
+            "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
+            "description": "Smarrito in zona parco centrale",
+            "location": {
+                "type": "Point",
+                "coordinates": [11.12108, 46.06787]
+            },
+            "lastSeenDate": "2026-05-14T18:30:00.000Z",
+            "isCurrentlyThere": false,
+            "animalBehaviour": "Spaventato ma docile",
+            "healthCondition": "Buona, collare rosso presente",
+            "createdAt": "2026-05-15T08:15:00.000Z"
+        }
+
+## Dettaglio Annuncio [/announcements/{id}]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID univoco dell'annuncio.
+
+### Singolo Annuncio [GET]
+Mostra i dettagli completi di un singolo annuncio popolando i dati dell'animale e del creatore.
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+            "type": "LOST",
+            "status": "ACTIVE",
+            "publisherId": {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "mario_rossi",
+                "email": "mario@example.com",
+                "phoneNumber": "+393331234567"
+            },
+            "animalId": {
+                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                "species": "Cane",
+                "breed": "Pastore Tedesco"
+            },
+            "description": "Smarrito in zona parco centrale",
+            "location": {
+                "type": "Point",
+                "coordinates": [11.12108, 46.06787]
+            },
+            "lastSeenDate": "2026-05-14T18:30:00.000Z",
+            "isCurrentlyThere": false,
+            "animalBehaviour": "Spaventato ma docile",
+            "healthCondition": "Buona, collare rosso presente"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Annuncio non trovato"
+        }
+
+### Modifica Annuncio [PUT]
+Consente al proprietario dell'annuncio di modificarne i campi principali. Richiede token.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "description": "Aggiornamento: visto vicino alla fontana",
+                "isCurrentlyThere": true
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+            "type": "LOST",
+            "status": "ACTIVE",
+            "description": "Aggiornamento: visto vicino alla fontana",
+            "isCurrentlyThere": true
+        }
+
+### Elimina Annuncio [DELETE]
+Consente all'autore di rimuovere l'annuncio. Richiede token.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "message": "Annuncio eliminato"
+        }
+
+## Stato Annuncio [/announcements/{id}/status]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID dell'annuncio.
+
+### Cambia Stato [PATCH]
+Permette all'autore di variare rapidamente lo stato dell'annuncio (Es: portarlo a `RESOLVED`).
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "status": "RESOLVED"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+            "status": "RESOLVED"
+        }

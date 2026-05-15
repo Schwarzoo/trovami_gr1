@@ -14,6 +14,21 @@ const authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'applic
 const mePayload = decodeJwt(token) || {};
 const myUserId = mePayload.userId;
 
+async function handleLogout() {
+  try {
+    await fetch('http://localhost:3000/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  } catch (e) {
+    console.error('Logout error:', e);
+  }
+
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  window.location.href = '/pages/login.html';
+}
+
 async function fetchMe() {
   const res = await fetch('http://localhost:3000/api/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
   if (!res.ok) return null;
@@ -38,6 +53,8 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
   const data = await res.json();
   document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.message || 'Errore');
 });
+
+document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
 document.getElementById('showCreate').addEventListener('click', () => {
   const f = document.getElementById('createForm'); f.style.display = f.style.display === 'none' ? 'block' : 'none';
