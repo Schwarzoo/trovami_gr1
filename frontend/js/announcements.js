@@ -233,6 +233,10 @@ function sortAnnouncementsByDistance(announcements, [userLat, userLng]) {
         .sort((a, b) => (a._distance || 0) - (b._distance || 0));
 }
 
+function sortAnnouncementsByDate(announcements) {
+    return [...announcements].sort((a, b) => new Date(b.date) - new Date(a.date));
+}
+
 function showError(msg) {
     const banner = document.getElementById('error-banner');
     banner.textContent = msg;
@@ -243,6 +247,7 @@ function showError(msg) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     allAnnouncements = await fetchAnnouncements();
+    allAnnouncements = sortAnnouncementsByDate(allAnnouncements);
     renderCards(allAnnouncements);
     updateCount(allAnnouncements.length);
 
@@ -253,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (sortByProximity) {
             sortByProximity = false;
             currentLocation = null;
-            updateLocationStatus('Ordine normale');
+            updateLocationStatus('');
             applyFilters();
             return;
         }
