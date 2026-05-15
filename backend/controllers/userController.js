@@ -23,3 +23,13 @@ exports.updateMe = async (req, res) => {
     res.status(500).json({ message: 'Errore server', error: err.message });
   }
 };
+
+exports.deleteMe = async (req, res) => {
+  try {
+    // Optionally: cascade-delete user resources (announcements, animals) here
+    await User.findByIdAndDelete(req.user.userId);
+    res.json({ message: 'Account eliminato' });
+  } catch (err) {
+    res.status(500).json({ message: 'Errore server', error: err.message });
+  }
+};
