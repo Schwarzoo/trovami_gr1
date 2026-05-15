@@ -88,6 +88,21 @@ document.getElementById('createSubmit').addEventListener('click', async () => {
   if (res.ok) loadMyAnnouncements();
 });
 
+document.getElementById('deleteAccount')?.addEventListener('click', async () => {
+  if (!confirm('Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non è reversibile.')) return;
+  const res = await fetch('http://localhost:3000/api/users/me', { method: 'DELETE', headers: authHeader });
+  if (!res.ok) {
+    const d = await res.json().catch(()=>({}));
+    alert(d.message || 'Errore eliminazione account');
+    return;
+  }
+  // cleanup local session and redirect
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  alert('Account eliminato');
+  window.location.href = '/';
+});
+
 async function loadMyAnnouncements() {
   const res = await fetch('http://localhost:3000/api/announcements');
   if (!res.ok) return;
