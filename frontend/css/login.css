@@ -107,6 +107,14 @@ body {
   font-size: 0.92rem;
 }
 
+/* center wrapper used by auth pages */
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
 @media (max-width: 480px) {
   .auth-card {
     padding: 24px 18px;

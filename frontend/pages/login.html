@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/header.css" />
   <link rel="stylesheet" href="../css/login.css" />
   <title>Login - TrovaMi</title>
 </head>
 <body>
+  <div data-include="header"></div>
+
   <main class="auth-page">
     <form id="loginForm" class="auth-card">
       <h1>Accedi</h1>
@@ -20,9 +23,13 @@
       <button type="submit">Entra</button>
       <p id="loginError" class="error"></p>
       <p>Non hai un account? <a href="register.html">Registrati</a></p>
+      <p><a href="forgot-password.html">Ho dimenticato la password</a></p>
     </form>
     
   </main>
+
+  <script src="/js/includes.js"></script>
+  <div data-include="footer"></div>
 
   <script src="../js/login.js"></script>
 </body>

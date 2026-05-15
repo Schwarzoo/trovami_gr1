@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/header.css" />
   <link rel="stylesheet" href="../css/register.css" />
   <title>Registrazione - TrovaMi</title>
 </head>
 <body>
+  <div data-include="header"></div>
+
   <main class="auth-page">
     <form id="registerForm" class="auth-card">
       <h1>Crea account</h1>
@@ -32,6 +35,9 @@
       <p id="registerSuccess" class="success"></p>
     </form>
   </main>
+
+  <script src="/js/includes.js"></script>
+  <div data-include="footer"></div>
 
   <script src="../js/register.js"></script>
 </body>

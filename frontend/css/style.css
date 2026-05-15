@@ -2,7 +2,6 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: Arial, sans-serif;
 }
 
 .page {
@@ -11,11 +10,9 @@ html, body {
   height: 100vh;
 }
 
-.header {
-  padding: 16px;
-  background: #1f2937;
-  color: white;
-}
+
+
+
 
 #map {
   flex: 1;
