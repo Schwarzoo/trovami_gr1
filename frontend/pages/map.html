@@ -20,6 +20,51 @@
       <p>Mappa segnalazioni animali smarriti</p>
     </div>
 
+    <div class="filters">
+      <div class="filter-group">
+        <label for="filter-type">Tipo</label>
+        <select id="filter-type">
+          <option value="">Tutti</option>
+          <option value="LostAnimal">Smarrito</option>
+          <option value="Sighting">Avvistato</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-species">Specie</label>
+        <select id="filter-species">
+          <option value="">Tutte</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-breed">Razza</label>
+        <select id="filter-breed">
+          <option value="">Tutte</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-color">Colore</label>
+        <select id="filter-color">
+          <option value="">Tutti</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-date-from">Da data</label>
+        <input type="date" id="filter-date-from" />
+      </div>
+      <div class="filter-group">
+        <label for="filter-date-to">A data</label>
+        <input type="date" id="filter-date-to" />
+      </div>
+      <div class="filter-group">
+        <label for="filter-include-unknown">Opzioni</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;font-weight:500;color:var(--text-muted);text-transform:none;letter-spacing:0;">
+          <input type="checkbox" id="filter-include-unknown" checked />
+          Includi segnalazioni con informazioni sconosciute
+        </label>
+      </div>
+      <span id="result-count">— annunci trovati</span>
+    </div>
+
     <div id="map"></div>
   </main>
 
