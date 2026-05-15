@@ -103,6 +103,29 @@
 					<input id="modal-photo" />
 					<img id="modal-photo-preview" src="" alt="preview"
 						style="display:none;max-width:100%;border-radius:8px;margin-top:8px;" />
+					<label>Ultima data vista</label>
+					<input id="modal-lastSeenDate" type="date" />
+					<label style="display:flex;align-items:center;gap:8px;"><input id="modal-isCurrentlyThere" type="checkbox" />
+						Attualmente presente</label>
+					<label>Comportamento</label>
+					<select id="modal-animalBehaviour">
+						<option value="indifferente">indifferente</option>
+						<option value="tranquillo">tranquillo</option>
+						<option value="spaventato">spaventato</option>
+						<option value="aggressivo">aggressivo</option>
+					</select>
+					<label>Condizione salute</label>
+					<select id="modal-healthCondition">
+						<option value="in salute">in salute</option>
+						<option value="ferito">ferito</option>
+						<option value="malnutrito">malnutrito</option>
+					</select>
+					<label>Stato annuncio</label>
+					<select id="modal-status">
+						<option value="ACTIVE">ACTIVE</option>
+						<option value="RESOLVED">RESOLVED</option>
+						<option value="ARCHIVED">ARCHIVED</option>
+					</select>
 					<label>Coordinate (lng,lat)</label>
 					<div style="display:flex;gap:8px;align-items:center;">
 						<input id="modal-coords" placeholder="11.1333,46.0667" />

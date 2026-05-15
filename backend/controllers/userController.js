@@ -26,10 +26,13 @@ exports.updateMe = async (req, res) => {
 
 exports.deleteMe = async (req, res) => {
   try {
+    console.log('DELETE /api/users/me called for user=', req.user);
     // Optionally: cascade-delete user resources (announcements, animals) here
     await User.findByIdAndDelete(req.user.userId);
+    console.log('User deleted:', req.user.userId);
     res.json({ message: 'Account eliminato' });
   } catch (err) {
+    console.error('Errore in deleteMe:', err);
     res.status(500).json({ message: 'Errore server', error: err.message });
   }
 };
