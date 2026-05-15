@@ -93,8 +93,39 @@ input[type="text"] {
 select:focus,
 input[type="text"]:focus { border-color: var(--accent); }
 
-#result-count {
+button#nearby-button {
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    border-radius: 8px;
+    padding: .55rem .9rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background .2s, transform .2s;
+}
+button#nearby-button:hover { background: #b34f25; }
+button#nearby-button:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+    background: var(--border);
+    color: var(--text-muted);
+}
+.location-status {
+    font-size: 0.82rem;
+    color: var(--text-muted);
     margin-left: auto;
+    min-width: 180px;
+    text-align: right;
+}
+.card-distance {
+    margin: 0.75rem 0 0;
+    color: var(--accent-2);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+#result-count {
+    margin-left: 0;
     font-size: 0.85rem;
     color: var(--text-muted);
     font-weight: 500;
