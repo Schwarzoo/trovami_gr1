@@ -30,13 +30,130 @@ const greenIcon = L.divIcon({
   popupAnchor: [0, -40]
 });
 
+const secondaryIcon = L.divIcon({
+  className: '',
+  html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38">
+    <path d="M14 0C6.27 0 0 6.27 0 14c0 9.25 14 24 14 24S28 23.25 28 14C28 6.27 21.73 0 14 0z" fill="#9CA3AF"/>
+    <circle cx="14" cy="14" r="6" fill="#F3F4F6"/>
+    <text x="14" y="18" text-anchor="middle" font-size="12" font-family="Arial" fill="#6B7280">?</text>
+  </svg>`,
+  iconSize: [28, 38],
+  iconAnchor: [14, 38],
+  popupAnchor: [0, -40]
+});
 
-async function loadAnnouncements() {
-  const res = await fetch('http://localhost:3000/api/announcements');
-  if (!res.ok) { console.error('Errore fetch annunci'); return; }
 
-  const announcements = await res.json();
-  console.log(`Annunci ricevuti: ${announcements.length}`, announcements); // ← aggiunto
+let allAnnouncements = [];
+
+function normalizeText(value) {
+  return (value || '').toString().toLowerCase().trim();
+}
+
+function isUnknownValue(value) {
+  const text = normalizeText(value);
+  return text === '' || text.startsWith('sconosciut') || text === 'unknown';
+}
+
+function tokenizeQuery(query) {
+  return normalizeText(query).split(/\s+/).filter(Boolean);
+}
+
+function matchesTokens(value, tokens) {
+  if (tokens.length === 0) return true;
+  const hay = normalizeText(value);
+  return tokens.every(token => hay.includes(token));
+}
+
+function parseDateInput(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function endOfDay(date) {
+  if (!date) return null;
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
+function getFilteredAnnouncements() {
+  const typeInput = document.getElementById('filter-type');
+  const speciesInput = document.getElementById('filter-species');
+  const breedInput = document.getElementById('filter-breed');
+  const colorInput = document.getElementById('filter-color');
+  const dateFromInput = document.getElementById('filter-date-from');
+  const dateToInput = document.getElementById('filter-date-to');
+  const includeUnknownInput = document.getElementById('filter-include-unknown');
+
+  const typeQuery = normalizeText(typeInput ? typeInput.value : '');
+  const speciesQuery = normalizeText(speciesInput ? speciesInput.value : '');
+  const breedQuery = normalizeText(breedInput ? breedInput.value : '');
+  const colorQuery = normalizeText(colorInput ? colorInput.value : '');
+  const includeUnknown = includeUnknownInput ? includeUnknownInput.checked : true;
+  const hasSpeciesFilter = !!speciesQuery;
+  const hasBreedFilter = !!breedQuery;
+  const hasColorFilter = !!colorQuery;
+
+  const dateFrom = parseDateInput(dateFromInput ? dateFromInput.value : '');
+  const dateTo = endOfDay(parseDateInput(dateToInput ? dateToInput.value : ''));
+
+  let filtered = [...allAnnouncements];
+
+  if (typeQuery) {
+    filtered = filtered.filter(a => normalizeText(a.type) === typeQuery);
+  }
+
+  if (speciesQuery) {
+    filtered = filtered.filter(a => {
+      const species = normalizeText(a.animalId?.species);
+      if (species === speciesQuery) return true;
+      return includeUnknown && isUnknownValue(species);
+    });
+  }
+
+  if (breedQuery) {
+    filtered = filtered.filter(a => {
+      const breed = normalizeText(a.animalId?.breed);
+      if (breed === breedQuery) return true;
+      return includeUnknown && isUnknownValue(breed);
+    });
+  }
+
+  if (colorQuery) {
+    filtered = filtered.filter(a => {
+      const color = normalizeText(a.animalId?.color);
+      if (color === colorQuery) return true;
+      return includeUnknown && isUnknownValue(color);
+    });
+  }
+
+  if (dateFrom || dateTo) {
+    filtered = filtered.filter(a => {
+      const annDate = new Date(a.date);
+      if (Number.isNaN(annDate.getTime())) return false;
+      if (dateFrom && annDate < dateFrom) return false;
+      if (dateTo && annDate > dateTo) return false;
+      return true;
+    });
+  }
+
+  return filtered.map(a => {
+    const speciesUnknown = hasSpeciesFilter && isUnknownValue(a.animalId?.species);
+    const breedUnknown = hasBreedFilter && isUnknownValue(a.animalId?.breed);
+    const colorUnknown = hasColorFilter && isUnknownValue(a.animalId?.color);
+    a._matchType = includeUnknown && (speciesUnknown || breedUnknown || colorUnknown) ? 'secondary' : 'primary';
+    return a;
+  });
+}
+
+function updateCount(n) {
+  const count = document.getElementById('result-count');
+  if (!count) return;
+  count.textContent = `${n} ${n === 1 ? 'annuncio trovato' : 'annunci trovati'}`;
+}
+
+function renderAnnouncements(announcements) {
   let highlightedMarker = null;
 
   // remove existing markers
@@ -99,7 +216,7 @@ async function loadAnnouncements() {
     </div>
   `;
 
-  const markerIcon = isLost ? redIcon : greenIcon;
+  const markerIcon = a._matchType === 'secondary' ? secondaryIcon : (isLost ? redIcon : greenIcon);
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
@@ -115,26 +232,109 @@ async function loadAnnouncements() {
     map.panBy([0, -140], { animate: false });
     highlightedMarker.openPopup();
   }
-//   announcements.forEach(a => {
-//     const [lng, lat] = a.location.coordinates;
-//     const animal = a.animalId;
-
-//     const icon = a.type === 'LostAnimal'
-//       ? L.icon({ iconUrl: '/icons/lost.png',    iconSize: [32, 32] })
-//       : L.icon({ iconUrl: '/icons/sighting.png', iconSize: [32, 32] });
-
-//     L.marker([lat, lng], { icon })
-//       .addTo(map)
-//       .bindPopup(`
-//         <strong>${a.type === 'LostAnimal' ? 'Smarrito' : 'Avvistato'}</strong><br>
-//         ${animal?.species ?? ''} ${animal?.breed ?? ''}<br>
-//         ${a.description}<br>
-//         <small>${new Date(a.date).toLocaleDateString('it-IT')}</small>
-//       `)
-//       .openPopup();
-//   });
 }
 
+function buildSelectOptions(selectEl, values, placeholder) {
+  if (!selectEl) return;
+  const current = selectEl.value;
+  selectEl.innerHTML = '';
+
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = placeholder;
+  selectEl.appendChild(first);
+
+  values.forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    selectEl.appendChild(option);
+  });
+
+  if (current && values.includes(current)) {
+    selectEl.value = current;
+  }
+}
+
+function formatLabel(value) {
+  return value
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function addUniqueOption(map, value) {
+  if (!value) return;
+  const trimmed = value.trim();
+  if (!trimmed) return;
+  const key = normalizeText(trimmed);
+  if (!map.has(key)) {
+    map.set(key, formatLabel(trimmed));
+  }
+}
+
+function populateFilterOptions(announcements) {
+  const speciesSelect = document.getElementById('filter-species');
+  const breedSelect = document.getElementById('filter-breed');
+  const colorSelect = document.getElementById('filter-color');
+
+  const species = new Map();
+  const breeds = new Map();
+  const colors = new Map();
+
+  announcements.forEach(a => {
+    const animal = a.animalId || {};
+    addUniqueOption(species, animal.species);
+    addUniqueOption(breeds, animal.breed);
+    addUniqueOption(colors, animal.color);
+  });
+
+  const sortedSpecies = Array.from(species.values()).sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+  const sortedBreeds = Array.from(breeds.values()).sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+  const sortedColors = Array.from(colors.values()).sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+
+  buildSelectOptions(speciesSelect, sortedSpecies, 'Tutte');
+  buildSelectOptions(breedSelect, sortedBreeds, 'Tutte');
+  buildSelectOptions(colorSelect, sortedColors, 'Tutti');
+}
+
+async function loadAnnouncements() {
+  const res = await fetch('http://localhost:3000/api/announcements');
+  if (!res.ok) { console.error('Errore fetch annunci'); return; }
+
+  const announcements = await res.json();
+  allAnnouncements = Array.isArray(announcements) ? announcements : [];
+  populateFilterOptions(allAnnouncements);
+  const filtered = getFilteredAnnouncements();
+  updateCount(filtered.length);
+  renderAnnouncements(filtered);
+}
+
+function wireFilters() {
+  const typeInput = document.getElementById('filter-type');
+  const speciesInput = document.getElementById('filter-species');
+  const breedInput = document.getElementById('filter-breed');
+  const colorInput = document.getElementById('filter-color');
+  const dateFromInput = document.getElementById('filter-date-from');
+  const dateToInput = document.getElementById('filter-date-to');
+  const includeUnknownInput = document.getElementById('filter-include-unknown');
+  const handler = () => {
+    const filtered = getFilteredAnnouncements();
+    updateCount(filtered.length);
+    renderAnnouncements(filtered);
+  };
+
+  if (typeInput) typeInput.addEventListener('change', handler);
+  if (speciesInput) speciesInput.addEventListener('change', handler);
+  if (breedInput) breedInput.addEventListener('change', handler);
+  if (colorInput) colorInput.addEventListener('change', handler);
+  if (dateFromInput) dateFromInput.addEventListener('change', handler);
+  if (dateToInput) dateToInput.addEventListener('change', handler);
+  if (includeUnknownInput) includeUnknownInput.addEventListener('change', handler);
+}
+
+wireFilters();
 loadAnnouncements();
 
 // Listen for updates from other pages (profile) and refresh

@@ -46,7 +46,8 @@ body {
 .filter-group { display: flex; flex-direction: column; gap: .3rem; }
 
 select,
-input[type="text"] {
+input[type="text"],
+input[type="date"] {
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: .45rem .8rem;
@@ -60,7 +61,13 @@ input[type="text"] {
     height: 40px; /* Altezza esplicita per coerenza */
 }
 select:focus,
-input[type="text"]:focus { border-color: var(--accent); }
+input[type="text"]:focus,
+input[type="date"]:focus { border-color: var(--accent); }
+
+input[type="date"] {
+    padding-right: 0.6rem;
+    letter-spacing: 0.01em;
+}
 
 button#nearby-button {
     border: 1px solid var(--accent);
