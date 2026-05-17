@@ -128,13 +128,14 @@
 						<option value="ARCHIVED">ARCHIVED</option>
 					</select>
 					<label>Coordinate (lng,lat)</label>
-					<div style="display:flex;gap:8px;align-items:center;">
+					<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
 						<input id="modal-coords" placeholder="11.1333,46.0667" />
 						<button type="button" id="pickOnMap" class="btn btn--ghost">Seleziona su mappa</button>
+						<button type="button" id="useMyLocation" class="btn btn--ghost">Usa la mia posizione</button>
 					</div>
 					<div id="modal-map" style="height:220px;margin-top:8px;display:none;border-radius:8px;overflow:hidden;"></div>
 					<div style="display:flex;gap:8px;margin-top:12px;">
-						<button id="modal-save" class="btn btn--primary" type="button">Salva</button>
+						<button id="modal-save" class="btn btn--primary" type="button">Pubblica</button>
 						<button id="modal-cancel" class="btn btn--ghost" type="button">Annulla</button>
 					</div>
 				</form>
