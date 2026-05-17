@@ -59,46 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('showCreate').addEventListener('click', (e) => {
     e.preventDefault();
-    const f = document.getElementById('createForm');
-    f.style.display = 'none';
     openModalForCreate();
-  });
-
-  document.getElementById('createSubmit').addEventListener('click', async () => {
-    const type = document.getElementById('new-type').value;
-    const description = document.getElementById('new-description').value;
-    const coordsRawInput = document.getElementById('new-coords').value.trim();
-    const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
-    const photo = document.getElementById('new-photo').value;
-    const species = document.getElementById('new-species').value || 'Sconosciuta';
-    const breed = document.getElementById('new-breed').value || '';
-
-    if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) { document.getElementById('createMsg').textContent = 'Coordinate non valide'; return; }
-
-    // create animal first
-    const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: authHeader, body: JSON.stringify({ species, breed, gender: 'Sconosciuto', color: 'sconosciuto', lunghezzaPelo: 'Senza', photos: photo ? [photo] : [] }) });
-    if (!animalRes.ok) { document.getElementById('createMsg').textContent = 'Errore creazione animale'; return; }
-    const animal = await animalRes.json();
-
-    const body = {
-      type,
-      animalId: animal._id,
-      description,
-      coordinates: [coordsRaw[0], coordsRaw[1]]
-    };
-
-    const res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: authHeader, body: JSON.stringify(body) });
-    const data = await res.json();
-    document.getElementById('createMsg').textContent = res.ok ? 'Annuncio creato' : (data.message || 'Errore');
-    if (res.ok) {
-      loadMyAnnouncements();
-      // hide inline create form
-      document.getElementById('createForm').style.display = 'none';
-      document.getElementById('createForm').querySelectorAll('input, textarea').forEach(el => { el.value = ''; });
-      document.getElementById('createMsg').textContent = '';
-      // notify map to refresh (other tabs/windows or map page)
-      try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
-    }
   });
 
 
