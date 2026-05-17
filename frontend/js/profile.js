@@ -4,6 +4,22 @@ function decodeJwt(token) {
     return JSON.parse(atob(payload));
   } catch (e) { return null; }
 }
+let mapInstance = null;
+let mapMarker = null;
+let editingId = null;
+let editingAnimalId = null;
+let currentEditStatus = 'ACTIVE';
+
+function setLastSeenMode(mode) {
+  const todayBtn = document.getElementById('lastSeenTodayBtn');
+  const customBtn = document.getElementById('lastSeenCustomBtn');
+  const dateInput = document.getElementById('modal-lastSeenDate');
+
+  const isCustom = mode === 'custom';
+  todayBtn.classList.toggle('is-selected', !isCustom);
+  customBtn.classList.toggle('is-selected', isCustom);
+  dateInput.style.display = isCustom ? 'block' : 'none';
+}
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -170,6 +186,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     img.src = url; img.style.display = 'block';
   });
 
+  document.getElementById('lastSeenTodayBtn').addEventListener('click', () => {
+    setLastSeenMode('today');
+  });
+
+  document.getElementById('lastSeenCustomBtn').addEventListener('click', () => {
+    setLastSeenMode('custom');
+  });
+
   document.getElementById('modal-close').addEventListener('click', ()=> showModal(false));
   document.getElementById('modal-cancel').addEventListener('click', ()=> showModal(false));
 
@@ -201,11 +225,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       animalIdToUse = animal._id;
     }
 
-    const lastSeenDate = document.getElementById('modal-lastSeenDate').value || null;
+    const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
+    const customDate = document.getElementById('modal-lastSeenDate').value;
+    let lastSeenDate = null;
+    if (lastSeenMode === 'today') {
+      lastSeenDate = new Date().toISOString();
+    } else if (customDate) {
+      lastSeenDate = new Date(customDate).toISOString();
+    }
     const isCurrentlyThere = document.getElementById('modal-isCurrentlyThere').checked;
     const animalBehaviour = document.getElementById('modal-animalBehaviour').value || null;
     const healthCondition = document.getElementById('modal-healthCondition').value || null;
-    const status = document.getElementById('modal-status').value || 'ACTIVE';
+    const status = editingId ? (currentEditStatus || 'ACTIVE') : 'ACTIVE';
 
     const body = {
       type,
@@ -236,9 +267,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
   });
 
-  // open create modal when clicking create
-  document.getElementById('showCreate').addEventListener('click', (e) => { e.preventDefault(); openModalForCreate(); });
-
   // delegate edit buttons to open modal with data
   document.addEventListener('click', async (e) => {
     const el = e.target;
@@ -254,10 +282,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Modal and map picker logic
-let mapInstance = null;
-let mapMarker = null;
-let editingId = null;
-let editingAnimalId = null;
 
 function normalizeCoordsFromInput(input) {
   if (!input) return null;
@@ -346,7 +370,9 @@ function decimalToDMS(dec, type) {
 
 function openModalForCreate() {
   editingId = null;
+  currentEditStatus = 'ACTIVE';
   document.getElementById('modal-title').textContent = 'Nuovo annuncio';
+  document.getElementById('modal-save').textContent = 'Pubblica';
   document.getElementById('modal-type').value = 'LostAnimal';
   document.getElementById('modal-description').value = '';
   document.getElementById('modal-species').value = '';
@@ -354,18 +380,21 @@ function openModalForCreate() {
   document.getElementById('modal-photo').value = '';
   document.getElementById('modal-photo-preview').style.display = 'none';
   document.getElementById('modal-coords').value = '';
+  setLastSeenMode('today');
   document.getElementById('modal-lastSeenDate').value = '';
+  document.getElementById('modal-lastSeenDate').style.display = 'none';
   document.getElementById('modal-isCurrentlyThere').checked = false;
   document.getElementById('modal-animalBehaviour').value = 'indifferente';
   document.getElementById('modal-healthCondition').value = 'in salute';
-  document.getElementById('modal-status').value = 'ACTIVE';
   showModal(true);
 }
 
 function openModalForEdit(ann) {
   editingId = ann._id;
   editingAnimalId = ann.animalId?._id || ann.animalId || null;
+  currentEditStatus = ann.status || 'ACTIVE';
   document.getElementById('modal-title').textContent = 'Modifica annuncio';
+  document.getElementById('modal-save').textContent = 'Modifica';
   document.getElementById('modal-type').value = ann.type || 'LostAnimal';
   document.getElementById('modal-description').value = ann.description || '';
   document.getElementById('modal-species').value = ann.animalId?.species || '';
@@ -380,11 +409,16 @@ function openModalForEdit(ann) {
     document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
   }
   // populate the extra fields if present
-  document.getElementById('modal-lastSeenDate').value = ann.lastSeenDate ? new Date(ann.lastSeenDate).toISOString().slice(0,10) : '';
+  if (ann.lastSeenDate) {
+    document.getElementById('modal-lastSeenDate').value = new Date(ann.lastSeenDate).toISOString().slice(0,10);
+    setLastSeenMode('custom');
+  } else {
+    document.getElementById('modal-lastSeenDate').value = '';
+    setLastSeenMode('today');
+  }
   document.getElementById('modal-isCurrentlyThere').checked = !!ann.isCurrentlyThere;
   document.getElementById('modal-animalBehaviour').value = ann.animalBehaviour || 'indifferente';
   document.getElementById('modal-healthCondition').value = ann.healthCondition || 'in salute';
-  document.getElementById('modal-status').value = ann.status || 'ACTIVE';
   showModal(true);
 }
 
