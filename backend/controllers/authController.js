@@ -4,6 +4,39 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+}
+
+async function sendVerificationEmail(user, rawToken) {
+  const transporter = createTransporter();
+  const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${rawToken}`;
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: user.email,
+    subject: 'Verifica Email - Trovami',
+    html: `
+      <h1>Trovami! - Verifica Email</h1>
+      <p>Per attivare il tuo account, clicca il link qui sotto:</p>
+      <a href="${verifyUrl}" style="background-color:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
+        Verifica Email
+      </a>
+      <p>Questo link scade tra 24 ore.</p>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password, phoneNumber } = req.body;
@@ -19,9 +52,31 @@ exports.register = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await User.create({ username, email, passwordHash, phoneNumber });
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex');
+    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    res.status(201).json({ message: 'Account creato con successo', userId: user._id });
+    const user = await User.create({
+      username,
+      email,
+      passwordHash,
+      phoneNumber,
+      isEmailVerified: false,
+      emailVerificationToken: verifyTokenHash,
+      emailVerificationExpires: verifyExpires
+    });
+
+    try {
+      await sendVerificationEmail(user, verifyToken);
+    } catch (mailErr) {
+      return res.status(500).json({
+        message: 'Account creato ma invio email di verifica fallito',
+        error: mailErr.message,
+        userId: user._id
+      });
+    }
+
+    res.status(201).json({ message: 'Account creato. Controlla la mail per verificare l\'account', userId: user._id });
   } catch (err) {
     res.status(500).json({ message: 'Errore server', error: err.message });
   }
@@ -38,6 +93,10 @@ exports.login = async (req, res) => {
 
     if (!user.isActive) {
       return res.status(403).json({ message: 'Account bloccato' });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ message: 'Email non verificata' });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -91,15 +150,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: process.env.SMTP_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
+    const transporter = createTransporter();
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/reset-password.html?token=${resetToken}`;
 
@@ -125,6 +176,51 @@ exports.forgotPassword = async (req, res) => {
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ message: 'Errore server', error: err.message });
+  }
+};
+
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000';
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(400).json({ message: 'Token mancante' });
+      }
+      return res.redirect(`${baseUrl}/pages/verify-email.html?status=missing`);
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({
+      emailVerificationToken: tokenHash,
+      emailVerificationExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000';
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(400).json({ message: 'Token non valido o scaduto' });
+      }
+      return res.redirect(`${baseUrl}/pages/verify-email.html?status=invalid`);
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.save();
+
+    const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000';
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.json({ message: 'Email verificata con successo' });
+    }
+    return res.redirect(`${baseUrl}/pages/verify-email.html?status=success`);
+  } catch (err) {
+    console.error('Verify email error:', err);
+    const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000';
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(500).json({ message: 'Errore server', error: err.message });
+    }
+    return res.redirect(`${baseUrl}/pages/verify-email.html?status=error`);
   }
 };
 
@@ -161,6 +257,39 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: 'Password aggiornata con successo' });
   } catch (err) {
     console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Errore server', error: err.message });
+  }
+};
+
+exports.resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email richiesta' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'Email non trovata' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ message: 'Email gia verificata' });
+    }
+
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex');
+    const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    user.emailVerificationToken = verifyTokenHash;
+    user.emailVerificationExpires = verifyExpires;
+    await user.save();
+
+    await sendVerificationEmail(user, verifyToken);
+
+    res.json({ message: 'Email di verifica reinviata' });
+  } catch (err) {
+    console.error('Resend verification error:', err);
     res.status(500).json({ message: 'Errore server', error: err.message });
   }
 };

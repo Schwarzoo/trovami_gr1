@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/login.css" />
+  <title>Conferma Email — Trovami</title>
+</head>
+
+<body>
+  <div data-include="header"></div>
+
+  <main class="auth-page">
+    <div class="auth-container">
+      <div class="auth-card">
+        <h1>Conferma Email</h1>
+        <p id="statusMessage" style="color:var(--text-muted);margin-bottom:24px;"></p>
+
+        <a id="actionLink" href="/pages/login.html" class="btn btn--primary" style="text-align:center;">Vai al login</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/includes.js"></script>
+  <div data-include="footer"></div>
+
+  <script>
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    const status = getQueryParam('status');
+    const messageEl = document.getElementById('statusMessage');
+    const actionLink = document.getElementById('actionLink');
+
+    if (status === 'success') {
+      messageEl.style.color = 'var(--success-color)';
+      messageEl.textContent = 'Email verificata con successo. Ora puoi accedere.';
+    } else if (status === 'missing') {
+      messageEl.style.color = 'var(--error-color)';
+      messageEl.textContent = 'Link non valido. Richiedi una nuova email di verifica.';
+      actionLink.textContent = 'Torna al login';
+    } else if (status === 'invalid') {
+      messageEl.style.color = 'var(--error-color)';
+      messageEl.textContent = 'Token non valido o scaduto. Richiedi una nuova email di verifica.';
+      actionLink.textContent = 'Torna al login';
+    } else {
+      messageEl.style.color = 'var(--error-color)';
+      messageEl.textContent = 'Si e verificato un errore. Riprova piu tardi.';
+      actionLink.textContent = 'Torna al login';
+    }
+
+  </script>
+</body>
+
+</html>
