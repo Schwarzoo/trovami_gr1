@@ -4,6 +4,22 @@ function decodeJwt(token) {
     return JSON.parse(atob(payload));
   } catch (e) { return null; }
 }
+let mapInstance = null;
+let mapMarker = null;
+let editingId = null;
+let editingAnimalId = null;
+let currentEditStatus = 'ACTIVE';
+
+function setLastSeenMode(mode) {
+  const todayBtn = document.getElementById('lastSeenTodayBtn');
+  const customBtn = document.getElementById('lastSeenCustomBtn');
+  const dateInput = document.getElementById('modal-lastSeenDate');
+
+  const isCustom = mode === 'custom';
+  todayBtn.classList.toggle('is-selected', !isCustom);
+  customBtn.classList.toggle('is-selected', isCustom);
+  dateInput.style.display = isCustom ? 'block' : 'none';
+}
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -57,43 +73,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('logoutBtn').addEventListener('click', handleLogout);
 
-  document.getElementById('showCreate').addEventListener('click', () => {
-    const f = document.getElementById('createForm'); f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  });
-
-  document.getElementById('createSubmit').addEventListener('click', async () => {
-    const type = document.getElementById('new-type').value;
-    const description = document.getElementById('new-description').value;
-    const coordsRawInput = document.getElementById('new-coords').value.trim();
-    const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
-    const photo = document.getElementById('new-photo').value;
-    const species = document.getElementById('new-species').value || 'Sconosciuta';
-    const breed = document.getElementById('new-breed').value || '';
-
-    if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) { document.getElementById('createMsg').textContent = 'Coordinate non valide'; return; }
-
-    // create animal first
-    const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ species, breed, gender: 'Sconosciuto', color: 'sconosciuto', lunghezzaPelo: 'Senza', photos: photo ? [photo] : [] }) });
-    if (!animalRes.ok) { document.getElementById('createMsg').textContent = 'Errore creazione animale'; return; }
-    const animal = await animalRes.json();
-
-    const body = {
-      type,
-      animalId: animal._id,
-      description,
-      coordinates: [coordsRaw[0], coordsRaw[1]]
-    };
-
-    const res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: authHeader, body: JSON.stringify(body) });
-    const data = await res.json();
-    document.getElementById('createMsg').textContent = res.ok ? 'Annuncio creato' : (data.message || 'Errore');
-    if (res.ok) {
-      loadMyAnnouncements();
-      // hide inline create form
-      document.getElementById('createForm').style.display = 'none';
-      // notify map to refresh (other tabs/windows or map page)
-      try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
-    }
+  document.getElementById('showCreate').addEventListener('click', (e) => {
+    e.preventDefault();
+    openModalForCreate();
   });
 
 
@@ -168,8 +150,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Modal and map picker related event listeners (must run after DOM loaded)
   document.getElementById('pickOnMap').addEventListener('click', () => {
-    const mm = document.getElementById('modal-map'); mm.style.display = 'block';
-    initMapPicker();
+    showMapPicker();
+  });
+
+  document.getElementById('useMyLocation').addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      alert('Geolocalizzazione non disponibile nel browser.');
+      return;
+    }
+
+    showMapPicker();
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setCoordsFromLatLng(latitude, longitude);
+        requestAnimationFrame(() => mapInstance && mapInstance.invalidateSize());
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let msg = 'Errore nella geolocalizzazione.';
+        if (error.code === error.PERMISSION_DENIED) msg = 'Permesso negato per la geolocalizzazione.';
+        if (error.code === error.POSITION_UNAVAILABLE) msg = 'Posizione non disponibile.';
+        if (error.code === error.TIMEOUT) msg = 'Timeout della richiesta di posizione.';
+        alert(msg);
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+    );
   });
 
   document.getElementById('modal-photo').addEventListener('input', (e)=>{
@@ -177,6 +184,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const img = document.getElementById('modal-photo-preview');
     if (!url) { img.style.display='none'; img.src=''; return; }
     img.src = url; img.style.display = 'block';
+  });
+
+  document.getElementById('lastSeenTodayBtn').addEventListener('click', () => {
+    setLastSeenMode('today');
+  });
+
+  document.getElementById('lastSeenCustomBtn').addEventListener('click', () => {
+    setLastSeenMode('custom');
   });
 
   document.getElementById('modal-close').addEventListener('click', ()=> showModal(false));
@@ -204,17 +219,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       animalIdToUse = aData._id;
     } else {
       // create new animal
-      const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ species, breed, gender: 'Sconosciuto', color: 'sconosciuto', lunghezzaPelo: 'Senza', photos: photo ? [photo] : [] }) });
+      const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: authHeader, body: JSON.stringify({ species, breed, gender: 'Sconosciuto', color: 'sconosciuto', lunghezzaPelo: 'Senza', photos: photo ? [photo] : [] }) });
       if (!animalRes.ok) { alert('Errore creazione animale'); return; }
       const animal = await animalRes.json();
       animalIdToUse = animal._id;
     }
 
-    const lastSeenDate = document.getElementById('modal-lastSeenDate').value || null;
+    const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
+    const customDate = document.getElementById('modal-lastSeenDate').value;
+    let lastSeenDate = null;
+    if (lastSeenMode === 'today') {
+      lastSeenDate = new Date().toISOString();
+    } else if (customDate) {
+      lastSeenDate = new Date(customDate).toISOString();
+    }
     const isCurrentlyThere = document.getElementById('modal-isCurrentlyThere').checked;
     const animalBehaviour = document.getElementById('modal-animalBehaviour').value || null;
     const healthCondition = document.getElementById('modal-healthCondition').value || null;
-    const status = document.getElementById('modal-status').value || 'ACTIVE';
+    const status = editingId ? (currentEditStatus || 'ACTIVE') : 'ACTIVE';
 
     const body = {
       type,
@@ -245,9 +267,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
   });
 
-  // open create modal when clicking create
-  document.getElementById('showCreate').addEventListener('click', (e) => { e.preventDefault(); openModalForCreate(); });
-
   // delegate edit buttons to open modal with data
   document.addEventListener('click', async (e) => {
     const el = e.target;
@@ -263,10 +282,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Modal and map picker logic
-let mapInstance = null;
-let mapMarker = null;
-let editingId = null;
-let editingAnimalId = null;
 
 function normalizeCoordsFromInput(input) {
   if (!input) return null;
@@ -355,7 +370,9 @@ function decimalToDMS(dec, type) {
 
 function openModalForCreate() {
   editingId = null;
+  currentEditStatus = 'ACTIVE';
   document.getElementById('modal-title').textContent = 'Nuovo annuncio';
+  document.getElementById('modal-save').textContent = 'Pubblica';
   document.getElementById('modal-type').value = 'LostAnimal';
   document.getElementById('modal-description').value = '';
   document.getElementById('modal-species').value = '';
@@ -363,18 +380,21 @@ function openModalForCreate() {
   document.getElementById('modal-photo').value = '';
   document.getElementById('modal-photo-preview').style.display = 'none';
   document.getElementById('modal-coords').value = '';
+  setLastSeenMode('today');
   document.getElementById('modal-lastSeenDate').value = '';
+  document.getElementById('modal-lastSeenDate').style.display = 'none';
   document.getElementById('modal-isCurrentlyThere').checked = false;
   document.getElementById('modal-animalBehaviour').value = 'indifferente';
   document.getElementById('modal-healthCondition').value = 'in salute';
-  document.getElementById('modal-status').value = 'ACTIVE';
   showModal(true);
 }
 
 function openModalForEdit(ann) {
   editingId = ann._id;
   editingAnimalId = ann.animalId?._id || ann.animalId || null;
+  currentEditStatus = ann.status || 'ACTIVE';
   document.getElementById('modal-title').textContent = 'Modifica annuncio';
+  document.getElementById('modal-save').textContent = 'Modifica';
   document.getElementById('modal-type').value = ann.type || 'LostAnimal';
   document.getElementById('modal-description').value = ann.description || '';
   document.getElementById('modal-species').value = ann.animalId?.species || '';
@@ -389,18 +409,24 @@ function openModalForEdit(ann) {
     document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
   }
   // populate the extra fields if present
-  document.getElementById('modal-lastSeenDate').value = ann.lastSeenDate ? new Date(ann.lastSeenDate).toISOString().slice(0,10) : '';
+  if (ann.lastSeenDate) {
+    document.getElementById('modal-lastSeenDate').value = new Date(ann.lastSeenDate).toISOString().slice(0,10);
+    setLastSeenMode('custom');
+  } else {
+    document.getElementById('modal-lastSeenDate').value = '';
+    setLastSeenMode('today');
+  }
   document.getElementById('modal-isCurrentlyThere').checked = !!ann.isCurrentlyThere;
   document.getElementById('modal-animalBehaviour').value = ann.animalBehaviour || 'indifferente';
   document.getElementById('modal-healthCondition').value = ann.healthCondition || 'in salute';
-  document.getElementById('modal-status').value = ann.status || 'ACTIVE';
   showModal(true);
 }
 
 function showModal(visible) {
   const overlay = document.getElementById('modal-overlay');
   overlay.style.display = visible ? 'flex' : 'none';
-  if (visible) initMapPicker(); else destroyMapPicker();
+  document.body.style.overflow = visible ? 'hidden' : '';
+  if (!visible) destroyMapPicker();
 }
 
 function initMapPicker() {
@@ -409,10 +435,9 @@ function initMapPicker() {
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(mapInstance);
   mapInstance.on('click', function(e){
     const { lat, lng } = e.latlng;
-    setMarker(lng, lat);
-    // set coords in DMS format for user clarity
-    document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
+    setCoordsFromLatLng(lat, lng);
   });
+  requestAnimationFrame(() => mapInstance.invalidateSize());
 }
 
 function destroyMapPicker() {
@@ -429,77 +454,21 @@ function setMarker(lng, lat){
   if (mapMarker) mapMarker.setLatLng([lat,lng]); else mapMarker = L.marker([lat,lng]).addTo(mapInstance);
   mapInstance.setView([lat,lng], 15);
   document.getElementById('modal-map').style.display = 'block';
+  requestAnimationFrame(() => mapInstance && mapInstance.invalidateSize());
 }
 
-document.getElementById('pickOnMap').addEventListener('click', () => {
-  const mm = document.getElementById('modal-map'); mm.style.display = 'block';
-  initMapPicker();
-});
+function setCoordsFromLatLng(lat, lng) {
+  setMarker(lng, lat);
+  // set coords in DMS format for user clarity
+  document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
+}
 
-document.getElementById('modal-photo').addEventListener('input', (e)=>{
-  const url = e.target.value.trim();
-  const img = document.getElementById('modal-photo-preview');
-  if (!url) { img.style.display='none'; img.src=''; return; }
-  img.src = url; img.style.display = 'block';
-});
-
-document.getElementById('modal-close').addEventListener('click', ()=> showModal(false));
-document.getElementById('modal-cancel').addEventListener('click', ()=> showModal(false));
-
-// Save from modal: create or update
-document.getElementById('modal-save').addEventListener('click', async () => {
-  const type = document.getElementById('modal-type').value;
-  const description = document.getElementById('modal-description').value;
-  const species = document.getElementById('modal-species').value || 'Sconosciuta';
-  const breed = document.getElementById('modal-breed').value || '';
-  const photo = document.getElementById('modal-photo').value;
-  const coordsRawInput = document.getElementById('modal-coords').value.trim();
-  const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
-
-  if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) { alert('Inserisci coordinate valide'); return; }
-
-  // create or update animal then announcement
-  let animalIdToUse = null;
-  if (editingId && editingAnimalId) {
-    // update existing animal
-    const aRes = await fetch(`http://localhost:3000/api/animals/${editingAnimalId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ species, breed, photos: photo ? [photo] : [] }) });
-    if (!aRes.ok) { alert('Errore aggiornamento animale'); return; }
-    const aData = await aRes.json();
-    animalIdToUse = aData._id;
+function showMapPicker() {
+  const mapEl = document.getElementById('modal-map');
+  mapEl.style.display = 'block';
+  if (!mapInstance) {
+    initMapPicker();
   } else {
-    // create new animal
-    const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ species, breed, gender: 'Sconosciuto', color: 'sconosciuto', lunghezzaPelo: 'Senza', photos: photo ? [photo] : [] }) });
-    if (!animalRes.ok) { alert('Errore creazione animale'); return; }
-    const animal = await animalRes.json();
-    animalIdToUse = animal._id;
+    mapInstance.invalidateSize();
   }
-
-  const body = { type, animalId: animalIdToUse, description, coordinates: [coordsRaw[0], coordsRaw[1]] };
-
-  if (!editingId) {
-    const res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: authHeader, body: JSON.stringify(body) });
-    if (!res.ok) { alert('Errore creazione annuncio'); return; }
-  } else {
-    const res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ ...body, description }) });
-    if (!res.ok) { alert('Errore aggiornamento annuncio'); return; }
-  }
-
-  showModal(false);
-  loadMyAnnouncements();
-  try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
-});
-
-// open create modal when clicking create
-document.getElementById('showCreate').addEventListener('click', (e) => { e.preventDefault(); openModalForCreate(); });
-
-// delegate edit buttons to open modal with data
-document.addEventListener('click', async (e) => {
-  const el = e.target;
-  if (el.classList.contains('edit')) {
-    const id = el.dataset.id;
-    const res = await fetch(`http://localhost:3000/api/announcements/${id}`);
-    if (!res.ok) { alert('Errore caricamento annuncio'); return; }
-    const ann = await res.json();
-    openModalForEdit(ann);
-  }
-});
+}
