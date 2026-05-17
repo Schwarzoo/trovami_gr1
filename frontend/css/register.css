@@ -20,7 +20,8 @@ body {
 }
 
 .auth-card {
-  width: min(100%, 420px);
+  width: min(100%, 440px);
+  box-sizing: border-box;
   position: relative;
   z-index: 1;
   display: flex;
@@ -125,4 +126,14 @@ body {
   .auth-card h1 {
     font-size: 1.7rem;
   }
+}
+
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.is-hidden {
+  display: none;
 }

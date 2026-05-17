@@ -7,10 +7,13 @@ const userSchema = new mongoose.Schema({
     passwordHash: { type: String, required: true },
     phoneNumber:  { type: String, default: null },
     isActive:     { type: Boolean, default: true },
+    isEmailVerified: { type: Boolean, default: false },
     role:         { type: String, enum: ['Segnalatore', 'Ricercatore', 'Shelter', 'Administrator'], default: 'Segnalatore' },
     sessionToken: { type: String, default: null},
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
+    emailVerificationToken: { type: String, default: null },
+    emailVerificationExpires: { type: Date, default: null },
 
     shelterData: {
         shelterName:    { type: String },
