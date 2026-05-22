@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Announcement = require('../models/Announcement');
 
 exports.getMe = async (req, res) => {
   try {
@@ -24,15 +25,43 @@ exports.updateMe = async (req, res) => {
   }
 };
 
-exports.deleteMe = async (req, res) => {
-  try {
-    console.log('DELETE /api/users/me called for user=', req.user);
-    // Optionally: cascade-delete user resources (announcements, animals) here
-    await User.findByIdAndDelete(req.user.userId);
-    console.log('User deleted:', req.user.userId);
-    res.json({ message: 'Account eliminato' });
-  } catch (err) {
-    console.error('Errore in deleteMe:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
-  }
+
+const {
+   removeAnnouncementCascade
+} = require('./announcementController');
+
+exports.deleteMe = async(req,res)=>{
+
+    try{
+
+        const userId = req.user.userId;
+
+        const announcements =
+            await Announcement.find({
+                publisherId:userId
+            });
+
+        for(const ann of announcements){
+
+            await removeAnnouncementCascade(
+                ann._id
+            );
+        }
+
+        await User.findByIdAndDelete(
+            userId
+        );
+
+        res.json({
+            success:true
+        });
+
+    }catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message:err.message
+        });
+    }
 };
