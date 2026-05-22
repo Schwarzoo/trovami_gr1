@@ -8,3 +8,4 @@ router.put('/me', authMiddleware, updateMe);
 router.delete('/me', authMiddleware, deleteMe);
 
 module.exports = router;
+

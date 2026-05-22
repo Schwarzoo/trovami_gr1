@@ -1,5 +1,6 @@
 const Announcement = require('../models/Announcement');
 const Animal = require('../models/Animal');
+const mongoose = require('mongoose');
 
 function normalizeCoordinates(input) {
   // accept array [a,b] or string 'a,b'
@@ -54,37 +55,79 @@ exports.getAnnouncements = async (req, res) => {
 };
 
 // POST /api/announcements
-exports.createAnnouncement = async (req, res) => {
-  try {
-    const {
-      type, animalId, description,
-      coordinates,   // [lng, lat] OR possibly [lat, lng]
-      lastSeenDate, isCurrentlyThere, animalBehaviour, healthCondition
-    } = req.body;
+exports.createAnnouncement = async (req,res)=>{
 
-    const coords = normalizeCoordinates(coordinates);
-    if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
+    try{
 
-    const announcement = new Announcement({
-      type,
-      publisherId: req.user.userId,  // viene dal middleware auth
-      animalId,
-      description,
-      location: {
-        type: 'Point',
-        coordinates: coords   // GeoJSON vuole [longitudine, latitudine]
-      },
-      lastSeenDate,
-      isCurrentlyThere,
-      animalBehaviour,
-      healthCondition
-    });
+        const {
+            type,
+            animalId,
+            description,
+            coordinates,
+            lastSeenDate,
+            isCurrentlyThere,
+            animalBehaviour,
+            healthCondition
+        } = req.body;
 
-    await announcement.save();
-    res.status(201).json(announcement);
-  } catch (err) {
-    res.status(400).json({ message: 'Errore nella creazione', error: err.message });
-  }
+        const animal =
+            await Animal.findById(
+                animalId
+            );
+
+        if(!animal){
+            return res.status(404).json({
+                message:'Animale non trovato'
+            });
+        }
+
+        const coords =
+            normalizeCoordinates(
+                coordinates
+            );
+
+        if(!coords){
+            return res.status(400).json({
+                message:'Coordinate non valide'
+            });
+        }
+
+        const announcement =
+            new Announcement({
+
+                type,
+                publisherId:req.user.userId,
+                animalId:animal._id,
+                description,
+
+                location:{
+                    type:'Point',
+                    coordinates:coords
+                },
+
+                lastSeenDate,
+                isCurrentlyThere,
+                animalBehaviour,
+                healthCondition,
+                status:'ACTIVE'
+            });
+
+        await announcement.save();
+
+        res.status(201).json(
+            announcement
+        );
+
+    }catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message:err.message
+        });
+
+    }
+
 };
 
 // GET /api/announcements/:id
@@ -149,22 +192,79 @@ exports.changeStatus = async (req, res) => {
   }
 };
 
-// DELETE /api/announcements/:id
-exports.deleteAnnouncement = async (req, res) => {
-  try {
-    console.log('DELETE /api/announcements/:id called with id=', req.params.id, 'user=', req.user);
-    const ann = await Announcement.findById(req.params.id);
-    console.log('Announcement fetched:', !!ann);
-    if (!ann) return res.status(404).json({ message: 'Annuncio non trovato' });
-  const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : ann.publisherId.toString();
-  if (publisherIdStr !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
 
-  // use model-level delete to be compatible with Mongoose versions where document.remove() may not exist
-  await Announcement.findByIdAndDelete(req.params.id);
-  console.log('Announcement removed (by id):', req.params.id);
-  res.json({ message: 'Annuncio eliminato' });
-  } catch (err) {
-    console.error('Errore in deleteAnnouncement:', err);
-    res.status(500).json({ message: 'Errore eliminazione', error: err.message });
-  }
+// DELETE /api/announcements/:id
+
+
+async function removeAnnouncementCascade(announcementId){
+
+    const announcement =
+        await Announcement.findById(announcementId)
+        .populate('animalId');
+
+    if(!announcement){
+        return false;
+    }
+
+    const animalId =
+        announcement.animalId?._id ||
+        announcement.animalId;
+
+    if(animalId){
+        await Animal.findByIdAndDelete(
+            animalId
+        );
+    }
+
+    await Announcement.findByIdAndDelete(
+        announcementId
+    );
+
+    return true;
+}
+
+exports.removeAnnouncementCascade =
+    removeAnnouncementCascade;
+
+
+exports.deleteAnnouncement = async(req,res)=>{
+
+    try{
+
+        const announcement =
+            await Announcement.findById(
+                req.params.id
+            );
+
+        if(!announcement){
+            return res.status(404).json({
+                message:'Annuncio non trovato'
+            });
+        }
+
+        if(
+            announcement.publisherId.toString()
+            !== req.user.userId
+        ){
+            return res.status(403).json({
+                message:'Non autorizzato'
+            });
+        }
+
+        await removeAnnouncementCascade(
+            req.params.id
+        );
+
+        res.json({
+            success:true
+        });
+
+    }catch(err){
+
+        console.error(err);
+
+        res.status(500).json({
+            message:err.message
+        });
+    }
 };

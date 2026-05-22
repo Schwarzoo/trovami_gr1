@@ -48,3 +48,26 @@ exports.updateAnimal = async (req, res) => {
     res.status(400).json({ message: 'Errore aggiornamento animal', error: err.message });
   }
 };
+
+// DELETE /api/animals/:id
+exports.deleteAnimal = async (req, res) => {
+  try {
+    const animalId = req.params.id;
+
+    // 1) controlla che sia un ObjectId valido
+    if (!mongoose.isValidObjectId(animalId)) {
+      return res.status(400).json({ message: "ID animale non valido" });
+    }
+
+    // 2) tenta cancellazione
+    const deleted = await Animal.findByIdAndDelete(animalId);
+    if (!deleted) {
+      return res.status(404).json({ message: "Animal non trovato" });
+    }
+
+    res.json({ message: "Animal eliminato", id: deleted._id });
+  } catch (err) {
+    console.error("Errore in deleteAnimal:", err);
+    res.status(500).json({ message: "Errore eliminazione animal", error: err.message });
+  }
+};
