@@ -188,17 +188,12 @@ function renderAnnouncements(announcements) {
   const isLost = a.type === 'LostAnimal';
   const date = new Date(a.date).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
 
-  // immagine o emoji
-  const hasImage = animal?.images?.length > 0;
+  // media placeholder (we'll try to fetch announcement photo and replace if present)
   const emoji = animal?.species?.toLowerCase().includes('gatt') ? '🐈' : '🐕';
-  const mediaBlock = hasImage
-    ? `<img src="${animal.images[0]}" alt="foto animale"
-            style="width:100%;height:110px;object-fit:cover;display:block;"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-       <div style="display:none;width:100%;height:110px;align-items:center;
-                   justify-content:center;background:#f5f5f5;font-size:42px;">${emoji}</div>`
-    : `<div style="width:100%;height:110px;background:#f5f5f5;
-                   display:flex;align-items:center;justify-content:center;font-size:42px;">${emoji}</div>`;
+  const mediaBlock = `
+    <div class="popup-media" data-ann-id="${a._id}" style="width:100%;height:110px;overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:42px;">
+      <span>${emoji}</span>
+    </div>`;
 
   const badgeStyle = isLost
     ? 'background:#FCEBEB;color:#A32D2D;'
@@ -242,6 +237,51 @@ function renderAnnouncements(announcements) {
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
+  // try to load announcement photo and update popup content if found
+  (async () => {
+    const photoUrl = `http://localhost:3000/api/announcements/${a._id}/photo`;
+    try {
+      const res = await fetch(photoUrl, { method: 'GET' });
+      if (!res.ok) throw new Error('no image');
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.startsWith('image')) throw new Error('not image');
+      const blob = await res.blob();
+      const imgUrl = URL.createObjectURL(blob);
+      // build a new media block with the image
+      const imgBlock = `<img src="${imgUrl}" style="width:100%;height:110px;object-fit:cover;display:block;"/>`;
+      // replace media block in popup HTML
+      const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
+      marker.getPopup().setContent(newPopup);
+      // store image url on marker for later revoke
+      marker._imgUrl = imgUrl;
+      // revoke object URL when popup closes to free memory
+      marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
+    } catch (err) {
+      // leave emoji placeholder
+    }
+  })();
+
+  // ensure we (re)fetch the image every time the popup opens (handles revoke on close)
+  marker.on('popupopen', async () => {
+    const photoUrl = `http://localhost:3000/api/announcements/${a._id}/photo`;
+    try {
+      const res = await fetch(photoUrl, { method: 'GET' });
+      if (!res.ok) throw new Error('no image');
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.startsWith('image')) throw new Error('not image');
+      const blob = await res.blob();
+      const imgUrl = URL.createObjectURL(blob);
+      const imgBlock = `<img src="${imgUrl}" style="width:100%;height:110px;object-fit:cover;display:block;"/>`;
+      const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
+      marker.getPopup().setContent(newPopup);
+      if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); }
+      marker._imgUrl = imgUrl;
+      // revoke when closed
+      marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
+    } catch (err) {
+      // keep placeholder
+    }
+  });
   window._tm_markers.push(marker);
   bounds.extend([lat, lng]);
   if (highlightId === a._id) {

@@ -36,7 +36,7 @@ function closeQuickAnnounceModal() {
 
 // Geolocation Handler
 function requestGeolocation() {
-  const locationDisplay = document.getElementById('qa-location-display');
+  const locationDisplay = document.getElementById('qa-location-status');
   
   if (!locationDisplay) return;
   if (!navigator.geolocation) {
@@ -115,7 +115,8 @@ async function handleQuickAnnounceSubmit(e) {
     description: formData.get('description') || '',
     healthCondition: formData.get('healthCondition'),
     animalBehaviour: formData.get('animalBehaviour') || 'indifferente',
-    coordinates: currentLocation.coordinates
+    coordinates: currentLocation.coordinates,
+    photo: formData.get('photo')
   };
 
   try {
@@ -174,14 +175,35 @@ async function submitQuickAnnounce(data) {
     lastSeenDate: new Date().toISOString()
   };
 
-  const announcementRes = await fetch('http://localhost:3000/api/announcements', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`
-    },
-    body: JSON.stringify(announcementPayload)
-  });
+  let announcementRes;
+  if (data.photo && data.photo.size > 0) {
+    const announcementForm = new FormData();
+    announcementForm.append('type', announcementPayload.type);
+    announcementForm.append('animalId', announcementPayload.animalId);
+    announcementForm.append('description', announcementPayload.description);
+    announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
+    announcementForm.append('healthCondition', announcementPayload.healthCondition);
+    announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
+    announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
+    announcementForm.append('photo', data.photo);
+
+    announcementRes = await fetch('http://localhost:3000/api/announcements', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: announcementForm
+    });
+  } else {
+    announcementRes = await fetch('http://localhost:3000/api/announcements', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify(announcementPayload)
+    });
+  }
 
   if (!announcementRes.ok) {
     const errorData = await announcementRes.json();

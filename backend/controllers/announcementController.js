@@ -1,6 +1,7 @@
 const Announcement = require('../models/Announcement');
 const Animal = require('../models/Animal');
 const mongoose = require('mongoose');
+const sharp = require('sharp');
 
 function normalizeCoordinates(input) {
   // accept array [a,b] or string 'a,b'
@@ -44,6 +45,7 @@ exports.getAnnouncements = async (req, res) => {
         }
 
         const announcements = await Announcement.find(filter)
+            .select('-photo')
             .populate('animalId')
             .populate('publisherId', 'username email phoneNumber') // 'name' non esiste nel modello User
             .sort({ createdAt: -1 });
@@ -69,6 +71,9 @@ exports.createAnnouncement = async (req,res)=>{
             animalBehaviour,
             healthCondition
         } = req.body;
+
+        // normalize boolean sent via form-data (may be 'true'/'false')
+        const isCurrentlyThereBool = (typeof isCurrentlyThere === 'string') ? (isCurrentlyThere === 'true') : !!isCurrentlyThere;
 
         const animal =
             await Animal.findById(
@@ -106,11 +111,25 @@ exports.createAnnouncement = async (req,res)=>{
                 },
 
                 lastSeenDate,
-                isCurrentlyThere,
+                isCurrentlyThere: isCurrentlyThereBool,
                 animalBehaviour,
                 healthCondition,
                 status:'ACTIVE'
             });
+
+            // if a file was uploaded via multer (field name 'photo'), store it in MongoDB
+            if (req.file && req.file.buffer) {
+                try {
+                    const processed = await sharp(req.file.buffer)
+                        .resize({ width: 1024, height: 1024, fit: 'inside' })
+                        .jpeg({ quality: 80 })
+                        .toBuffer();
+                    announcement.photo = { data: processed, contentType: 'image/jpeg' };
+                } catch (err) {
+                    // fallback to raw buffer if processing fails
+                    announcement.photo = { data: req.file.buffer, contentType: req.file.mimetype };
+                }
+            }
 
         await announcement.save();
 
@@ -134,6 +153,7 @@ exports.createAnnouncement = async (req,res)=>{
 exports.getAnnouncementById = async (req, res) => {
     try {
         const announcement = await Announcement.findById(req.params.id)
+            .select('-photo')
             .populate('animalId')
             .populate('publisherId', 'username email phoneNumber');
 
@@ -144,6 +164,18 @@ exports.getAnnouncementById = async (req, res) => {
         res.json(announcement);
     } catch (err) {
         res.status(500).json({ message: "Errore nel recupero dell'annuncio", error: err.message });
+    }
+};
+
+// GET /api/announcements/:id/photo  - serve binary image if present
+exports.getAnnouncementPhoto = async (req, res) => {
+    try {
+        const announcement = await Announcement.findById(req.params.id).select('photo');
+        if (!announcement || !announcement.photo || !announcement.photo.data) return res.status(404).json({ message: 'Foto non trovata' });
+        res.contentType(announcement.photo.contentType || 'image/jpeg');
+        res.send(announcement.photo.data);
+    } catch (err) {
+        res.status(500).json({ message: 'Errore recupero foto', error: err.message });
     }
 };
 
@@ -164,9 +196,26 @@ exports.updateAnnouncement = async (req, res) => {
         if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
         ann.location = { type: 'Point', coordinates: coords };
       } else ann[k] = req.body[k];
+
+            if (k === 'isCurrentlyThere') {
+                ann.isCurrentlyThere = (typeof req.body[k] === 'string') ? (req.body[k] === 'true') : !!req.body[k];
+            }
     }
 
-    await ann.save();
+        // if a new photo file was uploaded, replace stored photo
+        if (req.file && req.file.buffer) {
+            try {
+                const processed = await sharp(req.file.buffer)
+                    .resize({ width: 1024, height: 1024, fit: 'inside' })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                ann.photo = { data: processed, contentType: 'image/jpeg' };
+            } catch (err) {
+                ann.photo = { data: req.file.buffer, contentType: req.file.mimetype };
+            }
+        }
+
+        await ann.save();
     res.json(ann);
   } catch (err) {
     res.status(500).json({ message: 'Errore aggiornamento', error: err.message });

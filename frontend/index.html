@@ -149,6 +149,18 @@
               <textarea id="qa-description" name="description" placeholder="Descrivi la situazione, dove è stato visto l'animale, qualsiasi dettaglio utile..."></textarea>
             </div>
 
+            <div class="form-group">
+              <label for="qa-photo">Foto (opzionale)</label>
+              <input type="file" id="qa-photo" name="photo" accept="image/*" />
+              <span class="form-hint">Seleziona un'immagine per rendere la segnalazione più utile.</span>
+            </div>
+
+            <div class="form-group">
+              <label>Posizione</label>
+              <div id="qa-location-status" class="location-status">Richiedendo la posizione...</div>
+              <span class="form-hint">Il browser chiederà automaticamente il permesso per la geolocalizzazione.</span>
+            </div>
+
           </fieldset>
 
           <div class="form-actions">

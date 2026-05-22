@@ -49,7 +49,8 @@ function buildCard(ann) {
         ? `<div class="card-distance">${ann._distance < 1000 ? `${Math.round(ann._distance)} m` : `${(ann._distance / 1000).toFixed(1)} km`} da te</div>`
         : '';
 
-    const photo = animal?.photos?.[0] || null;
+    // try announcement photo endpoint first
+    const photoUrl = `http://localhost:3000/api/announcements/${ann._id}/photo`;
     const date = new Date(ann.date).toLocaleDateString('it-IT', {
         day: '2-digit', month: 'short', year: 'numeric'
     });
@@ -60,10 +61,7 @@ function buildCard(ann) {
 
     card.innerHTML = `
         <div class="card-image">
-            ${photo
-                ? `<img src="${photo}" alt="${animal?.species || 'Animale'}" loading="lazy">`
-                : `<div class="card-image-placeholder"><span>${animal?.species?.[0] || '?'}</span></div>`
-            }
+            <div class="card-image-placeholder"><span>…</span></div>
             <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
                 ${isLost ? 'Smarrito' : 'Avvistato'}
             </span>
@@ -85,6 +83,28 @@ function buildCard(ann) {
     `;
 
     card.addEventListener('click', () => openModal(ann));
+
+    (async () => {
+        const container = card.querySelector('.card-image');
+        try {
+            const res = await fetch(photoUrl, { method: 'GET' });
+            if (!res.ok) throw new Error('no image');
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.startsWith('image')) throw new Error('not image');
+            const blob = await res.blob();
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(blob);
+            img.alt = animal?.species || 'Animale';
+            img.loading = 'lazy';
+            img.onload = () => { URL.revokeObjectURL(img.src); };
+            const placeholder = container.querySelector('.card-image-placeholder');
+            if (placeholder) placeholder.replaceWith(img);
+        } catch (err) {
+            const placeholder = container.querySelector('.card-image-placeholder');
+            if (placeholder) placeholder.innerHTML = `<span>${animal?.species?.[0] || '?'}</span>`;
+        }
+    })();
+
     return card;
 }
 
@@ -111,11 +131,27 @@ async function openModal(ann) {
     document.getElementById('modal-title').textContent =
         isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`;
 
-    const photos = animal?.photos || [];
-    const gallery = document.getElementById('modal-gallery');
-    gallery.innerHTML = photos.length
-        ? photos.map(p => `<img src="${p}" alt="foto animale">`).join('')
-        : `<div class="modal-no-photo">Nessuna foto disponibile</div>`;
+        const gallery = document.getElementById('modal-gallery');
+        // try to load announcement photo from backend endpoint and fallback to text if missing
+        gallery.innerHTML = '<div class="modal-spinner">…</div>';
+        (async () => {
+            const photoUrl = `http://localhost:3000/api/announcements/${ann._id}/photo`;
+            try {
+                const res = await fetch(photoUrl, { method: 'GET' });
+                if (!res.ok) throw new Error('no image');
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.startsWith('image')) throw new Error('not image');
+                const blob = await res.blob();
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(blob);
+                img.alt = 'foto animale';
+                img.onload = () => { URL.revokeObjectURL(img.src); };
+                gallery.innerHTML = '';
+                gallery.appendChild(img);
+            } catch (err) {
+                gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
+            }
+        })();
 
     document.getElementById('modal-body').innerHTML = `
         <dl class="detail-list">

@@ -16,7 +16,8 @@ async function fetchHomeAnnouncements() {
 function buildHomeCard(ann) {
   const animal = ann.animalId;
   const isLost = ann.type === 'LostAnimal';
-  const photo = animal?.photos?.[0] || animal?.images?.[0] || null;
+  // try to use announcement-specific photo endpoint, fallback to placeholder
+  const photoUrl = `http://localhost:3000/api/announcements/${ann._id}/photo`;
   const date = new Date(ann.date).toLocaleDateString('it-IT', {
     day: '2-digit',
     month: 'short',
@@ -26,13 +27,9 @@ function buildHomeCard(ann) {
   const card = document.createElement('article');
   card.className = 'card';
   const description = ann.description || '';
-
   card.innerHTML = `
     <div class="card-image">
-      ${photo
-        ? `<img src="${photo}" alt="${animal?.species || 'Animale'}" loading="lazy">`
-        : `<div class="card-image-placeholder"><span>${animal?.species?.[0] || '?'}</span></div>`
-      }
+      <div class="card-image-placeholder"><span>…</span></div>
       <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
         ${isLost ? 'Smarrito' : 'Avvistato'}
       </span>
@@ -46,6 +43,27 @@ function buildHomeCard(ann) {
       <p class="card-description">${description}</p>
     </div>
   `;
+
+  (async () => {
+    const container = card.querySelector('.card-image');
+    try {
+      const res = await fetch(photoUrl, { method: 'GET' });
+      if (!res.ok) throw new Error('no image');
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.startsWith('image')) throw new Error('not image');
+      const blob = await res.blob();
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(blob);
+      img.alt = animal?.species || 'Animale';
+      img.loading = 'lazy';
+      img.onload = () => { URL.revokeObjectURL(img.src); };
+      const placeholder = container.querySelector('.card-image-placeholder');
+      if (placeholder) placeholder.replaceWith(img);
+    } catch (err) {
+      const placeholder = container.querySelector('.card-image-placeholder');
+      if (placeholder) placeholder.innerHTML = `<span>${animal?.species?.[0] || '?'}</span>`;
+    }
+  })();
 
   return card;
 }
