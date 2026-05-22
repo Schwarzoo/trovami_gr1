@@ -8,7 +8,7 @@ function getQueryParam(name) {
 
 const alreadyToken = localStorage.getItem('token');
 if (alreadyToken) {
-  const nxt = getQueryParam('next') || './map.html';
+  const nxt = getQueryParam('next') || './profile.html';
   window.location.href = nxt;
 }
 
@@ -35,5 +35,5 @@ form.addEventListener('submit', async (e) => {
   localStorage.setItem('token', data.token);
   localStorage.setItem('role', data.role);
   const next = getQueryParam('next');
-  window.location.href = next || './map.html';
+  window.location.href = next || './profile.html';
 });
