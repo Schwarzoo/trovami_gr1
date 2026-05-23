@@ -11,7 +11,6 @@ exports.createAnimal = async (req, res) => {
       lunghezzaPelo,
       distinctiveFeatures,
       microchipId,
-      photos,
       shelterId
     } = req.body;
 
@@ -23,7 +22,7 @@ exports.createAnimal = async (req, res) => {
       lunghezzaPelo,
       distinctiveFeatures,
       microchipId,
-      photos,
+      
       shelterId
     });
 
@@ -38,7 +37,7 @@ exports.createAnimal = async (req, res) => {
 exports.updateAnimal = async (req, res) => {
   try {
     const updates = {};
-    const allowed = ['species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','microchipId','photos','shelterId'];
+    const allowed = ['species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','microchipId','shelterId'];
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
     const animal = await Animal.findByIdAndUpdate(req.params.id, updates, { new: true });

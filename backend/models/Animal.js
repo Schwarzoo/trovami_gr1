@@ -8,7 +8,6 @@ const animalSchema = new mongoose.Schema({
     lunghezzaPelo:      { type: String, enum: ['Corto', 'Lungo', 'Medio', 'Senza'] },
     distinctiveFeatures: { type: String }, // di segni particolari
     microchipId:        { type: String, default: null }, 
-    photos:             [{ type: String }], //url foto
     shelterId:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null } // Se l'animale è in un rifugio[cite: 2]
 }, { timestamps: true });
 

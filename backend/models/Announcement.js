@@ -44,6 +44,13 @@ const announcementSchema = new mongoose.Schema({
         default: 'in salute'
     }
 
+    ,
+    // optional photo stored in MongoDB (binary)
+    photo: {
+        data: Buffer,
+        contentType: String
+    }
+
 }, { timestamps: true });
 
 // Indice per le query geografiche (Mappa)

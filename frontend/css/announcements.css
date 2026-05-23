@@ -228,6 +228,24 @@ button#nearby-button:disabled {
     overflow: hidden;
     margin-bottom: .75rem;
 }
+.card-details {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: .25rem .7rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: .75rem;
+}
+.card-detail-label {
+    font-weight: 600;
+    color: var(--text);
+}
+.card-details span:nth-child(even) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .card-tags { display: flex; flex-wrap: wrap; gap: .4rem; }
 .tag {
     background: var(--bg);
