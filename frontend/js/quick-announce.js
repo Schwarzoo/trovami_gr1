@@ -112,7 +112,7 @@ async function handleQuickAnnounceSubmit(e) {
     color: formData.get('color'),
     lunghezzaPelo: formData.get('lunghezzaPelo') || null,
     distinctiveFeatures: formData.get('distinctiveFeatures') || '',
-    description: formData.get('description') || '',
+    description: formData.get('description') || 'Nessuna descrizione',
     healthCondition: formData.get('healthCondition'),
     animalBehaviour: formData.get('animalBehaviour') || 'indifferente',
     coordinates: currentLocation.coordinates,

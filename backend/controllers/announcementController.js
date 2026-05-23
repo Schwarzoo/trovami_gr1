@@ -7,7 +7,17 @@ function normalizeCoordinates(input) {
   // accept array [a,b] or string 'a,b'
   let parts = null;
   if (Array.isArray(input)) parts = input.map(Number);
-  else if (typeof input === 'string') parts = input.split(',').map(s => Number(s.trim()));
+  else if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        return normalizeCoordinates(JSON.parse(trimmed));
+      } catch (err) {
+        return null;
+      }
+    }
+    parts = trimmed.split(',').map(s => Number(s.trim()));
+  }
   else if (input && input.coordinates && Array.isArray(input.coordinates)) parts = input.coordinates.map(Number);
   else return null;
 
@@ -66,6 +76,7 @@ exports.createAnnouncement = async (req,res)=>{
             animalId,
             description,
             coordinates,
+            location,
             lastSeenDate,
             isCurrentlyThere,
             animalBehaviour,
@@ -88,7 +99,7 @@ exports.createAnnouncement = async (req,res)=>{
 
         const coords =
             normalizeCoordinates(
-                coordinates
+                coordinates || location
             );
 
         if(!coords){
@@ -103,7 +114,7 @@ exports.createAnnouncement = async (req,res)=>{
                 type,
                 publisherId:req.user.userId,
                 animalId:animal._id,
-                description,
+                description: description || 'Nessuna descrizione',
 
                 location:{
                     type:'Point',
@@ -195,6 +206,8 @@ exports.updateAnnouncement = async (req, res) => {
         const coords = normalizeCoordinates(req.body[k].coordinates || req.body[k]);
         if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
         ann.location = { type: 'Point', coordinates: coords };
+      } else if (k === 'description') {
+        ann.description = req.body[k] || 'Nessuna descrizione';
       } else ann[k] = req.body[k];
 
             if (k === 'isCurrentlyThere') {

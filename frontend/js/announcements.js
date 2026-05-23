@@ -3,6 +3,13 @@ const API_BASE = 'http://localhost:3000/api/announcements';
 let allAnnouncements = [];
 let currentLocation = null;
 let sortByProximity = false;
+const EMPTY_VALUE = '- -';
+
+function displayValue(value) {
+    if (value === null || value === undefined) return EMPTY_VALUE;
+    const text = String(value).trim();
+    return text ? text : EMPTY_VALUE;
+}
 
 // --- Fetch ---
 
@@ -71,13 +78,13 @@ function buildCard(ann) {
                 <span class="card-species">${animal?.species || 'Specie sconosciuta'}</span>
                 <span class="card-date">${date}</span>
             </div>
-            <h3 class="card-breed">${animal?.breed || '—'}</h3>
+            <h3 class="card-breed">${displayValue(animal?.breed)}</h3>
             <p class="card-description">${ann.description}</p>
             ${distanceLabel}
-            <div class="card-tags">
-                ${animal?.color ? `<span class="tag">${animal.color}</span>` : ''}
-                ${animal?.gender ? `<span class="tag">${animal.gender}</span>` : ''}
-                ${ann.animalBehaviour ? `<span class="tag">${ann.animalBehaviour}</span>` : ''}
+            <div class="card-details">
+                <span class="card-detail-label">Colore</span><span>${displayValue(animal?.color)}</span>
+                <span class="card-detail-label">Salute</span><span>${displayValue(ann.healthCondition)}</span>
+                <span class="card-detail-label">Comportamento</span><span>${displayValue(ann.animalBehaviour)}</span>
             </div>
         </div>
     `;
@@ -155,15 +162,17 @@ async function openModal(ann) {
 
     document.getElementById('modal-body').innerHTML = `
         <dl class="detail-list">
-            <dt>Specie</dt><dd>${animal?.species || '—'}</dd>
-            <dt>Razza</dt><dd>${animal?.breed || '—'}</dd>
-            <dt>Colore</dt><dd>${animal?.color || '—'}</dd>
-            <dt>Sesso</dt><dd>${animal?.gender || '—'}</dd>
-            ${animal?.microchipId ? `<dt>Microchip</dt><dd>${animal.microchipId}</dd>` : ''}
-            ${animal?.distinctiveFeatures ? `<dt>Caratteristiche</dt><dd>${animal.distinctiveFeatures}</dd>` : ''}
+            <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
+            <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
+            <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
+            <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
+            <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
+            <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
+            <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
             ${locationInfo}
             <dt>Data</dt><dd>${date}</dd>
-            ${ann.healthCondition ? `<dt>Condizioni</dt><dd>${ann.healthCondition}</dd>` : ''}
+            <dt>Condizioni</dt><dd>${displayValue(ann.healthCondition)}</dd>
+            <dt>Comportamento</dt><dd>${displayValue(ann.animalBehaviour)}</dd>
         </dl>
         <p class="modal-description">${ann.description}</p>
         <div class="modal-contact">

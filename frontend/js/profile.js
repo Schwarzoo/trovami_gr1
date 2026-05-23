@@ -221,26 +221,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Save from modal: create or update
   document.getElementById('modal-save').addEventListener('click', async () => {
     const type = document.getElementById('modal-type').value;
-    const description = document.getElementById('modal-description').value;
-    const species = document.getElementById('modal-species').value || 'Sconosciuta';
-    const breed = document.getElementById('modal-breed').value || '';
+    const description = document.getElementById('modal-description').value.trim();
+    const species = document.getElementById('modal-species').value.trim();
+    const breed = document.getElementById('modal-breed').value.trim() || 'Non specificato';
+    const color = document.getElementById('modal-color').value.trim();
+    const gender = document.getElementById('modal-gender').value || 'Sconosciuto';
+    const lunghezzaPelo = document.getElementById('modal-lunghezzaPelo').value || null;
+    const distinctiveFeatures = document.getElementById('modal-distinctiveFeatures').value.trim();
     const photoFile = document.getElementById('modal-photo-file').files[0];
     const coordsRawInput = document.getElementById('modal-coords').value.trim();
     const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
 
+    if (!type || !species || !color) {
+      alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
+      return;
+    }
+
     if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) { alert('Inserisci coordinate valide'); return; }
+
+    const animalPayload = {
+      species,
+      breed,
+      gender,
+      color,
+      lunghezzaPelo,
+      distinctiveFeatures
+    };
 
     // create or update animal then announcement
     let animalIdToUse = null;
       if (editingId && editingAnimalId) {
       // update existing animal
-      const aRes = await fetch(`http://localhost:3000/api/animals/${editingAnimalId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ species, breed }) });
+      const aRes = await fetch(`http://localhost:3000/api/animals/${editingAnimalId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify(animalPayload) });
       if (!aRes.ok) { alert('Errore aggiornamento animale'); return; }
       const aData = await aRes.json();
       animalIdToUse = aData._id;
     } else {
       // create new animal
-      const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: authHeader, body: JSON.stringify({ species, breed, gender: 'Sconosciuto', color: 'sconosciuto', lunghezzaPelo: 'Senza' }) });
+      const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: authHeader, body: JSON.stringify(animalPayload) });
       if (!animalRes.ok) { alert('Errore creazione animale'); return; }
       const animal = await animalRes.json();
       animalIdToUse = animal._id;
@@ -262,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body = {
       type,
       animalId: animalIdToUse,
-      description,
+      description: description || 'Nessuna descrizione',
       lastSeenDate: lastSeenDate || undefined,
       isCurrentlyThere,
       animalBehaviour: animalBehaviour || undefined,
@@ -281,7 +299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fd = new FormData();
         fd.append('type', type);
         fd.append('animalId', animalIdToUse);
-        fd.append('description', description);
+        fd.append('description', body.description);
         fd.append('coordinates', loc.coordinates.join(','));
         if (lastSeenDate) fd.append('lastSeenDate', lastSeenDate);
         fd.append('isCurrentlyThere', isCurrentlyThere);
@@ -430,6 +448,10 @@ function openModalForCreate() {
   document.getElementById('modal-description').value = '';
   document.getElementById('modal-species').value = '';
   document.getElementById('modal-breed').value = '';
+  document.getElementById('modal-color').value = '';
+  document.getElementById('modal-gender').value = '';
+  document.getElementById('modal-lunghezzaPelo').value = '';
+  document.getElementById('modal-distinctiveFeatures').value = '';
   document.getElementById('modal-photo-file').value = '';
   document.getElementById('modal-photo-preview').style.display = 'none';
   document.getElementById('modal-coords').value = '';
@@ -452,15 +474,28 @@ function openModalForEdit(ann) {
   document.getElementById('modal-description').value = ann.description || '';
   document.getElementById('modal-species').value = ann.animalId?.species || '';
   document.getElementById('modal-breed').value = ann.animalId?.breed || '';
+  document.getElementById('modal-color').value = ann.animalId?.color || '';
+  document.getElementById('modal-gender').value = ann.animalId?.gender || '';
+  document.getElementById('modal-lunghezzaPelo').value = ann.animalId?.lunghezzaPelo || '';
+  document.getElementById('modal-distinctiveFeatures').value = ann.animalId?.distinctiveFeatures || '';
   const photo = ann.animalId?.photos?.[0] || '';
   // existing announcement photo is not loaded into the edit file input; user can upload a new file to replace it
   document.getElementById('modal-photo-file').value = '';
-  if (photo) { const el = document.getElementById('modal-photo-preview'); el.src = photo; el.style.display = 'block'; }
+  const preview = document.getElementById('modal-photo-preview');
+  if (photo) {
+    preview.src = photo;
+    preview.style.display = 'block';
+  } else {
+    preview.src = '';
+    preview.style.display = 'none';
+  }
   const coords = ann.location?.coordinates;
   if (coords) {
     // stored as [lng, lat] -> display as lat DMS, lng DMS
     const lng = coords[0]; const lat = coords[1];
     document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
+  } else {
+    document.getElementById('modal-coords').value = '';
   }
   // populate the extra fields if present
   if (ann.lastSeenDate) {

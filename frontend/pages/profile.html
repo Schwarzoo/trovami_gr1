@@ -93,11 +93,42 @@
 								<div class="form-grid">
 									<div class="field">
 										<label>Specie</label>
-										<input id="modal-species" placeholder="Es. Cane, Gatto" />
+										<input id="modal-species" placeholder="Es. Cane, Gatto" required />
 									</div>
 									<div class="field">
 										<label>Razza</label>
 										<input id="modal-breed" placeholder="Es. Labrador" />
+									</div>
+								</div>
+								<div class="form-grid">
+									<div class="field">
+										<label>Colore</label>
+										<input id="modal-color" placeholder="Es. Bianco, Nero, Marrone" required />
+									</div>
+									<div class="field">
+										<label>Genere</label>
+										<select id="modal-gender">
+											<option value="">-- Seleziona --</option>
+											<option value="Maschio">Maschio</option>
+											<option value="Femmina">Femmina</option>
+											<option value="Sconosciuto">Sconosciuto</option>
+										</select>
+									</div>
+								</div>
+								<div class="form-grid">
+									<div class="field">
+										<label>Lunghezza pelo</label>
+										<select id="modal-lunghezzaPelo">
+											<option value="">-- Seleziona --</option>
+											<option value="Corto">Corto</option>
+											<option value="Medio">Medio</option>
+											<option value="Lungo">Lungo</option>
+											<option value="Senza">Senza</option>
+										</select>
+									</div>
+									<div class="field">
+										<label>Segni particolari</label>
+										<textarea id="modal-distinctiveFeatures" placeholder="Es. collare rosso, cicatrice, zoppia..."></textarea>
 									</div>
 								</div>
 								<div class="form-grid">
