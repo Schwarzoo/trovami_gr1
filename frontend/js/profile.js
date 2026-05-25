@@ -65,7 +65,7 @@ function configureModalLabelsForAccount() {
   if (dateLabel) dateLabel.textContent = isRifugio ? 'Data' : 'Ultima data vista';
   if (positionSection) positionSection.style.display = isRifugio ? 'none' : '';
   if (microchipRow) microchipRow.style.display = isRifugio ? '' : 'none';
-  if (animalNameRow) animalNameRow.style.display = isRifugio ? '' : 'none';
+  if (animalNameRow) animalNameRow.style.display = '';
   if (positionHint) {
     positionHint.textContent = isRifugio
       ? 'Posizione del rifugio gia impostata. Puoi modificarla selezionando un altro punto.'
