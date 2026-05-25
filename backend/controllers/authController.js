@@ -38,6 +38,17 @@ async function sendVerificationEmail(user, rawToken) {
   await transporter.sendMail(mailOptions);
 }
 
+function duplicateAccountMessage(err) {
+  if (err?.code !== 11000) return null;
+  if (err.keyPattern?.email || err.keyValue?.email) return 'Email gia registrata';
+  if (err.keyPattern?.username || err.keyValue?.username) return 'Nome utente gia in uso';
+  return 'Account gia esistente';
+}
+
+function normalizeAccountRole(role) {
+  return typeof role === 'string' ? role.toLowerCase() : role;
+}
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password, phoneNumber, accountType, role, rifugioData } = req.body;
@@ -110,6 +121,10 @@ exports.register = async (req, res) => {
       rifugioStatus: user.rifugioStatus
     });
   } catch (err) {
+    const duplicateMessage = duplicateAccountMessage(err);
+    if (duplicateMessage) {
+      return res.status(400).json({ message: duplicateMessage });
+    }
     res.status(500).json({ message: 'Errore server', error: err.message });
   }
 };
@@ -135,6 +150,8 @@ exports.login = async (req, res) => {
     if (!valid) {
       return res.status(401).json({ message: 'Credenziali non valide' });
     }
+
+    user.role = normalizeAccountRole(user.role);
 
     const token = jwt.sign(
       { userId: user._id, role: user.role },

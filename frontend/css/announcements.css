@@ -339,6 +339,45 @@ button#nearby-button:disabled {
 
 #modal-body { padding: 0 1.5rem 1.5rem; }
 
+.loading-bar {
+    display: none;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+}
+
+.loading-bar.is-visible {
+    display: flex;
+}
+
+.loading-bar__track {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.loading-bar__fill {
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), #f3b37f);
+    animation: loadingBarMove 1.1s ease-in-out infinite;
+}
+
+.loading-bar__label {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+}
+
+@keyframes loadingBarMove {
+    0% { left: -40%; }
+    50% { left: 30%; }
+    100% { left: 100%; }
+}
+
 .detail-list {
     display: grid;
     grid-template-columns: auto 1fr;
