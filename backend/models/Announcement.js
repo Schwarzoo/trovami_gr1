@@ -36,6 +36,11 @@ const announcementSchema = new mongoose.Schema({
         default: 'ACTIVE'
     },
 
+    imageEmbedding: { 
+        type: [Number], 
+        default: null 
+    },
+
     lastSeenDate: { type: Date },
 
     // Campi specifici per Sighting (UC4)[cite: 1, 2]
