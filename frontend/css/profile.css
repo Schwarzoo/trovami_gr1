@@ -111,6 +111,12 @@
   align-items: start;
 }
 
+.profile-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .section-card {
   background: var(--surface);
   border: 1px solid var(--border);

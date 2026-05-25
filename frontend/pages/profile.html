@@ -41,6 +41,26 @@
 						<input id="phoneNumber" placeholder="Facoltativo" />
 					</div>
 
+					<div style="margin-top:4px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08);">
+						<h3 style="margin:0 0 10px 0;font-size:1rem;">Privacy contatti</h3>
+						<div class="field checkbox-row">
+							<label><input id="showEmail" type="checkbox" />Mostra email nei miei annunci</label>
+						</div>
+						<div class="field checkbox-row">
+							<label><input id="showPhone" type="checkbox" />Mostra telefono nei miei annunci</label>
+						</div>
+					</div>
+
+					<div style="margin-top:4px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08);">
+						<h3 style="margin:0 0 10px 0;font-size:1rem;">Notifiche</h3>
+						<div class="field checkbox-row">
+							<label><input id="emailOnComment" type="checkbox" />Ricevi email per nuovi commenti</label>
+						</div>
+						<div class="field checkbox-row">
+							<label><input id="soundOnSite" type="checkbox" />Suono notifiche sul sito</label>
+						</div>
+					</div>
+
 					<div style="display:flex;gap:8px;margin-top:8px;">
 						<button type="submit" class="btn btn--primary">Salva</button>
 						<span id="profileMessage" style="align-self:center;color:var(--text-muted);"></span>
@@ -54,12 +74,22 @@
 				</form>
 			</section>
 
-			<section id="my-announcements" class="section-card">
-				<h2>I miei annunci</h2>
-				<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
-				<div id="announcements-grid" style="margin-top:16px;"></div>
-		</div>
-		</section>
+			<div class="profile-right">
+				<section id="notifications-section" class="section-card">
+					<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+						<h2 style="margin:0;">Notifiche</h2>
+						<button id="notificationsReadAll" type="button" class="btn btn--ghost">Segna tutte lette</button>
+					</div>
+					<div id="notifications-empty" style="margin-top:10px;color:var(--text-muted);">Nessuna notifica</div>
+					<div id="notifications-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+				</section>
+
+				<section id="my-announcements" class="section-card">
+					<h2>I miei annunci</h2>
+					<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
+					<div id="announcements-grid" style="margin-top:16px;"></div>
+				</section>
+			</div>
 
 	</main>
 

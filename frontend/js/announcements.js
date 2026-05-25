@@ -11,6 +11,15 @@ function displayValue(value) {
     return text ? text : EMPTY_VALUE;
 }
 
+function escapeHtml(input) {
+    return String(input ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
 // --- Fetch ---
 
 async function fetchAnnouncements(params = {}) {
@@ -25,6 +34,48 @@ async function fetchAnnouncements(params = {}) {
         showError('Impossibile caricare gli annunci. Riprova più tardi.');
         return [];
     }
+}
+
+async function fetchAnnouncementById(id) {
+    try {
+        const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (err) {
+        return null;
+    }
+}
+
+async function postAnnouncementComment(id, text) {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('not logged in');
+
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}/comments`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ text })
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const msg = json?.message || 'Errore invio commento';
+        throw new Error(msg);
+    }
+    return json;
+}
+
+async function fetchPublicUser(userId) {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('not logged in');
+    const res = await fetch(`http://localhost:3000/api/users/${encodeURIComponent(userId)}/public`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.message || 'Errore caricamento contatti');
+    return json;
 }
 
 // --- Rendering ---
@@ -118,20 +169,24 @@ function buildCard(ann) {
 // --- Modal ---
 
 async function openModal(ann) {
-    const animal = ann.animalId;
-    const publisher = ann.publisherId;
-    const isLost = ann.type === 'LostAnimal';
     const isLoggedIn = !!localStorage.getItem('token'); // check auth
+    const full = await fetchAnnouncementById(ann._id);
+    const data = full || ann;
 
-    const date = new Date(ann.date).toLocaleDateString('it-IT', {
+    const animal = data.animalId;
+    const publisher = data.publisherId;
+    const isLost = data.type === 'LostAnimal';
+    const comments = Array.isArray(data.comments) ? data.comments : [];
+
+    const date = new Date(data.date).toLocaleDateString('it-IT', {
         day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
     let locationInfo = '';
-    const coords = ann.location?.coordinates;
+    const coords = data.location?.coordinates;
 
     if (coords?.length === 2) {
-        const link = `map.html?highlight=${encodeURIComponent(ann._id)}`;
+        const link = `map.html?highlight=${encodeURIComponent(data._id)}`;
         locationInfo = `<dt>Posizione</dt><dd><a class="position-link" href="${link}"><em>trovami</em></a></dd>`;
     }
 
@@ -160,6 +215,21 @@ async function openModal(ann) {
             }
         })();
 
+    const commentsHtml = renderCommentsHtml(comments);
+    const commentBoxHtml = isLoggedIn
+        ? `
+            <form class="comment-form" data-announcement-id="${escapeHtml(data._id)}">
+                <label class="comment-label" for="comment-text">Commento</label>
+                <textarea id="comment-text" class="comment-textarea" rows="3" maxlength="500" placeholder="Scrivi un aggiornamento (es. direzione)…"></textarea>
+                <div class="comment-actions">
+                    <span class="comment-hint">Max 500 caratteri</span>
+                    <button type="submit" class="comment-submit">Invia</button>
+                </div>
+                <div class="comment-error" role="status" aria-live="polite"></div>
+            </form>
+        `
+        : `<div class="comments-locked">🔒 Accedi per commentare</div>`;
+
     document.getElementById('modal-body').innerHTML = `
         <dl class="detail-list">
             <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
@@ -171,10 +241,22 @@ async function openModal(ann) {
             <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
             ${locationInfo}
             <dt>Data</dt><dd>${date}</dd>
-            <dt>Condizioni</dt><dd>${displayValue(ann.healthCondition)}</dd>
-            <dt>Comportamento</dt><dd>${displayValue(ann.animalBehaviour)}</dd>
+            <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
+            <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
         </dl>
-        <p class="modal-description">${ann.description}</p>
+        <p class="modal-description">${data.description}</p>
+
+        <section class="comments-section" aria-label="Commenti">
+            <div class="comments-header">
+                <h3>Commenti</h3>
+                <span class="comments-count">${comments.length}</span>
+            </div>
+            ${commentBoxHtml}
+            <div id="comments-list" class="comments-list">
+                ${commentsHtml}
+            </div>
+        </section>
+
         <div class="modal-contact">
             ${isLoggedIn
                 ? `<strong>Contatto:</strong>
@@ -186,8 +268,108 @@ async function openModal(ann) {
         </div>
     `;
 
+    const form = document.querySelector('.comment-form');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const textarea = form.querySelector('.comment-textarea');
+            const errorBox = form.querySelector('.comment-error');
+            const list = document.getElementById('comments-list');
+            const count = document.querySelector('.comments-count');
+
+            const text = (textarea?.value ?? '').trim();
+            if (!text) {
+                errorBox.textContent = 'Scrivi testo';
+                return;
+            }
+
+            errorBox.textContent = '';
+            form.querySelector('.comment-submit').disabled = true;
+
+            try {
+                const result = await postAnnouncementComment(data._id, text);
+                const updated = Array.isArray(result.comments) ? result.comments : [];
+                textarea.value = '';
+                if (list) list.innerHTML = renderCommentsHtml(updated);
+                if (count) count.textContent = String(updated.length);
+            } catch (err) {
+                errorBox.textContent = err.message || 'Errore invio commento';
+            } finally {
+                form.querySelector('.comment-submit').disabled = false;
+            }
+        });
+    }
+
+    // click username in comment -> show contacts
+    const modalBody = document.getElementById('modal-body');
+    if (modalBody && modalBody.dataset.commentContactsBound !== 'true') {
+      modalBody.dataset.commentContactsBound = 'true';
+      modalBody.addEventListener('click', async (e) => {
+        const btn = e.target?.closest?.('.comment-user-link');
+        if (!btn) return;
+        const userId = btn.getAttribute('data-user-id');
+        if (!userId) return;
+
+        const slotId = btn.getAttribute('data-slot-id');
+        const slot = slotId ? document.getElementById(slotId) : null;
+        if (!slot) return;
+
+        // toggle off
+        if (slot.dataset.loaded === 'true') {
+            slot.dataset.loaded = 'false';
+            slot.innerHTML = '';
+            slot.style.display = 'none';
+            return;
+        }
+
+        slot.dataset.loaded = 'true';
+        slot.style.display = 'block';
+        slot.innerHTML = '<div class="comment-text">Caricamento…</div>';
+
+        try {
+            const u = await fetchPublicUser(userId);
+            const parts = [];
+            if (u.phoneNumber) parts.push(`<a href="tel:${escapeHtml(u.phoneNumber)}">${escapeHtml(u.phoneNumber)}</a>`);
+            if (u.email) parts.push(`<a href="mailto:${escapeHtml(u.email)}">${escapeHtml(u.email)}</a>`);
+            slot.innerHTML = `
+                <div class="modal-contact" style="margin-top:8px;">
+                    <strong>Contatto:</strong>
+                    <span>${escapeHtml(u.username || '—')}</span>
+                    ${parts.join('')}
+                    ${parts.length === 0 ? '<span class="contact-locked">Nessun contatto pubblico</span>' : ''}
+                </div>
+            `;
+        } catch (err) {
+            slot.innerHTML = `<div class="comment-error">${escapeHtml(err.message || 'Errore')}</div>`;
+        }
+      });
+    }
+
     document.getElementById('modal-overlay').classList.add('active');
     document.body.style.overflow = 'hidden';
+}
+
+function renderCommentsHtml(comments) {
+    if (!Array.isArray(comments) || comments.length === 0) {
+        return `<div class="comments-empty">Nessun commento</div>`;
+    }
+
+    const sorted = [...comments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return sorted.map((c) => {
+        const when = c?.createdAt ? new Date(c.createdAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+        const uid = (c?.userId && typeof c.userId === 'object') ? (c.userId._id || c.userId.id) : c?.userId;
+        const slotId = `comment-contact-${escapeHtml(c?._id || uid || Math.random().toString(16).slice(2))}`;
+        return `
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <button type="button" class="comment-user-link comment-user" data-user-id="${escapeHtml(uid || '')}" data-slot-id="${slotId}">${escapeHtml(c?.username || 'utente')}</button>
+                    <span class="comment-date">${escapeHtml(when)}</span>
+                </div>
+                <div class="comment-text">${escapeHtml(c?.text || '')}</div>
+                <div id="${slotId}" class="comment-contact-slot" style="display:none;"></div>
+            </div>
+        `;
+    }).join('');
 }
 
 function closeModal() {
