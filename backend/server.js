@@ -17,6 +17,7 @@ app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/animals', require('./routes/animalRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 mongoose.connect(process.env.DB_URL)

@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const Notification = require('../models/Notification');
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -39,10 +40,14 @@ async function sendVerificationEmail(user, rawToken) {
 
 exports.register = async (req, res) => {
   try {
-    const { username, email, password, phoneNumber } = req.body;
+    const { username, email, password, phoneNumber, accountType, role, rifugioData } = req.body;
+    const wantsRifugio = accountType === 'rifugio' || role === 'shelter';
 
     if (!password || password.length < 8) {
       return res.status(400).json({ message: 'Password deve avere almeno 8 caratteri' });
+    }
+    if (wantsRifugio && !rifugioData?.rifugioName) {
+      return res.status(400).json({ message: 'Nome rifugio richiesto' });
     }
 
     const existing = await User.findOne({ email });
@@ -61,10 +66,30 @@ exports.register = async (req, res) => {
       email,
       passwordHash,
       phoneNumber,
+      role: wantsRifugio ? 'shelter' : 'user',
+      rifugioStatus: wantsRifugio ? 'pending' : 'none',
+      rifugioData: wantsRifugio ? {
+        rifugioName: rifugioData.rifugioName,
+        address: rifugioData.address || '',
+        city: rifugioData.city || '',
+        description: rifugioData.description || '',
+        totalSlots: rifugioData.totalSlots || undefined,
+        availableSlots: rifugioData.availableSlots || undefined
+      } : undefined,
       isEmailVerified: false,
       emailVerificationToken: verifyTokenHash,
       emailVerificationExpires: verifyExpires
     });
+
+    if (wantsRifugio) {
+      const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+      await Promise.all(admins.map(admin => Notification.create({
+        userId: admin._id,
+        targetUserId: user._id,
+        type: 'rifugio_request',
+        message: `Nuova richiesta rifugio: ${rifugioData.rifugioName}`
+      })));
+    }
 
     try {
       await sendVerificationEmail(user, verifyToken);
@@ -76,7 +101,14 @@ exports.register = async (req, res) => {
       });
     }
 
-    res.status(201).json({ message: 'Account creato. Controlla la mail per verificare l\'account', userId: user._id });
+    res.status(201).json({
+      message: wantsRifugio
+        ? 'Account rifugio creato. Controlla la mail e attendi approvazione admin'
+        : 'Account creato. Controlla la mail per verificare l\'account',
+      userId: user._id,
+      role: user.role,
+      rifugioStatus: user.rifugioStatus
+    });
   } catch (err) {
     res.status(500).json({ message: 'Errore server', error: err.message });
   }

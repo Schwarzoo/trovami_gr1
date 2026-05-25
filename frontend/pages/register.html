@@ -26,6 +26,24 @@
         <label for="phoneNumber">Telefono</label>
         <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Facoltativo" />
 
+        <button type="button" id="becomeRifugio" class="secondary-action" aria-pressed="false">Diventa rifugio</button>
+
+        <div id="rifugioFields" class="is-hidden">
+          <label for="rifugioName">Nome rifugio</label>
+          <input type="text" id="rifugioName" name="rifugioName" placeholder="Nome ufficiale del rifugio" />
+
+          <label for="rifugioAddress">Indirizzo</label>
+          <input type="text" id="rifugioAddress" name="rifugioAddress" placeholder="Via e numero civico" />
+
+          <label for="rifugioCity">Citta</label>
+          <input type="text" id="rifugioCity" name="rifugioCity" placeholder="Es. Trento" />
+
+          <label for="rifugioDescription">Descrizione</label>
+          <textarea id="rifugioDescription" name="rifugioDescription" placeholder="Breve descrizione del rifugio"></textarea>
+
+          <p class="form-hint">Gli account rifugio devono essere approvati da un admin prima di pubblicare annunci.</p>
+        </div>
+
         <label for="password">Password</label>
         <input type="password" id="password" name="password" placeholder="Minimo 8 caratteri" required />
 

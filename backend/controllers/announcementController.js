@@ -6,6 +6,7 @@ const Animal = require('../models/Animal');
 const smartMatchingEngine = require('../services/SmartMatchingEngine');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
 const nodemailer = require('nodemailer');
@@ -68,7 +69,7 @@ async function saveMatchNotification(announcement, matches) {
             const similarityPercentage = ((match.score || 0) * 100).toFixed(2);
             await Notification.create({
                 announcementId: announcement._id,
-                recipientId: announcement.publisherId,
+                userId: announcement.publisherId,
                 message: `Trovato un possibile match visivo per il tuo annuncio: ${similarityPercentage}% di similitudine!`,
                 type: 'SMART_MATCH'
             });
@@ -78,12 +79,26 @@ async function saveMatchNotification(announcement, matches) {
     }
 }
 
+async function notifyAdmins(payload) {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+    await Promise.all(admins.map(admin => Notification.create({
+        userId: admin._id,
+        ...payload
+    })));
+}
+
 exports.getAnnouncements = async (req, res) => {
     try {
-        const { type, species, status } = req.query;
+        const { type, species, status, rifugioId } = req.query;
         const filter = {};
         filter.status = status || 'ACTIVE';
         if (type) filter.type = type;
+        if (rifugioId) {
+            if (!mongoose.Types.ObjectId.isValid(rifugioId)) {
+                return res.status(400).json({ message: 'ID rifugio non valido' });
+            }
+            filter.publisherId = rifugioId;
+        }
 
         if (species) {
             const animals = await Animal.find({ species: new RegExp(species, 'i') }).select('_id');
@@ -93,7 +108,7 @@ exports.getAnnouncements = async (req, res) => {
         const announcements = await Announcement.find(filter)
             .select('-photo -comments')
             .populate('animalId')
-            .populate('publisherId', 'username email phoneNumber contactVisibility') // 'name' non esiste nel modello User
+            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData') // 'name' non esiste nel modello User
             .sort({ createdAt: -1 });
 
         const masked = announcements.map(a => {
@@ -188,6 +203,16 @@ exports.createAnnouncement = async (req,res)=>{
         const animal = await Animal.findById(animalId);
         if (!animal) return res.status(404).json({ message: 'Animale non trovato' });
 
+        const publisher = await User.findById(req.user.userId).select('role rifugioStatus rifugioData.location');
+        if (!publisher) return res.status(401).json({ message: 'Utente non valido' });
+        if (publisher.role === 'shelter' && publisher.rifugioStatus !== 'approved') {
+            return res.status(403).json({ message: 'Il rifugio deve essere approvato da un admin prima di pubblicare annunci' });
+        }
+        if (publisher.role === 'shelter') {
+            animal.shelterId = publisher._id;
+            await animal.save();
+        }
+
         const coords = normalizeCoordinates(coordinates || location);
         if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
 
@@ -236,13 +261,135 @@ exports.createAnnouncement = async (req,res)=>{
     }
 };
 
+// POST /api/announcements/quick
+exports.createQuickAnnouncement = async (req, res) => {
+    try {
+        const {
+            type,
+            species,
+            breed,
+            gender,
+            color,
+            lunghezzaPelo,
+            distinctiveFeatures,
+            description,
+            coordinates,
+            location,
+            lastSeenDate,
+            isCurrentlyThere,
+            animalBehaviour,
+            healthCondition,
+            contactName,
+            contactEmail,
+            contactPhone
+        } = req.body;
+
+        if (!species || !color) {
+            return res.status(400).json({ message: 'Specie e colore sono obbligatori' });
+        }
+
+        const fallbackRifugioLocation = publisher.role === 'shelter' ? publisher.rifugioData?.location : null;
+        const coords = normalizeCoordinates(coordinates || location || fallbackRifugioLocation);
+        if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
+
+        const animal = await Animal.create({
+            species,
+            breed: breed || 'Non specificato',
+            gender: gender || 'Sconosciuto',
+            color,
+            lunghezzaPelo: lunghezzaPelo || undefined,
+            distinctiveFeatures: distinctiveFeatures || ''
+        });
+
+        const announcement = new Announcement({
+            type: type || 'Sighting',
+            publisherId: null,
+            animalId: animal._id,
+            description: description || 'Segnalazione veloce',
+            isQuick: true,
+            quickContact: {
+                name: contactName || null,
+                email: contactEmail || null,
+                phoneNumber: contactPhone || null
+            },
+            location: { type: 'Point', coordinates: coords },
+            lastSeenDate,
+            isCurrentlyThere: (typeof isCurrentlyThere === 'string') ? (isCurrentlyThere === 'true') : !!isCurrentlyThere,
+            animalBehaviour,
+            healthCondition,
+            status: 'ACTIVE'
+        });
+
+        if (req.file && req.file.buffer) {
+            try {
+                const processed = await sharp(req.file.buffer)
+                    .resize({ width: 1024, height: 1024, fit: 'inside' })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                announcement.photo = { data: processed, contentType: 'image/jpeg' };
+                const embedding = await smartMatchingEngine.generateImageEmbedding(processed);
+                if (embedding) announcement.imageEmbedding = embedding;
+            } catch (err) {
+                announcement.photo = { data: req.file.buffer, contentType: req.file.mimetype };
+            }
+        }
+
+        await announcement.save();
+        res.status(201).json(announcement);
+    } catch (err) {
+        res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
+    }
+};
+
+// POST /api/announcements/:id/reports
+exports.reportAnnouncement = async (req, res) => {
+    try {
+        const announcementId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(announcementId)) {
+            return res.status(400).json({ message: 'ID annuncio non valido' });
+        }
+
+        const { reason, details } = req.body;
+        const allowedReasons = ['troll', 'offensivo', 'falso', 'altro'];
+        if (!allowedReasons.includes(reason)) {
+            return res.status(400).json({ message: 'Motivo segnalazione non valido' });
+        }
+
+        const announcement = await Announcement.findById(announcementId).populate('publisherId', 'username role rifugioData');
+        if (!announcement) return res.status(404).json({ message: 'Annuncio non trovato' });
+
+        const report = await Report.create({
+            announcementId,
+            reporterId: req.user.userId,
+            reason,
+            details: details || ''
+        });
+
+        const ownerLabel = announcement.publisherId
+            ? (announcement.publisherId.rifugioData?.rifugioName || announcement.publisherId.username)
+            : 'annuncio veloce anonimo';
+
+        await notifyAdmins({
+            type: 'report',
+            announcementId: announcement._id,
+            reportId: report._id,
+            targetUserId: announcement.publisherId?._id || null,
+            message: `Nuova segnalazione (${reason}) su ${ownerLabel}`
+        });
+
+        res.status(201).json({ message: 'Segnalazione inviata', report });
+    } catch (err) {
+        res.status(500).json({ message: 'Errore invio segnalazione', error: err.message });
+    }
+};
+
 // GET /api/announcements/:id
 	exports.getAnnouncementById = async (req, res) => {
 	    try {
 	        const announcement = await Announcement.findById(req.params.id)
 	            .select('-photo')
 	            .populate('animalId')
-	            .populate('publisherId', 'username email phoneNumber contactVisibility');
+	            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData');
 
         if (!announcement) {
             return res.status(404).json({ message: 'Annuncio non trovato' });
@@ -272,6 +419,7 @@ exports.updateAnnouncement = async (req, res) => {
         const ann = await Announcement.findById(req.params.id);
         if (!ann) return res.status(404).json({ message: 'Annuncio non trovato' });
         
+        if (!ann.publisherId) return res.status(403).json({ message: 'Non autorizzato' });
         const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : ann.publisherId.toString();
         if (publisherIdStr !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
 
@@ -323,6 +471,7 @@ exports.changeStatus = async (req, res) => {
         const ann = await Announcement.findById(req.params.id);
         if (!ann) return res.status(404).json({ message: 'Annuncio non trovato' });
         
+        if (!ann.publisherId) return res.status(403).json({ message: 'Non autorizzato' });
         const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : ann.publisherId.toString();
         if (publisherIdStr !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
 
@@ -349,7 +498,7 @@ exports.deleteAnnouncement = async (req, res) => {
     try {
         const announcement = await Announcement.findById(req.params.id);
         if (!announcement) return res.status(404).json({ message: 'Annuncio non trovato' });
-        if (announcement.publisherId.toString() !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
+        if (!announcement.publisherId || announcement.publisherId.toString() !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
         await removeAnnouncementCascade(req.params.id);
         res.json({ success: true });
     } catch (err) {

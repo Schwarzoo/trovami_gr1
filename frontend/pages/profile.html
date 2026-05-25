@@ -61,6 +61,20 @@
 						</div>
 					</div>
 
+					<div id="rifugio-status-box" class="comment-item" style="display:none;margin-top:8px;"></div>
+					<div id="rifugio-position-box" class="comment-item" style="display:none;margin-top:8px;">
+						<div class="comment-meta">
+							<span class="comment-user">Posizione rifugio</span>
+						</div>
+						<div id="rifugio-position-text" class="comment-text">Aggiungi la posizione del rifugio per pubblicare annunci.</div>
+						<div id="rifugio-position-map" style="display:none;height:220px;margin-top:10px;border-radius:8px;overflow:hidden;"></div>
+						<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+							<button id="editRifugioPosition" type="button" class="btn btn--ghost">Aggiungi posizione</button>
+							<button id="saveRifugioPosition" type="button" class="btn btn--primary" style="display:none;">Salva posizione</button>
+						</div>
+						<div id="rifugio-position-message" class="form-hint" style="margin-top:8px;"></div>
+					</div>
+
 					<div style="display:flex;gap:8px;margin-top:8px;">
 						<button id="editProfileBtn" type="button" class="btn btn--primary">Modifica</button>
 						<button id="saveProfileBtn" type="submit" class="btn btn--primary" disabled>Salva</button>
@@ -83,6 +97,19 @@
 					</div>
 					<div id="notifications-empty" style="margin-top:10px;color:var(--text-muted);">Nessuna notifica</div>
 					<div id="notifications-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+				</section>
+
+				<section id="admin-section" class="section-card" style="display:none;">
+					<h2>Moderazione admin</h2>
+					<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+						<button id="adminRefresh" type="button" class="btn btn--ghost">Aggiorna</button>
+					</div>
+					<h3 style="margin:10px 0;font-size:1rem;">Report aperti</h3>
+					<div id="admin-reports-empty" style="color:var(--text-muted);">Nessun report aperto</div>
+					<div id="admin-reports-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+					<h3 style="margin:18px 0 10px;font-size:1rem;">Richieste rifugio</h3>
+					<div id="admin-rifugi-empty" style="color:var(--text-muted);">Nessuna richiesta rifugio</div>
+					<div id="admin-rifugi-list" style="display:flex;flex-direction:column;gap:10px;"></div>
 				</section>
 
 				<section id="my-announcements" class="section-card">
@@ -113,15 +140,16 @@
 											<option value="Sighting">Avvistamento</option>
 										</select>
 									</div>
-									<div class="field checkbox-row">
-										<label><input id="modal-isCurrentlyThere" type="checkbox" />Attualmente presente</label>
-									</div>
 								</div>
 								<div class="field">
 									<label>Descrizione</label>
 									<textarea id="modal-description" placeholder="Aggiungi dettagli utili..."></textarea>
 								</div>
 								<div class="form-grid">
+									<div id="modal-animal-name-row" class="field" style="display:none;">
+										<label>Nome animale</label>
+										<input id="modal-animalName" placeholder="Es. Luna" />
+									</div>
 									<div class="field">
 										<label>Specie</label>
 										<input id="modal-species" placeholder="Es. Cane, Gatto" required />
@@ -145,6 +173,10 @@
 											<option value="Sconosciuto">Sconosciuto</option>
 										</select>
 									</div>
+								</div>
+								<div id="modal-microchip-row" class="field" style="display:none;">
+									<label>Microchip</label>
+									<input id="modal-microchipId" placeholder="Codice microchip" />
 								</div>
 								<div class="form-grid">
 									<div class="field">
@@ -190,7 +222,7 @@
 						style="display:none;max-width:100%;border-radius:8px;margin-top:8px;" />
 								<div class="form-grid">
 									<div class="field">
-										<label>Ultima data vista</label>
+										<label id="modal-lastSeenDate-label">Ultima data vista</label>
 										<div class="choice-buttons" role="group" aria-label="Scelta data avvistamento">
 											<button type="button" id="lastSeenTodayBtn" class="btn btn--ghost is-selected">Oggi</button>
 											<button type="button" id="lastSeenCustomBtn" class="btn btn--ghost">Scegli data</button>
@@ -198,13 +230,13 @@
 										<input id="modal-lastSeenDate" type="date" style="display:none;" />
 									</div>
 								</div>
-								<div class="field">
-									<label>Posizione</label>
+								<div id="modal-position-section" class="field">
+									<label id="modal-position-label">Posizione</label>
 									<div class="location-actions">
 										<button type="button" id="pickOnMap" class="btn btn--ghost">Seleziona su mappa</button>
 										<button type="button" id="useMyLocation" class="btn btn--ghost">Usa la mia posizione</button>
 									</div>
-									<span class="form-hint">Scegli un punto sulla mappa o usa la posizione attuale.</span>
+									<span id="modal-position-hint" class="form-hint">Scegli un punto sulla mappa o usa la posizione attuale.</span>
 								</div>
 					<input id="modal-coords" type="hidden" />
 					<div id="modal-map" style="height:220px;margin-top:8px;display:none;border-radius:8px;overflow:hidden;"></div>

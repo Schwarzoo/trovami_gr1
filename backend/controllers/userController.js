@@ -7,6 +7,14 @@ function toBool(v) {
   return undefined;
 }
 
+function normalizeLocation(input) {
+  const coords = input?.coordinates;
+  if (!Array.isArray(coords) || coords.length !== 2) return null;
+  const normalized = coords.map(Number);
+  if (normalized.some(Number.isNaN)) return null;
+  return { type: 'Point', coordinates: normalized };
+}
+
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-passwordHash -__v');
@@ -33,7 +41,22 @@ exports.updateMe = async (req, res) => {
     if (emailOnComment !== undefined) updates['notificationPrefs.emailOnComment'] = emailOnComment;
     if (soundOnSite !== undefined) updates['notificationPrefs.soundOnSite'] = soundOnSite;
 
-    const user = await User.findByIdAndUpdate(req.user.userId, updates, { new: true }).select('-passwordHash -__v');
+    if (req.body?.rifugioData?.location !== undefined) {
+      const me = await User.findById(req.user.userId).select('role rifugioStatus');
+      if (!me) return res.status(404).json({ message: 'Utente non trovato' });
+      if (me.role !== 'shelter' || me.rifugioStatus !== 'approved') {
+        return res.status(403).json({ message: 'Solo un rifugio approvato puo salvare la posizione' });
+      }
+      const location = normalizeLocation(req.body.rifugioData.location);
+      if (!location) return res.status(400).json({ message: 'Coordinate rifugio non valide' });
+      updates['rifugioData.location'] = location;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-passwordHash -__v');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
     res.json(user);
   } catch (err) {
@@ -58,6 +81,31 @@ exports.getPublicUser = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: 'Errore server', error: err.message });
+  }
+};
+
+exports.getPublicRifugi = async (req, res) => {
+  try {
+    const rifugi = await User.find({
+      role: 'shelter',
+      rifugioStatus: 'approved',
+      'rifugioData.location.coordinates.0': { $exists: true },
+      'rifugioData.location.coordinates.1': { $exists: true }
+    }).select('username email phoneNumber contactVisibility rifugioData');
+
+    res.json(rifugi.map((rifugio) => {
+      const showEmail = rifugio.contactVisibility?.showEmail !== false;
+      const showPhone = rifugio.contactVisibility?.showPhone !== false;
+      return {
+        _id: rifugio._id,
+        username: rifugio.username,
+        email: showEmail ? rifugio.email : null,
+        phoneNumber: showPhone ? rifugio.phoneNumber : null,
+        rifugioData: rifugio.rifugioData
+      };
+    }));
+  } catch (err) {
+    res.status(500).json({ message: 'Errore recupero rifugi', error: err.message });
   }
 };
 

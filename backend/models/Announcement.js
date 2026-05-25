@@ -15,7 +15,8 @@ const announcementSchema = new mongoose.Schema({
     publisherId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false,
+        default: null
     },
     animalId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -24,6 +25,12 @@ const announcementSchema = new mongoose.Schema({
     },
     date: { type: Date, default: Date.now },
     description: { type: String, required: true },
+    isQuick: { type: Boolean, default: false },
+    quickContact: {
+        name: { type: String, default: null },
+        email: { type: String, default: null },
+        phoneNumber: { type: String, default: null }
+    },
 
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },

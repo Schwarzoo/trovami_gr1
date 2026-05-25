@@ -14,12 +14,6 @@ function isUserLoggedIn() {
 
 // Modal Control Functions
 function openQuickAnnounceModal() {
-  if (!isUserLoggedIn()) {
-    alert('Devi essere loggato per segnalare un animale. Reindirizzamento al login...');
-    window.location.href = '/pages/login.html?next=/pages/home.html';
-    return;
-  }
-
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   
@@ -129,45 +123,14 @@ async function handleQuickAnnounceSubmit(e) {
 
 // API Call to Create Announcement
 async function submitQuickAnnounce(data) {
-  // First, check if user is authenticated
-  const authToken = localStorage.getItem('token');
-  if (!authToken) {
-    alert('Devi essere loggato per segnalare un animale. Reindirizzamento al login...');
-    window.location.href = '/pages/login.html';
-    return;
-  }
-
-  // Step 1: Create Animal
-  const animalPayload = {
+  const announcementPayload = {
+    type: data.type,
     species: data.species,
     breed: data.breed,
     gender: data.gender,
     color: data.color,
     lunghezzaPelo: data.lunghezzaPelo,
-    distinctiveFeatures: data.distinctiveFeatures
-  };
-
-  const animalRes = await fetch('http://localhost:3000/api/animals', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`
-    },
-    body: JSON.stringify(animalPayload)
-  });
-
-  if (!animalRes.ok) {
-    const errorData = await animalRes.json();
-    throw new Error(`Errore nella creazione dell'animale: ${errorData.message}`);
-  }
-
-  const animal = await animalRes.json();
-  const animalId = animal._id;
-
-  // Step 2: Create Announcement
-  const announcementPayload = {
-    type: data.type,
-    animalId: animalId,
+    distinctiveFeatures: data.distinctiveFeatures,
     description: data.description,
     coordinates: data.coordinates,
     healthCondition: data.healthCondition,
@@ -179,7 +142,12 @@ async function submitQuickAnnounce(data) {
   if (data.photo && data.photo.size > 0) {
     const announcementForm = new FormData();
     announcementForm.append('type', announcementPayload.type);
-    announcementForm.append('animalId', announcementPayload.animalId);
+    announcementForm.append('species', announcementPayload.species);
+    announcementForm.append('breed', announcementPayload.breed);
+    announcementForm.append('gender', announcementPayload.gender);
+    announcementForm.append('color', announcementPayload.color);
+    if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
+    if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
     announcementForm.append('description', announcementPayload.description);
     announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
     announcementForm.append('healthCondition', announcementPayload.healthCondition);
@@ -187,19 +155,15 @@ async function submitQuickAnnounce(data) {
     announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
     announcementForm.append('photo', data.photo);
 
-    announcementRes = await fetch('http://localhost:3000/api/announcements', {
+    announcementRes = await fetch('http://localhost:3000/api/announcements/quick', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      },
       body: announcementForm
     });
   } else {
-    announcementRes = await fetch('http://localhost:3000/api/announcements', {
+    announcementRes = await fetch('http://localhost:3000/api/announcements/quick', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(announcementPayload)
     });
@@ -209,8 +173,6 @@ async function submitQuickAnnounce(data) {
     const errorData = await announcementRes.json();
     throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message}`);
   }
-
-  const announcement = await announcementRes.json();
 
   // Success!
   alert('✅ Annuncio pubblicato con successo!');

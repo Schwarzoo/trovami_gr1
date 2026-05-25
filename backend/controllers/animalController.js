@@ -4,6 +4,7 @@ const Animal = require('../models/Animal');
 exports.createAnimal = async (req, res) => {
   try {
     const {
+      name,
       species,
       breed,
       gender,
@@ -15,6 +16,7 @@ exports.createAnimal = async (req, res) => {
     } = req.body;
 
     const animal = new Animal({
+      name,
       species,
       breed,
       gender,
@@ -37,7 +39,7 @@ exports.createAnimal = async (req, res) => {
 exports.updateAnimal = async (req, res) => {
   try {
     const updates = {};
-    const allowed = ['species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','microchipId','shelterId'];
+    const allowed = ['name','species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','microchipId','shelterId'];
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
     const animal = await Animal.findByIdAndUpdate(req.params.id, updates, { new: true });
