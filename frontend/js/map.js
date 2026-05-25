@@ -315,9 +315,9 @@ function renderAnnouncements(announcements) {
         ${address ? `<div style="font-size:13px;color:#666;margin-bottom:8px;">${escapeHtml(address)}</div>` : ''}
         ${rifugio.phoneNumber ? `<div style="font-size:13px;color:#666;">Tel: ${escapeHtml(rifugio.phoneNumber)}</div>` : ''}
         ${rifugio.email ? `<div style="font-size:13px;color:#666;">Email: ${escapeHtml(rifugio.email)}</div>` : ''}
-        <a href="/pages/rifugio-dashboard.html?rifugioId=${encodeURIComponent(rifugio._id)}"
+        <a href="/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}"
            style="display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">
-          Apri dashboard rifugio →
+          Vedi annunci rifugio →
         </a>
       </div>
     `;
@@ -325,6 +325,7 @@ function renderAnnouncements(announcements) {
     const marker = L.marker([lat, lng], { icon: rifugioIcon })
       .addTo(map)
       .bindPopup(popupHTML, { maxWidth: 330, className: 'custom-popup' });
+
     window._tm_rifugio_markers.push(marker);
     bounds.extend([lat, lng]);
     if (highlightRifugioId === String(rifugio._id)) {

@@ -72,6 +72,8 @@ function configureModalLabelsForAccount() {
       ? 'Posizione del rifugio gia impostata. Puoi modificarla selezionando un altro punto.'
       : 'Scegli un punto sulla mappa o usa la posizione attuale.';
   }
+}
+
 function setAnnouncementSavingState(isSaving) {
   isSavingAnnouncement = isSaving;
   const progress = document.getElementById('profile-modal-progress');
@@ -748,117 +750,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
       return;
     }
+
+    if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) {
+      alert('Inserisci coordinate valide');
+      return;
+    }
+
     setAnnouncementSavingState(true);
 
     try {
-      const type = document.getElementById('modal-type').value;
-      const description = document.getElementById('modal-description').value.trim();
-      const species = document.getElementById('modal-species').value.trim();
-      const breed = document.getElementById('modal-breed').value.trim() || 'Non specificato';
-      const color = document.getElementById('modal-color').value.trim();
-      const gender = document.getElementById('modal-gender').value || 'Sconosciuto';
-      const lunghezzaPelo = document.getElementById('modal-lunghezzaPelo').value || null;
-      const distinctiveFeatures = document.getElementById('modal-distinctiveFeatures').value.trim();
-      const photoFile = document.getElementById('modal-photo-file').files[0];
-      const coordsRawInput = document.getElementById('modal-coords').value.trim();
-      const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
-
-      if (!type || !species || !color) {
-        alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
-        return;
-      }
-
-    const animalPayload = {
-      name: animalName || undefined,
-      species,
-      breed,
-      gender,
-      color,
-      lunghezzaPelo,
-      distinctiveFeatures,
-      microchipId: currentUser?.role === 'shelter' ? microchipId : undefined
-    };
-      if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) { alert('Inserisci coordinate valide'); return; }
-
-      
-
-    const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
-    const customDate = document.getElementById('modal-lastSeenDate').value;
-    let lastSeenDate = null;
-    if (lastSeenMode === 'today') {
-      lastSeenDate = new Date().toISOString();
-    } else if (customDate) {
-      lastSeenDate = new Date(customDate).toISOString();
-    }
-    const animalBehaviour = document.getElementById('modal-animalBehaviour').value || null;
-    const healthCondition = document.getElementById('modal-healthCondition').value || null;
-    const status = editingId ? (currentEditStatus || 'ACTIVE') : 'ACTIVE';
-
-    const body = {
-      type,
-      animalId: animalIdToUse,
-      name: animalName || undefined,
-      description: description || 'Nessuna descrizione',
-      lastSeenDate: lastSeenDate || undefined,
-      animalBehaviour: animalBehaviour || undefined,
-      healthCondition: healthCondition || undefined,
-      status
-    };
-
-    // include location coordinates
-    // backend normalizeCoordinates accepts either coordinates array or location object
-    const loc = { coordinates: [coordsRaw[0], coordsRaw[1]] };
-
-    // send announcement (use FormData if a file was selected)
-    if (!editingId) {
-      let res;
-      if (photoFile) {
-        const fd = new FormData();
-        fd.append('type', type);
-        fd.append('animalId', animalIdToUse);
-        if (animalName) fd.append('name', animalName);
-        fd.append('description', body.description);
-        fd.append('coordinates', loc.coordinates.join(','));
-        if (lastSeenDate) fd.append('lastSeenDate', lastSeenDate);
-        if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
-        if (healthCondition) fd.append('healthCondition', healthCondition);
-        fd.append('status', status);
-        fd.append('photo', photoFile);
-        res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-      // create or update animal then announcement
-      let animalIdToUse = null;
-      if (editingId && editingAnimalId) {
-        // update existing animal
-        const aRes = await fetch(`http://localhost:3000/api/animals/${editingAnimalId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify(animalPayload) });
-        if (!aRes.ok) { alert('Errore aggiornamento animale'); return; }
-        const aData = await aRes.json();
-        animalIdToUse = aData._id;
-      } else {
-        // create new animal
-        const animalRes = await fetch('http://localhost:3000/api/animals', { method: 'POST', headers: authHeader, body: JSON.stringify(animalPayload) });
-        if (!animalRes.ok) { alert('Errore creazione animale'); return; }
-        const animal = await animalRes.json();
-        animalIdToUse = animal._id;
-      }
-      if (!res.ok) { alert('Errore creazione annuncio'); return; }
-    } else {
-      let res;
-      if (photoFile) {
-        const fd = new FormData();
-        // include same fields; backend update accepts location
-        for (const k of ['type','description']) fd.append(k, body[k]);
-        if (animalName) fd.append('name', animalName);
-        fd.append('location', JSON.stringify({ type: 'Point', coordinates: loc.coordinates }));
-        if (body.lastSeenDate) fd.append('lastSeenDate', body.lastSeenDate);
-        fd.append('isCurrentlyThere', currentEditIsCurrentlyThere);
-        if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
-        if (healthCondition) fd.append('healthCondition', healthCondition);
-        fd.append('status', status);
-        fd.append('photo', photoFile);
-        res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-      } else {
-        const resJson = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ ...body, isCurrentlyThere: currentEditIsCurrentlyThere, location: { type: 'Point', coordinates: loc.coordinates } }) });
-        res = resJson;
+      const animalPayload = {
+        name: animalName || undefined,
+        species,
+        breed,
+        gender,
+        color,
+        lunghezzaPelo,
+        distinctiveFeatures,
+        microchipId: currentUser?.role === 'shelter' ? microchipId : undefined
+      };
 
       const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
       const customDate = document.getElementById('modal-lastSeenDate').value;
@@ -868,70 +778,122 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (customDate) {
         lastSeenDate = new Date(customDate).toISOString();
       }
-      const isCurrentlyThere = document.getElementById('modal-isCurrentlyThere').checked;
+
       const animalBehaviour = document.getElementById('modal-animalBehaviour').value || null;
       const healthCondition = document.getElementById('modal-healthCondition').value || null;
+      const isCurrentlyThereEl = document.getElementById('modal-isCurrentlyThere');
+      const isCurrentlyThere = isCurrentlyThereEl ? !!isCurrentlyThereEl.checked : currentEditIsCurrentlyThere;
       const status = editingId ? (currentEditStatus || 'ACTIVE') : 'ACTIVE';
+
+      const animalHeaders = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+      let animalIdToUse = editingAnimalId || null;
+
+      if (editingId) {
+        if (animalIdToUse) {
+          const aRes = await fetch(`http://localhost:3000/api/animals/${animalIdToUse}`, {
+            method: 'PUT',
+            headers: animalHeaders,
+            body: JSON.stringify(animalPayload)
+          });
+          if (!aRes.ok) throw new Error('Errore aggiornamento animale');
+          const aData = await aRes.json();
+          animalIdToUse = aData._id;
+        } else {
+          const animalRes = await fetch('http://localhost:3000/api/animals', {
+            method: 'POST',
+            headers: animalHeaders,
+            body: JSON.stringify(animalPayload)
+          });
+          if (!animalRes.ok) throw new Error('Errore creazione animale');
+          const animal = await animalRes.json();
+          animalIdToUse = animal._id;
+        }
+      } else {
+        const animalRes = await fetch('http://localhost:3000/api/animals', {
+          method: 'POST',
+          headers: animalHeaders,
+          body: JSON.stringify(animalPayload)
+        });
+        if (!animalRes.ok) throw new Error('Errore creazione animale');
+        const animal = await animalRes.json();
+        animalIdToUse = animal._id;
+      }
 
       const body = {
         type,
         animalId: animalIdToUse,
         description: description || 'Nessuna descrizione',
         lastSeenDate: lastSeenDate || undefined,
-        isCurrentlyThere,
         animalBehaviour: animalBehaviour || undefined,
         healthCondition: healthCondition || undefined,
         status
       };
 
-      // include location coordinates
-      // backend normalizeCoordinates accepts either coordinates array or location object
       const loc = { coordinates: [coordsRaw[0], coordsRaw[1]] };
 
-      // send announcement (use FormData if a file was selected)
+      let res;
       if (!editingId) {
-        let res;
         if (photoFile) {
           const fd = new FormData();
           fd.append('type', type);
           fd.append('animalId', animalIdToUse);
+          if (animalName) fd.append('name', animalName);
           fd.append('description', body.description);
           fd.append('coordinates', loc.coordinates.join(','));
           if (lastSeenDate) fd.append('lastSeenDate', lastSeenDate);
-          fd.append('isCurrentlyThere', isCurrentlyThere);
           if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
           if (healthCondition) fd.append('healthCondition', healthCondition);
           fd.append('status', status);
           fd.append('photo', photoFile);
-          res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+          res = await fetch('http://localhost:3000/api/announcements', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: fd
+          });
         } else {
-          res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: authHeader, body: JSON.stringify({ ...body, coordinates: loc.coordinates }) });
+          res = await fetch('http://localhost:3000/api/announcements', {
+            method: 'POST',
+            headers: authHeader,
+            body: JSON.stringify({ ...body, coordinates: loc.coordinates })
+          });
         }
-        if (!res.ok) { alert('Errore creazione annuncio'); return; }
+        if (!res.ok) throw new Error('Errore creazione annuncio');
+      } else if (photoFile) {
+        const fd = new FormData();
+        for (const k of ['type', 'description']) fd.append(k, body[k]);
+        if (animalName) fd.append('name', animalName);
+        fd.append('location', JSON.stringify({ type: 'Point', coordinates: loc.coordinates }));
+        if (body.lastSeenDate) fd.append('lastSeenDate', body.lastSeenDate);
+        fd.append('isCurrentlyThere', String(isCurrentlyThere));
+        if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
+        if (healthCondition) fd.append('healthCondition', healthCondition);
+        fd.append('status', status);
+        fd.append('photo', photoFile);
+        res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: fd
+        });
+        if (!res.ok) throw new Error('Errore aggiornamento annuncio');
       } else {
-        let res;
-        if (photoFile) {
-          const fd = new FormData();
-          // include same fields; backend update accepts location
-          for (const k of ['type','description']) fd.append(k, body[k]);
-          fd.append('location', JSON.stringify({ type: 'Point', coordinates: loc.coordinates }));
-          if (body.lastSeenDate) fd.append('lastSeenDate', body.lastSeenDate);
-          fd.append('isCurrentlyThere', isCurrentlyThere);
-          if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
-          if (healthCondition) fd.append('healthCondition', healthCondition);
-          fd.append('status', status);
-          fd.append('photo', photoFile);
-          res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
-        } else {
-          const resJson = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ ...body, location: { type: 'Point', coordinates: loc.coordinates } }) });
-          res = resJson;
-        }
-        if (!res.ok) { alert('Errore aggiornamento annuncio'); return; }
+        res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, {
+          method: 'PUT',
+          headers: authHeader,
+          body: JSON.stringify({
+            ...body,
+            isCurrentlyThere,
+            location: { type: 'Point', coordinates: loc.coordinates }
+          })
+        });
+        if (!res.ok) throw new Error('Errore aggiornamento annuncio');
       }
 
       showModal(false);
       loadMyAnnouncements();
       try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
+    } catch (error) {
+      console.error('Save announcement error:', error);
+      alert(error?.message || 'Errore salvataggio annuncio');
     } finally {
       setAnnouncementSavingState(false);
     }
