@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
     phoneNumber:  { type: String, default: null },
     isActive:     { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
-    role:         { type: String, enum: ['Segnalatore', 'Ricercatore', 'Shelter', 'Administrator'], default: 'Segnalatore' },
+    role:         { type: String, enum: ['user', 'shelter', 'admin'], default: 'user' },
     sessionToken: { type: String, default: null},
 
     contactVisibility: {

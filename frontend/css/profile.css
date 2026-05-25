@@ -30,6 +30,43 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
+  color: var(--text);
+}
+
+#profileForm input:disabled {
+  background: #e6e1da;
+  color: #4f4a43;
+  cursor: not-allowed;
+}
+
+#profileForm input.readonly-input,
+#profileForm input.readonly-input:disabled {
+  background: #f2eee8;
+  color: #9a9287;
+  font-style: italic;
+  cursor: not-allowed;
+}
+
+#profileForm .checkbox-row:has(input:disabled) {
+  color: #4f4a43;
+  cursor: not-allowed;
+}
+
+#profileForm .checkbox-row:has(input:disabled) label {
+  color: #4f4a43;
+  cursor: not-allowed;
+}
+
+.btn:disabled {
+  background: #c9c3bb;
+  border-color: #c9c3bb;
+  color: #6f675e;
+  cursor: not-allowed;
+}
+
+.btn--primary:not(:disabled) {
+  background: var(--accent-2);
+  color: white;
 }
 
 .form-stack {
@@ -66,6 +103,7 @@
   gap: 8px;
   font-weight: 600;
   color: var(--text-muted);
+  width: 100%;
 }
 
 .checkbox-row input[type="checkbox"] {
@@ -75,6 +113,7 @@
   border: 0;
   accent-color: var(--accent-2);
 }
+
 .location-actions {
   display: flex;
   gap: 8px;

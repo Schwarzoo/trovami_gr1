@@ -30,3 +30,59 @@ header nav { margin-left: auto; display: flex; gap: 1.5rem; }
 header nav a { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); transition: color .2s; }
 header nav a:hover,
 header nav a.active { color: var(--accent); }
+
+/* FOOTER */
+.site-footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem 2rem;
+    color: var(--text-muted);
+    background: var(--bg);
+}
+
+.footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
+    gap: 2rem;
+}
+
+.footer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.footer-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: var(--accent);
+}
+
+.footer-section p {
+    max-width: 680px;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.footer-meta {
+    font-size: 0.9rem;
+}
+
+.footer-team ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+@media (max-width: 700px) {
+    .footer-inner {
+        grid-template-columns: 1fr;
+        gap: 1.4rem;
+    }
+}

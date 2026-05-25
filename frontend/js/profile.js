@@ -30,6 +30,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
   const mePayload = decodeJwt(token) || {};
   const myUserId = mePayload.userId;
+  const editableProfileFields = [
+    'username',
+    'phoneNumber',
+    'showEmail',
+    'showPhone',
+    'emailOnComment',
+    'soundOnSite'
+  ];
+  const editProfileButton = document.getElementById('editProfileBtn');
+  const saveProfileButton = document.getElementById('saveProfileBtn');
+
+  function setProfileEditing(enabled) {
+    editableProfileFields.forEach((id) => {
+      const field = document.getElementById(id);
+      if (field) field.disabled = !enabled;
+    });
+
+    saveProfileButton.disabled = !enabled;
+    editProfileButton.disabled = enabled;
+    document.getElementById('profile-section').classList.toggle('is-editing', enabled);
+  }
 
   async function handleLogout() {
     try {
@@ -164,6 +185,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (saveProfileButton.disabled) return;
+
     const updates = {
       username: document.getElementById('username').value,
       phoneNumber: document.getElementById('phoneNumber').value,
@@ -179,6 +202,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('http://localhost:3000/api/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
     const data = await res.json();
     document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.message || 'Errore');
+    if (res.ok) setProfileEditing(false);
+  });
+
+  editProfileButton.addEventListener('click', () => {
+    document.getElementById('profileMessage').textContent = '';
+    setProfileEditing(true);
+    document.getElementById('username').focus();
   });
 
   document.getElementById('logoutBtn').addEventListener('click', handleLogout);
@@ -282,6 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }));
 }
 
+  setProfileEditing(false);
   load();
 
   // Modal and map picker related event listeners (must run after DOM loaded)
