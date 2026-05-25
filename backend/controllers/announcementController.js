@@ -34,6 +34,27 @@ function createTransporter() {
     });
 }
 
+function buildAnnouncementUrl(announcementId) {
+    return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
+}
+
+async function sendSmartMatchEmail(userId, subject, html) {
+    try {
+        const recipient = await User.findById(userId).select('email username');
+        if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
+
+        const transporter = createTransporter();
+        await transporter.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: recipient.email,
+            subject,
+            html
+        });
+    } catch (err) {
+        console.error('Errore invio email smart match:', err);
+    }
+}
+
 function normalizeCoordinates(input) {
     let parts = null;
     if (Array.isArray(input)) parts = input.map(Number);
@@ -64,14 +85,56 @@ function normalizeCoordinates(input) {
 // Helper interno per gestire il salvataggio dei match
 async function saveMatchNotification(announcement, matches) {
     try {
-        for (const match of matches) {
-            const similarityPercentage = ((match.score || 0) * 100).toFixed(2);
+        if (!matches || matches.length === 0) return;
+
+        if (announcement.type === 'LostAnimal') {
+            const bestMatch = matches[0];
+            const bestSimilarity = ((bestMatch.score || 0) * 100).toFixed(2);
+            const matchedAnnouncementId = bestMatch.announcement?._id;
+
             await Notification.create({
-                announcementId: announcement._id,
-                recipientId: announcement.publisherId,
-                message: `Trovato un possibile match visivo per il tuo annuncio: ${similarityPercentage}% di similitudine!`,
+                userId: announcement.publisherId,
+                announcementId: matchedAnnouncementId || announcement._id,
+                message: `Trovati ${matches.length} possibili annunci compatibili con il tuo annuncio. Miglior similitudine: ${bestSimilarity}%`,
                 type: 'SMART_MATCH'
             });
+
+            if (matchedAnnouncementId) {
+                await sendSmartMatchEmail(
+                    announcement.publisherId,
+                    'Trovami - Smart match trovato',
+                    `
+                        <h2>Smart match trovato</h2>
+                        <p>Abbiamo trovato ${matches.length} possibile/i annuncio/i compatibile/i con il tuo annuncio.</p>
+                        <p><strong>Miglior similitudine:</strong> ${bestSimilarity}%</p>
+                        <p><a href="${buildAnnouncementUrl(matchedAnnouncementId)}">Apri l'annuncio compatibile</a></p>
+                    `
+                );
+            }
+            return;
+        }
+
+        for (const match of matches) {
+            const recipientId = match.announcement?.publisherId?._id || match.announcement?.publisherId;
+            if (!recipientId) continue;
+
+            const similarityPercentage = ((match.score || 0) * 100).toFixed(2);
+            await Notification.create({
+                userId: recipientId,
+                announcementId: announcement._id,
+                message: `Il tuo annuncio ha trovato un possibile match visivo: ${similarityPercentage}% di similitudine.`,
+                type: 'SMART_MATCH'
+            });
+
+            await sendSmartMatchEmail(
+                recipientId,
+                'Trovami - Nuovo smart match',
+                `
+                    <h2>Nuovo smart match</h2>
+                    <p>Il tuo annuncio ha trovato un possibile match visivo con una similitudine del ${similarityPercentage}%.</p>
+                    <p><a href="${buildAnnouncementUrl(announcement._id)}">Apri l'annuncio compatibile</a></p>
+                `
+            );
         }
     } catch (err) {
         console.error("Errore salvataggio notifica:", err);
@@ -223,11 +286,10 @@ exports.createAnnouncement = async (req,res)=>{
         await announcement.save();
 
         if (announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
-            smartMatchingEngine.findMatches(announcement, animal.species)
-                .then(matches => {
-                    if (matches.length > 0) saveMatchNotification(announcement, matches);
-                })
-                .catch(err => console.error("[Smart Matching] Errore:", err));
+            const matches = await smartMatchingEngine.findMatches(announcement, animal.species);
+            if (matches.length > 0) {
+                await saveMatchNotification(announcement, matches);
+            }
         }
 
         res.status(201).json(announcement);
@@ -275,7 +337,11 @@ exports.updateAnnouncement = async (req, res) => {
         const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : ann.publisherId.toString();
         if (publisherIdStr !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
 
+        const animal = await Animal.findById(ann.animalId);
+        if (!animal) return res.status(404).json({ message: 'Animale non trovato' });
+
         const allowed = ['description', 'lastSeenDate', 'isCurrentlyThere', 'animalBehaviour', 'healthCondition', 'status', 'type', 'location'];
+        let embeddingRegenerated = false;
         for (const k of allowed) {
             if (req.body[k] === undefined) continue;
             if (k === 'location') {
@@ -301,15 +367,29 @@ exports.updateAnnouncement = async (req, res) => {
                 
                 // Rigeneriamo embedding se la foto cambia
                 const embedding = await smartMatchingEngine.generateImageEmbedding(processed);
-                if (embedding) ann.imageEmbedding = embedding;
+                if (embedding) {
+                    ann.imageEmbedding = embedding;
+                    embeddingRegenerated = true;
+                }
             } catch (err) {
                 ann.photo = { data: req.file.buffer, contentType: req.file.mimetype };
                 const embedding = await smartMatchingEngine.generateImageEmbedding(req.file.buffer);
-                if (embedding) ann.imageEmbedding = embedding;
+                if (embedding) {
+                    ann.imageEmbedding = embedding;
+                    embeddingRegenerated = true;
+                }
             }
         }
 
         await ann.save();
+
+        if (embeddingRegenerated && ann.imageEmbedding && ann.imageEmbedding.length > 0) {
+            const matches = await smartMatchingEngine.findMatches(ann, animal.species);
+            if (matches.length > 0) {
+                await saveMatchNotification(ann, matches);
+            }
+        }
+
         res.json(ann);
     } catch (err) {
         res.status(500).json({ message: 'Errore aggiornamento', error: err.message });

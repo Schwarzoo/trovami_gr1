@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, enum: ['comment'], required: true },
+  type: { type: String, enum: ['comment', 'SMART_MATCH'], required: true },
   announcementId: { type: mongoose.Schema.Types.ObjectId, ref: 'Announcement', required: true },
   commentId: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
   message: { type: String, required: true },

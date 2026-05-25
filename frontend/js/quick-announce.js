@@ -4,6 +4,8 @@ const QUICK_ANNOUNCE_FORM = document.getElementById('quick-announce-form');
 const QUICK_ANNOUNCE_BTN = document.getElementById('quick-announce-btn');
 const QUICK_ANNOUNCE_CLOSE = document.getElementById('quick-announce-close');
 const QUICK_ANNOUNCE_CANCEL = document.getElementById('quick-announce-cancel');
+const QUICK_ANNOUNCE_PROGRESS = document.getElementById('qa-progress');
+const QUICK_ANNOUNCE_SUBMIT = document.querySelector('#quick-announce-form button[type="submit"]');
 
 let currentLocation = null;
 
@@ -32,6 +34,17 @@ function closeQuickAnnounceModal() {
   document.body.style.overflow = '';
   QUICK_ANNOUNCE_FORM.reset();
   currentLocation = null;
+  setQuickAnnounceLoading(false);
+}
+
+function setQuickAnnounceLoading(isLoading) {
+  if (QUICK_ANNOUNCE_PROGRESS) {
+    QUICK_ANNOUNCE_PROGRESS.classList.toggle('is-visible', isLoading);
+    QUICK_ANNOUNCE_PROGRESS.setAttribute('aria-hidden', String(!isLoading));
+  }
+  if (QUICK_ANNOUNCE_SUBMIT) QUICK_ANNOUNCE_SUBMIT.disabled = isLoading;
+  if (QUICK_ANNOUNCE_CANCEL) QUICK_ANNOUNCE_CANCEL.disabled = isLoading;
+  if (QUICK_ANNOUNCE_CLOSE) QUICK_ANNOUNCE_CLOSE.disabled = isLoading;
 }
 
 // Geolocation Handler
@@ -137,89 +150,95 @@ async function submitQuickAnnounce(data) {
     return;
   }
 
-  // Step 1: Create Animal
-  const animalPayload = {
-    species: data.species,
-    breed: data.breed,
-    gender: data.gender,
-    color: data.color,
-    lunghezzaPelo: data.lunghezzaPelo,
-    distinctiveFeatures: data.distinctiveFeatures
-  };
+  setQuickAnnounceLoading(true);
 
-  const animalRes = await fetch('http://localhost:3000/api/animals', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`
-    },
-    body: JSON.stringify(animalPayload)
-  });
+  try {
+    // Step 1: Create Animal
+    const animalPayload = {
+      species: data.species,
+      breed: data.breed,
+      gender: data.gender,
+      color: data.color,
+      lunghezzaPelo: data.lunghezzaPelo,
+      distinctiveFeatures: data.distinctiveFeatures
+    };
 
-  if (!animalRes.ok) {
-    const errorData = await animalRes.json();
-    throw new Error(`Errore nella creazione dell'animale: ${errorData.message}`);
-  }
-
-  const animal = await animalRes.json();
-  const animalId = animal._id;
-
-  // Step 2: Create Announcement
-  const announcementPayload = {
-    type: data.type,
-    animalId: animalId,
-    description: data.description,
-    coordinates: data.coordinates,
-    healthCondition: data.healthCondition,
-    animalBehaviour: data.animalBehaviour,
-    lastSeenDate: new Date().toISOString()
-  };
-
-  let announcementRes;
-  if (data.photo && data.photo.size > 0) {
-    const announcementForm = new FormData();
-    announcementForm.append('type', announcementPayload.type);
-    announcementForm.append('animalId', announcementPayload.animalId);
-    announcementForm.append('description', announcementPayload.description);
-    announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
-    announcementForm.append('healthCondition', announcementPayload.healthCondition);
-    announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
-    announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
-    announcementForm.append('photo', data.photo);
-
-    announcementRes = await fetch('http://localhost:3000/api/announcements', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: announcementForm
-    });
-  } else {
-    announcementRes = await fetch('http://localhost:3000/api/announcements', {
+    const animalRes = await fetch('http://localhost:3000/api/animals', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`
       },
-      body: JSON.stringify(announcementPayload)
+      body: JSON.stringify(animalPayload)
     });
+
+    if (!animalRes.ok) {
+      const errorData = await animalRes.json();
+      throw new Error(`Errore nella creazione dell'animale: ${errorData.message}`);
+    }
+
+    const animal = await animalRes.json();
+    const animalId = animal._id;
+
+    // Step 2: Create Announcement
+    const announcementPayload = {
+      type: data.type,
+      animalId: animalId,
+      description: data.description,
+      coordinates: data.coordinates,
+      healthCondition: data.healthCondition,
+      animalBehaviour: data.animalBehaviour,
+      lastSeenDate: new Date().toISOString()
+    };
+
+    let announcementRes;
+    if (data.photo && data.photo.size > 0) {
+      const announcementForm = new FormData();
+      announcementForm.append('type', announcementPayload.type);
+      announcementForm.append('animalId', announcementPayload.animalId);
+      announcementForm.append('description', announcementPayload.description);
+      announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
+      announcementForm.append('healthCondition', announcementPayload.healthCondition);
+      announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
+      announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
+      announcementForm.append('photo', data.photo);
+
+      announcementRes = await fetch('http://localhost:3000/api/announcements', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: announcementForm
+      });
+    } else {
+      announcementRes = await fetch('http://localhost:3000/api/announcements', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(announcementPayload)
+      });
+    }
+
+    if (!announcementRes.ok) {
+      const errorData = await announcementRes.json();
+      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message}`);
+    }
+
+    await announcementRes.json();
+
+    // Success!
+    alert('✅ Annuncio pubblicato con successo!');
+    closeQuickAnnounceModal();
+    
+    // Optionally redirect to announcements page or refresh
+    setTimeout(() => {
+      window.location.href = '/pages/announcements.html';
+    }, 1500);
+  } finally {
+    setQuickAnnounceLoading(false);
   }
-
-  if (!announcementRes.ok) {
-    const errorData = await announcementRes.json();
-    throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message}`);
-  }
-
-  const announcement = await announcementRes.json();
-
-  // Success!
-  alert('✅ Annuncio pubblicato con successo!');
-  closeQuickAnnounceModal();
-  
-  // Optionally redirect to announcements page or refresh
-  setTimeout(() => {
-    window.location.href = '/pages/announcements.html';
-  }, 1500);
 }
 
 // Event Listeners
