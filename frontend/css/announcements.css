@@ -161,6 +161,10 @@ button#nearby-button:disabled {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
+.card:focus-visible {
+    outline: 3px solid rgba(26,115,232,0.45);
+    outline-offset: 3px;
+}
 
 @keyframes fadeUp {
     from { opacity: 0; transform: translateY(16px); }
