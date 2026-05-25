@@ -4,9 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const { forgotPassword, resetPassword } = require('./controllers/authController');
 
-//
 const path = require('path');
-//
 
 const app = express();
 
@@ -18,8 +16,8 @@ app.post('/api/auth/reset-password', resetPassword);
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/animals', require('./routes/animalRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
-app.use(express.static(path.join(__dirname, '../frontend')));// ← aggiunta
-
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 mongoose.connect(process.env.DB_URL)
   .then(() => {
@@ -29,3 +27,4 @@ mongoose.connect(process.env.DB_URL)
     });
   })
   .catch(err => console.error('Errore connessione:', err));
+

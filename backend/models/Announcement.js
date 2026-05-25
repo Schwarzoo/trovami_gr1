@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+const commentSchema = new mongoose.Schema({
+    userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    username: { type: String, required: true },
+    text:     { type: String, required: true, trim: true, maxlength: 500 }
+}, { timestamps: { createdAt: true, updatedAt: false } });
+
 const announcementSchema = new mongoose.Schema({
     type: {
         type: String,
@@ -30,6 +36,11 @@ const announcementSchema = new mongoose.Schema({
         default: 'ACTIVE'
     },
 
+    imageEmbedding: { 
+        type: [Number], 
+        default: null 
+    },
+
     lastSeenDate: { type: Date },
 
     // Campi specifici per Sighting (UC4)[cite: 1, 2]
@@ -50,6 +61,9 @@ const announcementSchema = new mongoose.Schema({
         data: Buffer,
         contentType: String
     }
+
+    ,
+    comments: { type: [commentSchema], default: [] }
 
 }, { timestamps: true });
 
