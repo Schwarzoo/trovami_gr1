@@ -1,7 +1,34 @@
 const Announcement = require('../models/Announcement');
 const Animal = require('../models/Animal');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
+const nodemailer = require('nodemailer');
+
+function maskPublisherContacts(publisher) {
+    if (!publisher) return publisher;
+    const vis = publisher.contactVisibility || {};
+    const showEmail = vis.showEmail !== false;
+    const showPhone = vis.showPhone !== false;
+    return {
+        ...publisher,
+        email: showEmail ? publisher.email : null,
+        phoneNumber: showPhone ? publisher.phoneNumber : null
+    };
+}
+
+function createTransporter() {
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: process.env.SMTP_PORT || 587,
+        secure: false,
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    });
+}
 
 function normalizeCoordinates(input) {
   // accept array [a,b] or string 'a,b'
@@ -55,14 +82,89 @@ exports.getAnnouncements = async (req, res) => {
         }
 
         const announcements = await Announcement.find(filter)
-            .select('-photo')
+            .select('-photo -comments')
             .populate('animalId')
-            .populate('publisherId', 'username email phoneNumber') // 'name' non esiste nel modello User
+            .populate('publisherId', 'username email phoneNumber contactVisibility') // 'name' non esiste nel modello User
             .sort({ createdAt: -1 });
 
-        res.json(announcements);
+        const masked = announcements.map(a => {
+            const obj = a.toObject ? a.toObject() : a;
+            if (obj.publisherId) obj.publisherId = maskPublisherContacts(obj.publisherId);
+            return obj;
+        });
+
+        res.json(masked);
     } catch (err) {
         res.status(500).json({ message: 'Errore nel recupero degli annunci', error: err.message });
+    }
+};
+
+// POST /api/announcements/:id/comments  (auth) - add comment
+exports.addAnnouncementComment = async (req, res) => {
+    try {
+        const announcementId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(announcementId)) {
+            return res.status(400).json({ message: 'ID annuncio non valido' });
+        }
+
+        const text = (req.body?.text ?? '').toString().trim();
+        if (!text) return res.status(400).json({ message: 'Testo mancante' });
+        if (text.length > 500) return res.status(400).json({ message: 'Testo troppo lungo (max 500)' });
+
+        const user = await User.findById(req.user.userId).select('username');
+        if (!user) return res.status(401).json({ message: 'Utente non valido' });
+
+        const ann = await Announcement.findById(announcementId);
+        if (!ann) return res.status(404).json({ message: 'Annuncio non trovato' });
+
+        ann.comments.push({
+            userId: user._id,
+            username: user.username,
+            text
+        });
+
+        await ann.save();
+
+        const newComment = ann.comments[ann.comments.length - 1];
+
+        // notification for announcement owner (skip self-comments)
+        try {
+            const publisherId = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id : ann.publisherId;
+            if (publisherId && publisherId.toString() !== user._id.toString()) {
+                const msg = `Nuovo commento su annuncio: ${text.slice(0, 80)}${text.length > 80 ? '…' : ''}`;
+                await Notification.create({
+                    userId: publisherId,
+                    type: 'comment',
+                    announcementId: ann._id,
+                    commentId: newComment?._id || null,
+                    message: msg
+                });
+
+                const publisher = await User.findById(publisherId).select('email username notificationPrefs');
+                const emailOn = !!publisher?.notificationPrefs?.emailOnComment;
+                const canSend = emailOn && publisher?.email && process.env.SMTP_USER && process.env.SMTP_PASS;
+                if (canSend) {
+                    const transporter = createTransporter();
+                    const annUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${ann._id}`;
+                    await transporter.sendMail({
+                        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                        to: publisher.email,
+                        subject: 'Trovami - Nuovo commento',
+                        html: `
+                            <h2>Nuovo commento su un tuo annuncio</h2>
+                            <p><strong>${user.username}</strong>: ${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+                            <p><a href="${annUrl}">Vedi annuncio</a></p>
+                        `
+                    });
+                }
+            }
+        } catch (e) {
+            // best-effort
+        }
+
+        res.status(201).json({ comment: newComment, comments: ann.comments });
+    } catch (err) {
+        res.status(500).json({ message: 'Errore inserimento commento', error: err.message });
     }
 };
 
@@ -161,22 +263,24 @@ exports.createAnnouncement = async (req,res)=>{
 };
 
 // GET /api/announcements/:id
-exports.getAnnouncementById = async (req, res) => {
-    try {
-        const announcement = await Announcement.findById(req.params.id)
-            .select('-photo')
-            .populate('animalId')
-            .populate('publisherId', 'username email phoneNumber');
+	exports.getAnnouncementById = async (req, res) => {
+	    try {
+	        const announcement = await Announcement.findById(req.params.id)
+	            .select('-photo')
+	            .populate('animalId')
+	            .populate('publisherId', 'username email phoneNumber contactVisibility');
 
         if (!announcement) {
             return res.status(404).json({ message: 'Annuncio non trovato' });
         }
 
-        res.json(announcement);
-    } catch (err) {
-        res.status(500).json({ message: "Errore nel recupero dell'annuncio", error: err.message });
-    }
-};
+	        const obj = announcement.toObject();
+	        if (obj.publisherId) obj.publisherId = maskPublisherContacts(obj.publisherId);
+	        res.json(obj);
+	    } catch (err) {
+	        res.status(500).json({ message: "Errore nel recupero dell'annuncio", error: err.message });
+	    }
+	};
 
 // GET /api/announcements/:id/photo  - serve binary image if present
 exports.getAnnouncementPhoto = async (req, res) => {

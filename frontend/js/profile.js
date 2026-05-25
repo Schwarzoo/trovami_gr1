@@ -52,6 +52,96 @@ document.addEventListener('DOMContentLoaded', async () => {
     return await res.json();
   }
 
+  async function fetchNotifications() {
+    const res = await fetch('http://localhost:3000/api/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
+  async function markNotificationRead(id) {
+    await fetch(`http://localhost:3000/api/notifications/${encodeURIComponent(id)}/read`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  }
+
+  async function markAllNotificationsRead() {
+    await fetch('http://localhost:3000/api/notifications/read-all', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  }
+
+  function playBeep() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.value = 0.0001;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      const now = ctx.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      o.stop(now + 0.2);
+      o.onended = () => ctx.close();
+    } catch (e) {}
+  }
+
+  function escapeHtml(input) {
+    return String(input ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function renderNotifications(list) {
+    const empty = document.getElementById('notifications-empty');
+    const container = document.getElementById('notifications-list');
+    if (!container || !empty) return;
+
+    container.innerHTML = '';
+    if (!list || list.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.forEach((n) => {
+      const when = n?.createdAt ? new Date(n.createdAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+      const annId = n?.announcementId;
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">Notifica</span>
+          <span class="comment-date">${escapeHtml(when)}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(n?.message || '')}</div>
+        <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+          <a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(annId)}">Vedi annuncio</a>
+        </div>
+      `;
+      const link = item.querySelector('a');
+      if (link) {
+        link.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (n?._id) await markNotificationRead(n._id);
+          window.location.href = link.getAttribute('href');
+        });
+      }
+      container.appendChild(item);
+    });
+  }
+
   async function load() {
     const me = await fetchMe();
     if (!me) { localStorage.removeItem('token'); window.location.href = '/pages/login.html'; return; }
@@ -60,18 +150,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('email').value = me.email || '';
     document.getElementById('phoneNumber').value = me.phoneNumber || '';
 
+    document.getElementById('showEmail').checked = me.contactVisibility?.showEmail !== false;
+    document.getElementById('showPhone').checked = me.contactVisibility?.showPhone !== false;
+    document.getElementById('emailOnComment').checked = !!me.notificationPrefs?.emailOnComment;
+    document.getElementById('soundOnSite').checked = me.notificationPrefs?.soundOnSite !== false;
+
+    const notifications = await fetchNotifications();
+    renderNotifications(notifications);
+    if (notifications.length > 0 && (me.notificationPrefs?.soundOnSite !== false)) playBeep();
+
     loadMyAnnouncements();
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const updates = { username: document.getElementById('username').value, phoneNumber: document.getElementById('phoneNumber').value };
+    const updates = {
+      username: document.getElementById('username').value,
+      phoneNumber: document.getElementById('phoneNumber').value,
+      contactVisibility: {
+        showEmail: !!document.getElementById('showEmail').checked,
+        showPhone: !!document.getElementById('showPhone').checked
+      },
+      notificationPrefs: {
+        emailOnComment: !!document.getElementById('emailOnComment').checked,
+        soundOnSite: !!document.getElementById('soundOnSite').checked
+      }
+    };
     const res = await fetch('http://localhost:3000/api/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
     const data = await res.json();
     document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.message || 'Errore');
   });
 
   document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+  document.getElementById('notificationsReadAll')?.addEventListener('click', async () => {
+    await markAllNotificationsRead();
+    const notifications = await fetchNotifications();
+    renderNotifications(notifications);
+  });
 
   document.getElementById('showCreate').addEventListener('click', (e) => {
     e.preventDefault();
