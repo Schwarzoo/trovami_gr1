@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     isActive:     { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
     role:         { type: String, enum: ['user', 'shelter', 'admin'], default: 'user' },
+    rifugioStatus: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
     sessionToken: { type: String, default: null},
 
     contactVisibility: {
@@ -26,6 +27,19 @@ const userSchema = new mongoose.Schema({
     emailVerificationToken: { type: String, default: null },
     emailVerificationExpires: { type: Date, default: null },
 
+    rifugioData: {
+        rifugioName: { type: String },
+        address: { type: String },
+        city: { type: String },
+        description: { type: String },
+        totalSlots: { type: Number },
+        availableSlots: { type: Number },
+        location: {
+            type: { type: String, enum: ['Point'] },
+            coordinates: { type: [Number], default: undefined }
+        }
+    },
+
     shelterData: {
         shelterName:    { type: String },
         totalSlots:     { type: Number },
@@ -40,6 +54,12 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('validate', function normalizeRole() {
     if (typeof this.role === 'string') {
         this.role = this.role.toLowerCase();
+    }
+    if (this.role === 'shelter' && (!this.rifugioStatus || this.rifugioStatus === 'none')) {
+        this.rifugioStatus = 'pending';
+    }
+    if (this.role !== 'shelter' && (!this.rifugioStatus || this.rifugioStatus === 'pending')) {
+        this.rifugioStatus = 'none';
     }
 });
 

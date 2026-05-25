@@ -16,12 +16,6 @@ function isUserLoggedIn() {
 
 // Modal Control Functions
 function openQuickAnnounceModal() {
-  if (!isUserLoggedIn()) {
-    alert('Devi essere loggato per segnalare un animale. Reindirizzamento al login...');
-    window.location.href = '/pages/login.html?next=/pages/home.html';
-    return;
-  }
-
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   
@@ -142,6 +136,44 @@ async function handleQuickAnnounceSubmit(e) {
 
 // API Call to Create Announcement
 async function submitQuickAnnounce(data) {
+  const announcementPayload = {
+    type: data.type,
+    species: data.species,
+    breed: data.breed,
+    gender: data.gender,
+    color: data.color,
+    lunghezzaPelo: data.lunghezzaPelo,
+    distinctiveFeatures: data.distinctiveFeatures,
+    description: data.description,
+    coordinates: data.coordinates,
+    healthCondition: data.healthCondition,
+    animalBehaviour: data.animalBehaviour,
+    lastSeenDate: new Date().toISOString()
+  };
+
+  let announcementRes;
+  if (data.photo && data.photo.size > 0) {
+    const announcementForm = new FormData();
+    announcementForm.append('type', announcementPayload.type);
+    announcementForm.append('species', announcementPayload.species);
+    announcementForm.append('breed', announcementPayload.breed);
+    announcementForm.append('gender', announcementPayload.gender);
+    announcementForm.append('color', announcementPayload.color);
+    if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
+    if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
+    announcementForm.append('description', announcementPayload.description);
+    announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
+    announcementForm.append('healthCondition', announcementPayload.healthCondition);
+    announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
+    announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
+    announcementForm.append('photo', data.photo);
+
+    announcementRes = await fetch('http://localhost:3000/api/announcements/quick', {
+      method: 'POST',
+      body: announcementForm
+    });
+  } else {
+    announcementRes = await fetch('http://localhost:3000/api/announcements/quick', {
   // First, check if user is authenticated
   const authToken = localStorage.getItem('token');
   if (!authToken) {
@@ -166,8 +198,7 @@ async function submitQuickAnnounce(data) {
     const animalRes = await fetch('http://localhost:3000/api/animals', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(animalPayload)
     });
@@ -177,6 +208,14 @@ async function submitQuickAnnounce(data) {
       throw new Error(`Errore nella creazione dell'animale: ${errorData.message}`);
     }
 
+  // Success!
+  alert('✅ Annuncio pubblicato con successo!');
+  closeQuickAnnounceModal();
+  
+  // Optionally redirect to announcements page or refresh
+  setTimeout(() => {
+    window.location.href = '/pages/announcements.html';
+  }, 1500);
     const animal = await animalRes.json();
     const animalId = animal._id;
 

@@ -15,6 +15,7 @@ const map = L.map('map', {
 }).setView(TRENTO_CENTER , 13);
 const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get('highlight');
+const highlightRifugioId = urlParams.get('rifugioId');
 
 // Disable tile wrapping (noWrap: true) to prevent seeing multiple copies of the world
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -60,8 +61,21 @@ const secondaryIcon = L.divIcon({
   popupAnchor: [0, -40]
 });
 
+const rifugioIcon = L.divIcon({
+  className: '',
+  html: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 34 34">
+    <circle cx="17" cy="17" r="15" fill="#C85A2A"/>
+    <path d="M8 17.5L17 9l9 8.5v8.5a1 1 0 0 1-1 1h-5v-6h-6v6H9a1 1 0 0 1-1-1v-8.5z" fill="white"/>
+    <path d="M6.5 18L17 8l10.5 10" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+  popupAnchor: [0, -14]
+});
+
 
 let allAnnouncements = [];
+let allRifugi = [];
 
 // Keep track of current visible markers bounds so we can restrict zoom/pan
 let _visibleBounds = null;
@@ -176,13 +190,16 @@ function updateCount(n) {
 
 function renderAnnouncements(announcements) {
   let highlightedMarker = null;
+  let highlightedRifugioMarker = null;
 
   // remove existing markers
   if (window._tm_markers) { window._tm_markers.forEach(m => map.removeLayer(m)); }
+  if (window._tm_rifugio_markers) { window._tm_rifugio_markers.forEach(m => map.removeLayer(m)); }
   window._tm_markers = [];
+  window._tm_rifugio_markers = [];
   const bounds = L.latLngBounds([]);
 
-  announcements.forEach(a => {
+  announcements.filter(a => a.publisherId?.role !== 'shelter').forEach(a => {
   const [lng, lat] = a.location.coordinates;
   const animal = a.animalId;
   const isLost = a.type === 'LostAnimal';
@@ -216,7 +233,7 @@ function renderAnnouncements(announcements) {
           <div style="width:26px;height:26px;border-radius:50%;background:#E6F1FB;
                       display:flex;align-items:center;justify-content:center;font-size:13px;">🐾</div>
           <span style="font-size:12px;color:#666;">
-            ${animal?.species ?? ''}${animal?.breed ? ' · ' + animal.breed : ''}
+            ${animal?.name ? escapeHtml(animal.name) + ' · ' : ''}${animal?.species ?? ''}${animal?.breed ? ' · ' + animal.breed : ''}
           </span>
         </div>
 
@@ -282,6 +299,38 @@ function renderAnnouncements(announcements) {
       // keep placeholder
     }
   });
+
+  allRifugi.forEach((rifugio) => {
+    const coords = rifugio.rifugioData?.location?.coordinates;
+    if (!Array.isArray(coords) || coords.length !== 2) return;
+    const [lng, lat] = coords.map(Number);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+
+    const name = rifugio.rifugioData?.rifugioName || rifugio.username || 'Rifugio';
+    const address = [rifugio.rifugioData?.address, rifugio.rifugioData?.city].filter(Boolean).join(', ');
+    const popupHTML = `
+      <div style="width:300px;font-family:sans-serif;padding:4px 2px 2px;">
+        <div style="font-size:17px;font-weight:700;margin-bottom:8px;color:#111;">${escapeHtml(name)}</div>
+        ${rifugio.rifugioData?.description ? `<div style="font-size:13px;color:#555;line-height:1.45;margin-bottom:10px;">${escapeHtml(rifugio.rifugioData.description)}</div>` : ''}
+        ${address ? `<div style="font-size:13px;color:#666;margin-bottom:8px;">${escapeHtml(address)}</div>` : ''}
+        ${rifugio.phoneNumber ? `<div style="font-size:13px;color:#666;">Tel: ${escapeHtml(rifugio.phoneNumber)}</div>` : ''}
+        ${rifugio.email ? `<div style="font-size:13px;color:#666;">Email: ${escapeHtml(rifugio.email)}</div>` : ''}
+        <a href="/pages/rifugio-dashboard.html?rifugioId=${encodeURIComponent(rifugio._id)}"
+           style="display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">
+          Apri dashboard rifugio →
+        </a>
+      </div>
+    `;
+
+    const marker = L.marker([lat, lng], { icon: rifugioIcon })
+      .addTo(map)
+      .bindPopup(popupHTML, { maxWidth: 330, className: 'custom-popup' });
+    window._tm_rifugio_markers.push(marker);
+    bounds.extend([lat, lng]);
+    if (highlightRifugioId === String(rifugio._id)) {
+      highlightedRifugioMarker = marker;
+    }
+  });
   window._tm_markers.push(marker);
   bounds.extend([lat, lng]);
   if (highlightId === a._id) {
@@ -291,7 +340,11 @@ function renderAnnouncements(announcements) {
 
 
   if (window._tm_markers.length > 0 && bounds.isValid()) {
-    if (highlightedMarker) {
+    if (highlightedRifugioMarker) {
+      const { lat, lng } = highlightedRifugioMarker.getLatLng();
+      map.setView([lat, lng], 16, { animate: false });
+      highlightedRifugioMarker.openPopup();
+    } else if (highlightedMarker) {
       const { lat, lng } = highlightedMarker.getLatLng();
       map.setView([lat, lng], 16, { animate: false });
       map.panBy([0, -140], { animate: false });
@@ -327,6 +380,15 @@ function renderAnnouncements(announcements) {
   // } catch (err) {
   //   console.warn('Could not set min zoom', err);
   // }
+}
+
+function escapeHtml(input) {
+  return String(input ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 
@@ -396,11 +458,16 @@ function populateFilterOptions(announcements) {
 }
 
 async function loadAnnouncements() {
-  const res = await fetch('http://localhost:3000/api/announcements');
-  if (!res.ok) { console.error('Errore fetch annunci'); return; }
+  const [annRes, rifugiRes] = await Promise.all([
+    fetch('http://localhost:3000/api/announcements'),
+    fetch('http://localhost:3000/api/users/rifugi/public')
+  ]);
+  if (!annRes.ok) { console.error('Errore fetch annunci'); return; }
 
-  const announcements = await res.json();
+  const announcements = await annRes.json();
+  const rifugi = rifugiRes.ok ? await rifugiRes.json() : [];
   allAnnouncements = Array.isArray(announcements) ? announcements : [];
+  allRifugi = Array.isArray(rifugi) ? rifugi : [];
   populateFilterOptions(allAnnouncements);
   const filtered = getFilteredAnnouncements();
   updateCount(filtered.length);

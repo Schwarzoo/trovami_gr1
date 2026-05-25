@@ -67,6 +67,24 @@ async function postAnnouncementComment(id, text) {
     return json;
 }
 
+async function postAnnouncementReport(id, reason, details) {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('not logged in');
+
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}/reports`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ reason, details })
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.message || 'Errore invio segnalazione');
+    return json;
+}
+
 async function fetchPublicUser(userId) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
@@ -102,7 +120,13 @@ function renderCards(announcements) {
 
 function buildCard(ann) {
     const animal = ann.animalId;
+    const publisher = ann.publisherId;
     const isLost = ann.type === 'LostAnimal';
+    const isRifugioAnnouncement = publisher?.role === 'shelter';
+    const rifugioName = publisher?.role === 'shelter'
+        ? (publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username)
+        : '';
+    const primaryTitle = animal?.name || animal?.breed || animal?.species || 'Animale';
     const distanceLabel = typeof ann._distance === 'number'
         ? `<div class="card-distance">${ann._distance < 1000 ? `${Math.round(ann._distance)} m` : `${(ann._distance / 1000).toFixed(1)} km`} da te</div>`
         : '';
@@ -120,8 +144,8 @@ function buildCard(ann) {
     card.innerHTML = `
         <div class="card-image">
             <div class="card-image-placeholder"><span>…</span></div>
-            <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
-                ${isLost ? 'Smarrito' : 'Avvistato'}
+            <span class="badge badge--${isRifugioAnnouncement ? 'rifugio' : (isLost ? 'lost' : 'sighting')}">
+                ${isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? 'Smarrito' : 'Avvistato')}
             </span>
         </div>
         <div class="card-body">
@@ -129,8 +153,11 @@ function buildCard(ann) {
                 <span class="card-species">${animal?.species || 'Specie sconosciuta'}</span>
                 <span class="card-date">${date}</span>
             </div>
-            <h3 class="card-breed">${displayValue(animal?.breed)}</h3>
-            <p class="card-description">${ann.description}</p>
+            <h3 class="card-breed">${escapeHtml(primaryTitle)}</h3>
+            ${animal?.name ? `<div class="card-distance">${escapeHtml(animal?.species || '')}${animal?.breed ? ` · ${escapeHtml(animal.breed)}` : ''}</div>` : ''}
+            <p class="card-description">${escapeHtml(ann.description)}</p>
+            ${rifugioName ? `<div class="card-distance">Rifugio: ${escapeHtml(rifugioName)}</div>` : ''}
+            ${ann.isQuick ? `<div class="card-distance">Segnalazione veloce</div>` : ''}
             ${distanceLabel}
             <div class="card-details">
                 <span class="card-detail-label">Colore</span><span>${displayValue(animal?.color)}</span>
@@ -176,6 +203,7 @@ async function openModal(ann) {
     const animal = data.animalId;
     const publisher = data.publisherId;
     const isLost = data.type === 'LostAnimal';
+    const isRifugioAnnouncement = publisher?.role === 'shelter';
     const comments = Array.isArray(data.comments) ? data.comments : [];
 
     const date = new Date(data.date).toLocaleDateString('it-IT', {
@@ -190,8 +218,19 @@ async function openModal(ann) {
         locationInfo = `<dt>Posizione</dt><dd><a class="position-link" href="${link}"><em>trovami</em></a></dd>`;
     }
 
+    const rifugioAddress = [publisher?.rifugioData?.address, publisher?.rifugioData?.city]
+        .filter(Boolean)
+        .join(', ');
+    const rifugioCoords = publisher?.rifugioData?.location?.coordinates;
+    const rifugioLocationHtml = publisher?.role === 'shelter'
+        ? `
+            ${rifugioAddress ? `<span>${escapeHtml(rifugioAddress)}</span>` : ''}
+            ${Array.isArray(rifugioCoords) && rifugioCoords.length === 2 ? `<a href="map.html?rifugioId=${encodeURIComponent(publisher._id)}">Vedi posizione rifugio</a>` : ''}
+        `
+        : '';
+
     document.getElementById('modal-title').textContent =
-        isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`;
+        animal?.name || (isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
 
         const gallery = document.getElementById('modal-gallery');
         // try to load announcement photo from backend endpoint and fallback to text if missing
@@ -229,9 +268,35 @@ async function openModal(ann) {
             </form>
         `
         : `<div class="comments-locked">🔒 Accedi per commentare</div>`;
+    const reportBoxHtml = isLoggedIn
+        ? `
+            <section class="comments-section" aria-label="Segnala annuncio">
+                <div class="comments-header">
+                    <h3>Segnala annuncio</h3>
+                </div>
+                <form class="report-form" data-announcement-id="${escapeHtml(data._id)}">
+                    <label class="comment-label" for="report-reason">Motivo</label>
+                    <select id="report-reason" class="report-select">
+                        <option value="troll">Troll</option>
+                        <option value="offensivo">Offensivo</option>
+                        <option value="falso">Non reale</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                    <label class="comment-label" for="report-details">Dettagli</label>
+                    <textarea id="report-details" class="comment-textarea" rows="2" maxlength="500" placeholder="Aggiungi dettagli utili"></textarea>
+                    <div class="comment-actions">
+                        <span class="comment-hint">Visibile agli admin</span>
+                        <button type="submit" class="comment-submit">Segnala</button>
+                    </div>
+                    <div class="report-message comment-error" role="status" aria-live="polite"></div>
+                </form>
+            </section>
+        `
+        : '';
 
     document.getElementById('modal-body').innerHTML = `
         <dl class="detail-list">
+            ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
             <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
             <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
             <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
@@ -256,13 +321,15 @@ async function openModal(ann) {
                 ${commentsHtml}
             </div>
         </section>
+        ${reportBoxHtml}
 
         <div class="modal-contact">
             ${isLoggedIn
                 ? `<strong>Contatto:</strong>
-                   <span>${publisher?.username || '—'}</span>
+                   <span>${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</span>
                    ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">${publisher.phoneNumber}</a>` : ''}
-                   ${publisher?.email ? `<a href="mailto:${publisher.email}">${publisher.email}</a>` : ''}`
+                   ${publisher?.email ? `<a href="mailto:${publisher.email}">${publisher.email}</a>` : ''}
+                   ${rifugioLocationHtml}`
                 : `<span class="contact-locked">🔒 Accedi per vedere i contatti</span>`
             }
         </div>
@@ -296,6 +363,39 @@ async function openModal(ann) {
                 errorBox.textContent = err.message || 'Errore invio commento';
             } finally {
                 form.querySelector('.comment-submit').disabled = false;
+            }
+        });
+    }
+
+    const reportForm = document.querySelector('.report-form');
+    if (reportForm) {
+        reportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = reportForm.querySelector('#report-reason')?.value || 'altro';
+            const details = reportForm.querySelector('#report-details')?.value.trim() || '';
+            const message = reportForm.querySelector('.report-message');
+            const submit = reportForm.querySelector('.comment-submit');
+
+            if (message) {
+                message.textContent = '';
+                message.classList.remove('success');
+            }
+            submit.disabled = true;
+
+            try {
+                await postAnnouncementReport(data._id, reason, details);
+                if (message) {
+                    message.textContent = 'Segnalazione inviata agli admin';
+                    message.style.color = '#166534';
+                }
+                reportForm.reset();
+            } catch (err) {
+                if (message) {
+                    message.textContent = err.message || 'Errore invio segnalazione';
+                    message.style.color = '';
+                }
+            } finally {
+                submit.disabled = false;
             }
         });
     }
@@ -378,10 +478,34 @@ function closeModal() {
 }
 
 // --- Filtri ---
+function populateRifugioFilter(announcements) {
+    const select = document.getElementById('filter-rifugio');
+    if (!select) return;
+
+    const rifugi = new Map();
+    announcements.forEach((ann) => {
+        const publisher = ann.publisherId;
+        const id = publisher?._id || publisher;
+        if (!id || publisher?.role !== 'shelter') return;
+        const name = publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username || 'Rifugio';
+        rifugi.set(id, name);
+    });
+
+    select.innerHTML = '<option value="">Tutti</option>';
+    [...rifugi.entries()]
+        .sort((a, b) => a[1].localeCompare(b[1], 'it'))
+        .forEach(([id, name]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+}
 
 function getFilteredAnnouncements() {
     const type    = document.getElementById('filter-type').value;
     const species = document.getElementById('filter-species').value.trim();
+    const rifugioId = document.getElementById('filter-rifugio')?.value || '';
 
     let filtered = [...allAnnouncements];
 
@@ -389,6 +513,7 @@ function getFilteredAnnouncements() {
     if (species) filtered = filtered.filter(a =>
         a.animalId?.species?.toLowerCase().includes(species.toLowerCase())
     );
+    if (rifugioId) filtered = filtered.filter(a => (a.publisherId?._id || a.publisherId) === rifugioId);
 
     if (sortByProximity && currentLocation) {
         filtered = sortAnnouncementsByDistance(filtered, currentLocation);
@@ -473,11 +598,18 @@ function showError(msg) {
 document.addEventListener('DOMContentLoaded', async () => {
     allAnnouncements = await fetchAnnouncements();
     allAnnouncements = sortAnnouncementsByDate(allAnnouncements);
-    renderCards(allAnnouncements);
-    updateCount(allAnnouncements.length);
+    populateRifugioFilter(allAnnouncements);
+    const initialRifugioId = new URLSearchParams(window.location.search).get('rifugioId');
+    if (initialRifugioId && document.getElementById('filter-rifugio')) {
+        document.getElementById('filter-rifugio').value = initialRifugioId;
+    }
+    const initialFiltered = getFilteredAnnouncements();
+    renderCards(initialFiltered);
+    updateCount(initialFiltered.length);
 
     document.getElementById('filter-type').addEventListener('change', applyFilters);
     document.getElementById('filter-species').addEventListener('input', applyFilters);
+    document.getElementById('filter-rifugio')?.addEventListener('change', applyFilters);
     document.getElementById('nearby-button').addEventListener('click', async () => {
         const button = document.getElementById('nearby-button');
         if (sortByProximity) {

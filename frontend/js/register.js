@@ -5,8 +5,19 @@ const successPanel = document.getElementById('registerSuccessPanel');
 const goToLoginButton = document.getElementById('goToLogin');
 const resendButton = document.getElementById('resendVerification');
 const resendMessage = document.getElementById('resendMessage');
+const becomeRifugioButton = document.getElementById('becomeRifugio');
+const rifugioFields = document.getElementById('rifugioFields');
 
 let lastRegisteredEmail = '';
+let isRifugio = false;
+
+becomeRifugioButton.addEventListener('click', () => {
+  isRifugio = !isRifugio;
+  rifugioFields.classList.toggle('is-hidden', !isRifugio);
+  becomeRifugioButton.classList.toggle('is-selected', isRifugio);
+  becomeRifugioButton.setAttribute('aria-pressed', String(isRifugio));
+  document.getElementById('rifugioName').required = isRifugio;
+});
 
 goToLoginButton.addEventListener('click', () => {
   window.location.href = './login.html';
@@ -53,6 +64,10 @@ form.addEventListener('submit', async (e) => {
   const username = document.getElementById('username').value.trim();
   const email = document.getElementById('email').value.trim();
   const phoneNumber = document.getElementById('phoneNumber').value.trim();
+  const rifugioName = document.getElementById('rifugioName').value.trim();
+  const rifugioAddress = document.getElementById('rifugioAddress').value.trim();
+  const rifugioCity = document.getElementById('rifugioCity').value.trim();
+  const rifugioDescription = document.getElementById('rifugioDescription').value.trim();
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -66,6 +81,11 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
+  if (isRifugio && !rifugioName) {
+    errorBox.textContent = 'Inserisci il nome del rifugio';
+    return;
+  }
+
   const res = await fetch('http://localhost:3000/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -73,7 +93,14 @@ form.addEventListener('submit', async (e) => {
       username,
       email,
       password,
-      phoneNumber: phoneNumber || null
+      phoneNumber: phoneNumber || null,
+      accountType: isRifugio ? 'rifugio' : 'user',
+      rifugioData: isRifugio ? {
+        rifugioName,
+        address: rifugioAddress,
+        city: rifugioCity,
+        description: rifugioDescription
+      } : undefined
     })
   });
 
@@ -84,9 +111,15 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  successBox.textContent = "Registrazione completata. Controlla la mail per verificare l'account.";
+  successBox.textContent = isRifugio
+    ? "Registrazione rifugio completata. Controlla la mail e attendi l'approvazione admin."
+    : "Registrazione completata. Controlla la mail per verificare l'account.";
   lastRegisteredEmail = email;
   form.reset();
+  isRifugio = false;
+  rifugioFields.classList.add('is-hidden');
+  becomeRifugioButton.classList.remove('is-selected');
+  becomeRifugioButton.setAttribute('aria-pressed', 'false');
   form.classList.add('is-hidden');
   successPanel.classList.remove('is-hidden');
 });

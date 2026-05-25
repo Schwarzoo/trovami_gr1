@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const animalSchema = new mongoose.Schema({
+    name:               { type: String, trim: true, default: null },
     species:            { type: String, required: true }, // Dog, Cat, etc.
     breed:              { type: String, required: true }, // Labrador, Pinscher, etc.
     gender:             { type: String, enum: ['Maschio', 'Femmina', 'Sconosciuto'], required: true },

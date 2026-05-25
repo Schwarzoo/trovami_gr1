@@ -6,9 +6,14 @@ function decodeJwt(token) {
 }
 let mapInstance = null;
 let mapMarker = null;
+let rifugioMapInstance = null;
+let rifugioMapMarker = null;
+let pendingRifugioLocation = null;
 let editingId = null;
 let editingAnimalId = null;
 let currentEditStatus = 'ACTIVE';
+let currentEditIsCurrentlyThere = false;
+let currentUser = null;
 let isSavingAnnouncement = false;
 
 function setLastSeenMode(mode) {
@@ -22,6 +27,51 @@ function setLastSeenMode(mode) {
   dateInput.style.display = isCustom ? 'block' : 'none';
 }
 
+function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
+  const typeSelect = document.getElementById('modal-type');
+  if (!typeSelect) return;
+
+  const isRifugio = currentUser?.role === 'shelter';
+  if (isRifugio) {
+    typeSelect.innerHTML = '<option value="Sighting">In rifugio</option>';
+    typeSelect.value = 'Sighting';
+    typeSelect.disabled = true;
+    return;
+  }
+
+  typeSelect.disabled = false;
+  typeSelect.innerHTML = `
+    <option value="LostAnimal">Smarrito</option>
+    <option value="Sighting">Avvistamento</option>
+  `;
+  typeSelect.value = defaultType || 'LostAnimal';
+}
+
+function getRifugioCoordinates() {
+  const coords = currentUser?.rifugioData?.location?.coordinates || currentUser?.shelterData?.location?.coordinates;
+  if (!Array.isArray(coords) || coords.length !== 2) return null;
+  const [lng, lat] = coords.map(Number);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  return [lng, lat];
+}
+
+function configureModalLabelsForAccount() {
+  const isRifugio = currentUser?.role === 'shelter';
+  const dateLabel = document.getElementById('modal-lastSeenDate-label');
+  const positionHint = document.getElementById('modal-position-hint');
+  const positionSection = document.getElementById('modal-position-section');
+  const microchipRow = document.getElementById('modal-microchip-row');
+  const animalNameRow = document.getElementById('modal-animal-name-row');
+
+  if (dateLabel) dateLabel.textContent = isRifugio ? 'Data' : 'Ultima data vista';
+  if (positionSection) positionSection.style.display = isRifugio ? 'none' : '';
+  if (microchipRow) microchipRow.style.display = isRifugio ? '' : 'none';
+  if (animalNameRow) animalNameRow.style.display = '';
+  if (positionHint) {
+    positionHint.textContent = isRifugio
+      ? 'Posizione del rifugio gia impostata. Puoi modificarla selezionando un altro punto.'
+      : 'Scegli un punto sulla mappa o usa la posizione attuale.';
+  }
 function setAnnouncementSavingState(isSaving) {
   isSavingAnnouncement = isSaving;
   const progress = document.getElementById('profile-modal-progress');
@@ -179,9 +229,231 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function renderRifugioStatus(me) {
+    const box = document.getElementById('rifugio-status-box');
+    if (!box) return;
+    if (me.role !== 'shelter') {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
+    }
+
+    const name = me.rifugioData?.rifugioName || me.shelterData?.shelterName || me.username || 'Rifugio';
+    const labels = {
+      pending: 'in attesa di approvazione admin',
+      approved: 'approvato',
+      rejected: 'rifiutato'
+    };
+    box.style.display = 'block';
+    box.innerHTML = `
+      <div class="comment-meta">
+        <span class="comment-user">Account rifugio</span>
+        <span class="comment-date">${escapeHtml(labels[me.rifugioStatus] || me.rifugioStatus || 'non configurato')}</span>
+      </div>
+      <div class="comment-text">${escapeHtml(name)}${me.rifugioStatus === 'pending' ? ': potrai pubblicare annunci dopo approvazione.' : ''}</div>
+    `;
+  }
+
+  function renderRifugioPosition(me) {
+    const box = document.getElementById('rifugio-position-box');
+    const text = document.getElementById('rifugio-position-text');
+    const button = document.getElementById('editRifugioPosition');
+    const message = document.getElementById('rifugio-position-message');
+    if (!box || !text || !button) return;
+
+    if (me.role !== 'shelter' || me.rifugioStatus !== 'approved') {
+      box.style.display = 'none';
+      return;
+    }
+
+    const coords = getRifugioCoordinates();
+    box.style.display = 'block';
+    text.textContent = coords
+      ? 'Posizione salvata. Puoi modificarla dalla mappa.'
+      : 'Aggiungi la posizione del rifugio per pubblicare annunci.';
+    button.textContent = coords ? 'Modifica posizione' : 'Aggiungi posizione';
+    if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa.';
+  }
+
+  function ensureRifugioMap() {
+    const mapEl = document.getElementById('rifugio-position-map');
+    if (!mapEl) return null;
+    mapEl.style.display = 'block';
+
+    if (!rifugioMapInstance) {
+      rifugioMapInstance = L.map('rifugio-position-map').setView([46.0667, 11.1333], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(rifugioMapInstance);
+      rifugioMapInstance.on('click', (e) => {
+        setPendingRifugioLocation(e.latlng.lng, e.latlng.lat);
+      });
+    }
+
+    requestAnimationFrame(() => rifugioMapInstance.invalidateSize());
+    return rifugioMapInstance;
+  }
+
+  function setPendingRifugioLocation(lng, lat) {
+    pendingRifugioLocation = [lng, lat];
+    const map = ensureRifugioMap();
+    if (!map) return;
+    if (rifugioMapMarker) {
+      rifugioMapMarker.setLatLng([lat, lng]);
+    } else {
+      rifugioMapMarker = L.marker([lat, lng]).addTo(map);
+    }
+    map.setView([lat, lng], 15);
+    document.getElementById('saveRifugioPosition').style.display = 'inline-block';
+    document.getElementById('rifugio-position-message').textContent = 'Punto selezionato. Salva la posizione.';
+  }
+
+  function openRifugioPositionEditor() {
+    const map = ensureRifugioMap();
+    const coords = getRifugioCoordinates();
+    if (coords) {
+      setPendingRifugioLocation(coords[0], coords[1]);
+    } else if (map) {
+      map.setView([46.0667, 11.1333], 13);
+      document.getElementById('saveRifugioPosition').style.display = 'none';
+      document.getElementById('rifugio-position-message').textContent = 'Clicca sulla mappa per scegliere il punto del rifugio.';
+    }
+    requestAnimationFrame(() => map && map.invalidateSize());
+  }
+
+  async function saveRifugioPosition() {
+    if (!pendingRifugioLocation) {
+      alert('Seleziona un punto sulla mappa');
+      return;
+    }
+
+    const [lng, lat] = pendingRifugioLocation;
+    const res = await fetch('http://localhost:3000/api/users/me', {
+      method: 'PUT',
+      headers: authHeader,
+      body: JSON.stringify({
+        rifugioData: {
+          location: { type: 'Point', coordinates: [lng, lat] }
+        }
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.message || 'Errore salvataggio posizione');
+      return;
+    }
+
+    const savedCoords = data?.rifugioData?.location?.coordinates;
+    if (!Array.isArray(savedCoords) || savedCoords.length !== 2) {
+      alert('La posizione non risulta salvata. Riprova.');
+      return;
+    }
+
+    currentUser = data;
+    pendingRifugioLocation = getRifugioCoordinates();
+    renderRifugioPosition(currentUser);
+    document.getElementById('saveRifugioPosition').style.display = 'none';
+    document.getElementById('rifugio-position-message').textContent = 'Posizione salvata.';
+  }
+
+  async function fetchAdminReports() {
+    const res = await fetch('http://localhost:3000/api/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
+  async function fetchPendingRifugi() {
+    const res = await fetch('http://localhost:3000/api/admin/rifugi/pending', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
+  function renderAdminReports(list) {
+    const empty = document.getElementById('admin-reports-empty');
+    const container = document.getElementById('admin-reports-list');
+    if (!empty || !container) return;
+    container.innerHTML = '';
+    if (!list.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.forEach((report) => {
+      const ann = report.announcementId;
+      const publisher = ann?.publisherId;
+      const publisherId = publisher?._id || publisher || '';
+      const animal = ann?.animalId;
+      const isQuick = !!ann?.isQuick || !publisherId;
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(report.reason || 'report')}</span>
+          <span class="comment-date">${report.createdAt ? new Date(report.createdAt).toLocaleString('it-IT') : ''}</span>
+        </div>
+        <div class="comment-text">
+          ${escapeHtml(report.details || 'Nessun dettaglio')}
+          <br>Annuncio: ${escapeHtml(animal?.species || 'non disponibile')} - ${isQuick ? 'segnalazione veloce anonima' : escapeHtml(publisher?.username || 'utente')}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${ann?._id ? `<a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(ann._id)}">Vedi</a>` : ''}
+          ${ann?._id ? `<button class="btn btn--danger" data-admin-action="delete-ann" data-ann-id="${escapeHtml(ann._id)}">Elimina annuncio</button>` : ''}
+          ${publisherId ? `<button class="btn btn--danger" data-admin-action="block-user" data-user-id="${escapeHtml(publisherId)}">Blocca account</button>` : ''}
+          <button class="btn btn--ghost" data-admin-action="dismiss-report" data-report-id="${escapeHtml(report._id)}">Archivia report</button>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function renderPendingRifugi(list) {
+    const empty = document.getElementById('admin-rifugi-empty');
+    const container = document.getElementById('admin-rifugi-list');
+    if (!empty || !container) return;
+    container.innerHTML = '';
+    if (!list.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.forEach((rifugio) => {
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(rifugio.rifugioData?.rifugioName || rifugio.username)}</span>
+          <span class="comment-date">${rifugio.createdAt ? new Date(rifugio.createdAt).toLocaleDateString('it-IT') : ''}</span>
+        </div>
+        <div class="comment-text">
+          ${escapeHtml(rifugio.email || '')}
+          ${rifugio.rifugioData?.address ? `<br>${escapeHtml(rifugio.rifugioData.address)}` : ''}
+          ${rifugio.rifugioData?.description ? `<br>${escapeHtml(rifugio.rifugioData.description)}` : ''}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn--primary" data-admin-action="approve-rifugio" data-user-id="${escapeHtml(rifugio._id)}">Approva</button>
+          <button class="btn btn--danger" data-admin-action="reject-rifugio" data-user-id="${escapeHtml(rifugio._id)}">Rifiuta</button>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  async function loadAdminData() {
+    if (currentUser?.role !== 'admin') return;
+    const section = document.getElementById('admin-section');
+    if (section) section.style.display = 'block';
+    const [reports, rifugi] = await Promise.all([fetchAdminReports(), fetchPendingRifugi()]);
+    renderAdminReports(reports);
+    renderPendingRifugi(rifugi);
+  }
+
   async function load() {
     const me = await fetchMe();
     if (!me) { localStorage.removeItem('token'); window.location.href = '/pages/login.html'; return; }
+    currentUser = me;
 
     document.getElementById('username').value = me.username || '';
     document.getElementById('email').value = me.email || '';
@@ -191,10 +463,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('showPhone').checked = me.contactVisibility?.showPhone !== false;
     document.getElementById('emailOnComment').checked = !!me.notificationPrefs?.emailOnComment;
     document.getElementById('soundOnSite').checked = me.notificationPrefs?.soundOnSite !== false;
+    renderRifugioStatus(me);
+    renderRifugioPosition(me);
 
     const notifications = await fetchNotifications();
     renderNotifications(notifications);
     if (notifications.length > 0 && (me.notificationPrefs?.soundOnSite !== false)) playBeep();
+    await loadAdminData();
 
     loadMyAnnouncements();
   }
@@ -235,8 +510,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderNotifications(notifications);
   });
 
+  document.getElementById('adminRefresh')?.addEventListener('click', loadAdminData);
+  document.getElementById('editRifugioPosition')?.addEventListener('click', openRifugioPositionEditor);
+  document.getElementById('saveRifugioPosition')?.addEventListener('click', saveRifugioPosition);
+
+  document.getElementById('admin-section')?.addEventListener('click', async (e) => {
+    const button = e.target?.closest?.('[data-admin-action]');
+    if (!button) return;
+    const action = button.dataset.adminAction;
+
+    try {
+      if (action === 'delete-ann') {
+        const annId = button.dataset.annId;
+        const reason = prompt('Motivo rimozione annuncio:', 'annuncio falso/offensivo') || 'violazione delle regole';
+        const res = await fetch(`http://localhost:3000/api/admin/announcements/${encodeURIComponent(annId)}`, {
+          method: 'DELETE',
+          headers: authHeader,
+          body: JSON.stringify({ reason })
+        });
+        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore eliminazione');
+      }
+
+      if (action === 'block-user') {
+        const userId = button.dataset.userId;
+        if (!confirm('Bloccare questo account?')) return;
+        const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/block`, {
+          method: 'PATCH',
+          headers: authHeader,
+          body: JSON.stringify({ reason: 'Blocco da moderazione report' })
+        });
+        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore blocco');
+      }
+
+      if (action === 'dismiss-report') {
+        const reportId = button.dataset.reportId;
+        const res = await fetch(`http://localhost:3000/api/admin/reports/${encodeURIComponent(reportId)}/status`, {
+          method: 'PATCH',
+          headers: authHeader,
+          body: JSON.stringify({ status: 'DISMISSED', details: 'Archiviato da admin' })
+        });
+        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore archiviazione');
+      }
+
+      if (action === 'approve-rifugio' || action === 'reject-rifugio') {
+        const userId = button.dataset.userId;
+        const verb = action === 'approve-rifugio' ? 'approve' : 'reject';
+        const body = action === 'reject-rifugio'
+          ? JSON.stringify({ reason: prompt('Motivo rifiuto:', 'Dati insufficienti') || 'Dati insufficienti' })
+          : '{}';
+        const res = await fetch(`http://localhost:3000/api/admin/rifugi/${encodeURIComponent(userId)}/${verb}`, {
+          method: 'PATCH',
+          headers: authHeader,
+          body
+        });
+        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore richiesta rifugio');
+      }
+
+      await loadAdminData();
+      await loadMyAnnouncements();
+    } catch (err) {
+      alert(err.message || 'Errore moderazione');
+    }
+  });
+
   document.getElementById('showCreate').addEventListener('click', (e) => {
     e.preventDefault();
+    if (currentUser?.role === 'shelter' && currentUser?.rifugioStatus !== 'approved') {
+      alert('Il tuo account rifugio deve essere approvato da un admin prima di pubblicare annunci.');
+      return;
+    }
+    if (currentUser?.role === 'shelter' && !getRifugioCoordinates()) {
+      alert('Prima salva la posizione del rifugio nella sezione Dati profilo.');
+      openRifugioPositionEditor();
+      return;
+    }
     openModalForCreate();
   });
 
@@ -269,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
       <div class="card-body">
-        <div class="card-breed">${a.animalId?.species ?? ''} ${a.animalId?.breed ?? ''}</div>
+        <div class="card-breed">${a.animalId?.name ? escapeHtml(a.animalId.name) + ' - ' : ''}${a.animalId?.species ?? ''} ${a.animalId?.breed ?? ''}</div>
         <div class="card-description">${a.description}</div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button data-id="${a._id}" class="edit btn btn--ghost">Modifica</button>
@@ -383,6 +730,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Save from modal: create or update
   document.getElementById('modal-save').addEventListener('click', async () => {
+    const type = document.getElementById('modal-type').value;
+    const description = document.getElementById('modal-description').value.trim();
+    const animalName = document.getElementById('modal-animalName')?.value.trim() || null;
+    const species = document.getElementById('modal-species').value.trim();
+    const breed = document.getElementById('modal-breed').value.trim() || 'Non specificato';
+    const color = document.getElementById('modal-color').value.trim();
+    const gender = document.getElementById('modal-gender').value || 'Sconosciuto';
+    const lunghezzaPelo = document.getElementById('modal-lunghezzaPelo').value || null;
+    const distinctiveFeatures = document.getElementById('modal-distinctiveFeatures').value.trim();
+    const microchipId = document.getElementById('modal-microchipId')?.value.trim() || null;
+    const photoFile = document.getElementById('modal-photo-file').files[0];
+    const coordsRawInput = document.getElementById('modal-coords').value.trim();
+    const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
+
+    if (!type || !species || !color) {
+      alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
+      return;
+    }
     setAnnouncementSavingState(true);
 
     try {
@@ -403,17 +768,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
+    const animalPayload = {
+      name: animalName || undefined,
+      species,
+      breed,
+      gender,
+      color,
+      lunghezzaPelo,
+      distinctiveFeatures,
+      microchipId: currentUser?.role === 'shelter' ? microchipId : undefined
+    };
       if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) { alert('Inserisci coordinate valide'); return; }
 
-      const animalPayload = {
-        species,
-        breed,
-        gender,
-        color,
-        lunghezzaPelo,
-        distinctiveFeatures
-      };
+      
 
+    const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
+    const customDate = document.getElementById('modal-lastSeenDate').value;
+    let lastSeenDate = null;
+    if (lastSeenMode === 'today') {
+      lastSeenDate = new Date().toISOString();
+    } else if (customDate) {
+      lastSeenDate = new Date(customDate).toISOString();
+    }
+    const animalBehaviour = document.getElementById('modal-animalBehaviour').value || null;
+    const healthCondition = document.getElementById('modal-healthCondition').value || null;
+    const status = editingId ? (currentEditStatus || 'ACTIVE') : 'ACTIVE';
+
+    const body = {
+      type,
+      animalId: animalIdToUse,
+      name: animalName || undefined,
+      description: description || 'Nessuna descrizione',
+      lastSeenDate: lastSeenDate || undefined,
+      animalBehaviour: animalBehaviour || undefined,
+      healthCondition: healthCondition || undefined,
+      status
+    };
+
+    // include location coordinates
+    // backend normalizeCoordinates accepts either coordinates array or location object
+    const loc = { coordinates: [coordsRaw[0], coordsRaw[1]] };
+
+    // send announcement (use FormData if a file was selected)
+    if (!editingId) {
+      let res;
+      if (photoFile) {
+        const fd = new FormData();
+        fd.append('type', type);
+        fd.append('animalId', animalIdToUse);
+        if (animalName) fd.append('name', animalName);
+        fd.append('description', body.description);
+        fd.append('coordinates', loc.coordinates.join(','));
+        if (lastSeenDate) fd.append('lastSeenDate', lastSeenDate);
+        if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
+        if (healthCondition) fd.append('healthCondition', healthCondition);
+        fd.append('status', status);
+        fd.append('photo', photoFile);
+        res = await fetch('http://localhost:3000/api/announcements', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
       // create or update animal then announcement
       let animalIdToUse = null;
       if (editingId && editingAnimalId) {
@@ -429,6 +840,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const animal = await animalRes.json();
         animalIdToUse = animal._id;
       }
+      if (!res.ok) { alert('Errore creazione annuncio'); return; }
+    } else {
+      let res;
+      if (photoFile) {
+        const fd = new FormData();
+        // include same fields; backend update accepts location
+        for (const k of ['type','description']) fd.append(k, body[k]);
+        if (animalName) fd.append('name', animalName);
+        fd.append('location', JSON.stringify({ type: 'Point', coordinates: loc.coordinates }));
+        if (body.lastSeenDate) fd.append('lastSeenDate', body.lastSeenDate);
+        fd.append('isCurrentlyThere', currentEditIsCurrentlyThere);
+        if (animalBehaviour) fd.append('animalBehaviour', animalBehaviour);
+        if (healthCondition) fd.append('healthCondition', healthCondition);
+        fd.append('status', status);
+        fd.append('photo', photoFile);
+        res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+      } else {
+        const resJson = await fetch(`http://localhost:3000/api/announcements/${editingId}`, { method: 'PUT', headers: authHeader, body: JSON.stringify({ ...body, isCurrentlyThere: currentEditIsCurrentlyThere, location: { type: 'Point', coordinates: loc.coordinates } }) });
+        res = resJson;
 
       const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
       const customDate = document.getElementById('modal-lastSeenDate').value;
@@ -611,23 +1041,27 @@ function decimalToDMS(dec, type) {
 function openModalForCreate() {
   editingId = null;
   currentEditStatus = 'ACTIVE';
+  currentEditIsCurrentlyThere = false;
   document.getElementById('modal-title').textContent = 'Nuovo annuncio';
   document.getElementById('modal-save').textContent = 'Pubblica';
-  document.getElementById('modal-type').value = 'LostAnimal';
+  configureModalLabelsForAccount();
+  configureTypeFieldForAccount('LostAnimal');
   document.getElementById('modal-description').value = '';
+  document.getElementById('modal-animalName').value = '';
   document.getElementById('modal-species').value = '';
   document.getElementById('modal-breed').value = '';
   document.getElementById('modal-color').value = '';
   document.getElementById('modal-gender').value = '';
   document.getElementById('modal-lunghezzaPelo').value = '';
   document.getElementById('modal-distinctiveFeatures').value = '';
+  document.getElementById('modal-microchipId').value = '';
   document.getElementById('modal-photo-file').value = '';
   document.getElementById('modal-photo-preview').style.display = 'none';
-  document.getElementById('modal-coords').value = '';
+  const rifugioCoords = currentUser?.role === 'shelter' ? getRifugioCoordinates() : null;
+  document.getElementById('modal-coords').value = rifugioCoords ? rifugioCoords.join(',') : '';
   setLastSeenMode('today');
   document.getElementById('modal-lastSeenDate').value = '';
   document.getElementById('modal-lastSeenDate').style.display = 'none';
-  document.getElementById('modal-isCurrentlyThere').checked = false;
   document.getElementById('modal-animalBehaviour').value = 'indifferente';
   document.getElementById('modal-healthCondition').value = 'in salute';
   showModal(true);
@@ -637,16 +1071,20 @@ function openModalForEdit(ann) {
   editingId = ann._id;
   editingAnimalId = ann.animalId?._id || ann.animalId || null;
   currentEditStatus = ann.status || 'ACTIVE';
+  currentEditIsCurrentlyThere = !!ann.isCurrentlyThere;
   document.getElementById('modal-title').textContent = 'Modifica annuncio';
   document.getElementById('modal-save').textContent = 'Modifica';
-  document.getElementById('modal-type').value = ann.type || 'LostAnimal';
+  configureModalLabelsForAccount();
+  configureTypeFieldForAccount(ann.type || 'LostAnimal');
   document.getElementById('modal-description').value = ann.description || '';
+  document.getElementById('modal-animalName').value = ann.animalId?.name || '';
   document.getElementById('modal-species').value = ann.animalId?.species || '';
   document.getElementById('modal-breed').value = ann.animalId?.breed || '';
   document.getElementById('modal-color').value = ann.animalId?.color || '';
   document.getElementById('modal-gender').value = ann.animalId?.gender || '';
   document.getElementById('modal-lunghezzaPelo').value = ann.animalId?.lunghezzaPelo || '';
   document.getElementById('modal-distinctiveFeatures').value = ann.animalId?.distinctiveFeatures || '';
+  document.getElementById('modal-microchipId').value = ann.animalId?.microchipId || '';
   const photo = ann.animalId?.photos?.[0] || '';
   // existing announcement photo is not loaded into the edit file input; user can upload a new file to replace it
   document.getElementById('modal-photo-file').value = '';
@@ -674,7 +1112,6 @@ function openModalForEdit(ann) {
     document.getElementById('modal-lastSeenDate').value = '';
     setLastSeenMode('today');
   }
-  document.getElementById('modal-isCurrentlyThere').checked = !!ann.isCurrentlyThere;
   document.getElementById('modal-animalBehaviour').value = ann.animalBehaviour || 'indifferente';
   document.getElementById('modal-healthCondition').value = ann.healthCondition || 'in salute';
   showModal(true);
