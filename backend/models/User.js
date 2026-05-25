@@ -37,4 +37,10 @@ const userSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+userSchema.pre('validate', function normalizeRole() {
+    if (typeof this.role === 'string') {
+        this.role = this.role.toLowerCase();
+    }
+});
+
 module.exports = mongoose.model('User', userSchema);
