@@ -10,6 +10,17 @@ const userSchema = new mongoose.Schema({
     isEmailVerified: { type: Boolean, default: false },
     role:         { type: String, enum: ['Segnalatore', 'Ricercatore', 'Shelter', 'Administrator'], default: 'Segnalatore' },
     sessionToken: { type: String, default: null},
+
+    contactVisibility: {
+        showEmail: { type: Boolean, default: true },
+        showPhone: { type: Boolean, default: true }
+    },
+
+    notificationPrefs: {
+        emailOnComment: { type: Boolean, default: false },
+        soundOnSite:    { type: Boolean, default: true }
+    },
+
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
     emailVerificationToken: { type: String, default: null },
