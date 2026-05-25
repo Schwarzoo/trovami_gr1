@@ -2,6 +2,7 @@ const Announcement = require('../models/Announcement');
 const Animal = require('../models/Animal');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
+const smartMatchingEngine = require('../services/SmartMatchingEngine');
 
 function normalizeCoordinates(input) {
   // accept array [a,b] or string 'a,b'
@@ -130,19 +131,46 @@ exports.createAnnouncement = async (req,res)=>{
 
             // if a file was uploaded via multer (field name 'photo'), store it in MongoDB
             if (req.file && req.file.buffer) {
-                try {
-                    const processed = await sharp(req.file.buffer)
-                        .resize({ width: 1024, height: 1024, fit: 'inside' })
-                        .jpeg({ quality: 80 })
-                        .toBuffer();
-                    announcement.photo = { data: processed, contentType: 'image/jpeg' };
-                } catch (err) {
-                    // fallback to raw buffer if processing fails
-                    announcement.photo = { data: req.file.buffer, contentType: req.file.mimetype };
+            try {
+                const processed = await sharp(req.file.buffer)
+                    .resize({ width: 1024, height: 1024, fit: 'inside' })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+                announcement.photo = { data: processed, contentType: 'image/jpeg' };
+                
+                // ---- NUOVA LOGICA SMART MATCHING ----
+                // Generiamo l'embedding dal buffer dell'immagine appena rimpicciolita
+                const embedding = await smartMatchingEngine.generateImageEmbedding(processed);
+                if (embedding) {
+                    announcement.imageEmbedding = embedding;
                 }
+                // -------------------------------------
+                
+            } catch (err) {
+                // fallback to raw buffer if processing fails
+                announcement.photo = { data: req.file.buffer, contentType: req.file.mimetype };
+                
+                // Proviamo comunque a generare l'embedding
+                const embedding = await smartMatchingEngine.generateImageEmbedding(req.file.buffer);
+                if (embedding) announcement.imageEmbedding = embedding;
             }
+        }
 
         await announcement.save();
+
+        // ---- AVVIO DELLO SMART MATCHING IN BACKGROUND ----
+        if (announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
+             smartMatchingEngine.findMatches(announcement, animal.species).then(matches => {
+                 if (matches.length > 0) {
+                     console.log(`[Smart Matching] Successo! Trovati ${matches.length} match VISIVI per la specie ${animal.species}!`);
+                     // TODO: Invia le email
+                 } else {
+                     console.log(`[Smart Matching] Nessun match visivo trovato al momento per la specie ${animal.species}.`);
+                 }
+             }).catch(err => {
+                 console.error("[Smart Matching] Errore durante la ricerca:", err);
+             });
+        }
 
         res.status(201).json(
             announcement
