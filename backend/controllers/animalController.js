@@ -5,6 +5,7 @@ exports.createAnimal = async (req, res) => {
   try {
     const {
       name,
+      animalName,
       species,
       breed,
       gender,
@@ -15,8 +16,12 @@ exports.createAnimal = async (req, res) => {
       shelterId
     } = req.body;
 
+    const normalizedName = typeof (name ?? animalName) === 'string'
+      ? (name ?? animalName).trim()
+      : (name ?? animalName ?? null);
+
     const animal = new Animal({
-      name,
+      name: normalizedName || null,
       species,
       breed,
       gender,
@@ -39,7 +44,13 @@ exports.createAnimal = async (req, res) => {
 exports.updateAnimal = async (req, res) => {
   try {
     const updates = {};
-    const allowed = ['name','species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','microchipId','shelterId'];
+
+    const incomingName = req.body.name ?? req.body.animalName;
+    if (incomingName !== undefined) {
+      updates.name = typeof incomingName === 'string' ? incomingName.trim() : incomingName;
+    }
+
+    const allowed = ['species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','microchipId','shelterId'];
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
 
     const animal = await Animal.findByIdAndUpdate(req.params.id, updates, { new: true });

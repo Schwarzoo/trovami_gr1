@@ -779,6 +779,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body = {
       type,
       animalId: animalIdToUse,
+      name: animalName || undefined,
       description: description || 'Nessuna descrizione',
       lastSeenDate: lastSeenDate || undefined,
       animalBehaviour: animalBehaviour || undefined,
@@ -797,6 +798,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fd = new FormData();
         fd.append('type', type);
         fd.append('animalId', animalIdToUse);
+        if (animalName) fd.append('name', animalName);
         fd.append('description', body.description);
         fd.append('coordinates', loc.coordinates.join(','));
         if (lastSeenDate) fd.append('lastSeenDate', lastSeenDate);
@@ -815,6 +817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fd = new FormData();
         // include same fields; backend update accepts location
         for (const k of ['type','description']) fd.append(k, body[k]);
+        if (animalName) fd.append('name', animalName);
         fd.append('location', JSON.stringify({ type: 'Point', coordinates: loc.coordinates }));
         if (body.lastSeenDate) fd.append('lastSeenDate', body.lastSeenDate);
         fd.append('isCurrentlyThere', currentEditIsCurrentlyThere);

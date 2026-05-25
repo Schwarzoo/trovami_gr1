@@ -62,6 +62,13 @@ function normalizeCoordinates(input) {
     return [a, b];
 }
 
+function normalizeOptionalName(value) {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    const text = typeof value === 'string' ? value.trim() : String(value).trim();
+    return text || null;
+}
+
 // Helper interno per gestire il salvataggio dei match
 async function saveMatchNotification(announcement, matches) {
     try {
@@ -203,6 +210,12 @@ exports.createAnnouncement = async (req,res)=>{
         const animal = await Animal.findById(animalId);
         if (!animal) return res.status(404).json({ message: 'Animale non trovato' });
 
+        const incomingName = normalizeOptionalName(req.body.name ?? req.body.animalName);
+        if (incomingName !== undefined) {
+            animal.name = incomingName;
+            await animal.save();
+        }
+
         const publisher = await User.findById(req.user.userId).select('role rifugioStatus rifugioData.location');
         if (!publisher) return res.status(401).json({ message: 'Utente non valido' });
         if (publisher.role === 'shelter' && publisher.rifugioStatus !== 'approved') {
@@ -265,6 +278,7 @@ exports.createAnnouncement = async (req,res)=>{
 exports.createQuickAnnouncement = async (req, res) => {
     try {
         const {
+            name,
             type,
             species,
             breed,
@@ -293,6 +307,7 @@ exports.createQuickAnnouncement = async (req, res) => {
         if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
 
         const animal = await Animal.create({
+            name: normalizeOptionalName(name),
             species,
             breed: breed || 'Non specificato',
             gender: gender || 'Sconosciuto',
@@ -422,6 +437,15 @@ exports.updateAnnouncement = async (req, res) => {
         if (!ann.publisherId) return res.status(403).json({ message: 'Non autorizzato' });
         const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : ann.publisherId.toString();
         if (publisherIdStr !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
+
+        const animal = await Animal.findById(ann.animalId);
+        if (!animal) return res.status(404).json({ message: 'Animale non trovato' });
+
+        const incomingName = normalizeOptionalName(req.body.name ?? req.body.animalName);
+        if (incomingName !== undefined) {
+            animal.name = incomingName;
+            await animal.save();
+        }
 
         const allowed = ['description', 'lastSeenDate', 'isCurrentlyThere', 'animalBehaviour', 'healthCondition', 'status', 'type', 'location'];
         for (const k of allowed) {

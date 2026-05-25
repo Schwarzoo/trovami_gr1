@@ -315,9 +315,9 @@ function renderAnnouncements(announcements) {
         ${address ? `<div style="font-size:13px;color:#666;margin-bottom:8px;">${escapeHtml(address)}</div>` : ''}
         ${rifugio.phoneNumber ? `<div style="font-size:13px;color:#666;">Tel: ${escapeHtml(rifugio.phoneNumber)}</div>` : ''}
         ${rifugio.email ? `<div style="font-size:13px;color:#666;">Email: ${escapeHtml(rifugio.email)}</div>` : ''}
-        <a href="/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}"
+        <a href="/pages/rifugio-dashboard.html?rifugioId=${encodeURIComponent(rifugio._id)}"
            style="display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">
-          Mostra animali nel rifugio →
+          Apri dashboard rifugio →
         </a>
       </div>
     `;
