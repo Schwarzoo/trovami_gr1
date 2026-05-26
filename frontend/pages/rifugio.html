@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rifugio — Trovami</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/announcements.css" />
+  <link rel="stylesheet" href="../css/rifugio.css" />
+</head>
+<body>
+  <div data-include="header"></div>
+
+  <main class="page shelter-page">
+    <section class="shelter-hero">
+      <div class="shelter-hero-copy">
+        <div class="eyebrow">Scheda rifugio</div>
+        <h1 id="shelter-name">Caricamento rifugio…</h1>
+        <p id="shelter-description">Recupero delle informazioni in corso.</p>
+        <div class="hero-actions">
+          <div class="hero-actions-main">
+            <a class="button primary" id="shelter-announcements-link" href="#">Vedi annunci</a>
+          </div>
+          <div class="hero-actions-secondary">
+            <a class="button" id="shelter-map-link" href="#scheda-rifugio">Apri mappa</a>
+            <a class="button" href="/pages/rifugi.html">Torna ai rifugi</a>
+          </div>
+        </div>
+      </div>
+      <div class="hero-stats" id="shelter-stats"></div>
+    </section>
+
+    <section class="section-card" id="scheda-rifugio">
+      <div class="section-head">
+        <div>
+          <h2>Informazioni principali</h2>
+          <p>Contatti, disponibilità e dettagli del rifugio selezionato.</p>
+        </div>
+      </div>
+      <div class="shelter-info-grid" id="shelter-info-grid"></div>
+      <div class="map-shell shelter-map-shell">
+        <div id="shelter-map"></div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>Annunci del rifugio</h2>
+          <p>Le adozioni e gli avvisi pubblicati da questa struttura.</p>
+        </div>
+        <span class="section-badge" id="shelter-announcements-count">0 annunci</span>
+      </div>
+      <div id="shelter-announcements-grid" class="adoptions-grid"></div>
+    </section>
+
+  </main>
+
+  <div data-include="footer"></div>
+
+  <script src="/js/includes.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/rifugio.js"></script>
+</body>
+</html>

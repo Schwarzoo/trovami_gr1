@@ -95,6 +95,7 @@ class SmartMatchingEngine {
       animalId: { $in: validAnimalIds },
       imageEmbedding: { $ne: null },
     })
+      .select("-photo -comments")
       .populate("publisherId")
       .populate("animalId");
 

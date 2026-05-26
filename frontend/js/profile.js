@@ -149,6 +149,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  async function fetchAnnouncementById(id) {
+    const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  }
+
+  async function fetchSimilarAnnouncements(id, limit = 6) {
+    const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(id)}/similar?limit=${limit}`);
+    if (!res.ok) return [];
+    const json = await res.json().catch(() => ({}));
+    return Array.isArray(json?.matches) ? json.matches : [];
+  }
+
   async function markNotificationRead(id) {
     await fetch(`http://localhost:3000/api/notifications/${encodeURIComponent(id)}/read`, {
       method: 'POST',
@@ -957,6 +970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   grid.innerHTML = '';
   mine.forEach(a => {
     const div = document.createElement('div'); div.className = 'card';
+    div.dataset.id = a._id;
     const photoUrl = `http://localhost:3000/api/announcements/${a._id}/photo`;
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
@@ -994,6 +1008,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
   });
 
+  // open card by clicking the card box (ignore clicks on buttons/links/inputs)
+  grid.addEventListener('click', (e) => {
+    const clickedCard = e.target.closest('.card');
+    if (!clickedCard || !grid.contains(clickedCard)) return;
+    // if click was on an interactive control, do nothing (buttons/links/inputs)
+    if (e.target.closest('button, a, input, select, textarea')) return;
+    const id = clickedCard.dataset.id;
+    if (id) openAnnouncementModal(id);
+  });
+
   // attach actions
 
   document.querySelectorAll('button.close').forEach(b => b.addEventListener('click', async (e) => {
@@ -1019,6 +1043,141 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }));
 }
+
+  async function openAnnouncementModal(announcementId) {
+    const data = await fetchAnnouncementById(announcementId);
+    if (!data) {
+      alert('Annuncio non trovato');
+      return;
+    }
+
+    const animal = data.animalId || {};
+    const publisher = data.publisherId || {};
+    const isLost = data.type === 'LostAnimal';
+    const rifugioName = publisher?.role === 'shelter'
+      ? (publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username)
+      : '';
+
+    const date = new Date(data.date).toLocaleDateString('it-IT', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    document.getElementById('view-modal-title').textContent =
+      animal?.name || (isLost ? `${animal?.species || 'Animale'} smarrito/a` : `Avvistamento: ${animal?.species || 'Animale'}`);
+
+    const gallery = document.getElementById('view-modal-gallery');
+    gallery.innerHTML = '<div class="view-modal-no-photo">Caricamento...</div>';
+    (async () => {
+      const photoUrl = `http://localhost:3000/api/announcements/${data._id}/photo`;
+      try {
+        const res = await fetch(photoUrl, { method: 'GET' });
+        if (!res.ok) throw new Error('no image');
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.startsWith('image')) throw new Error('not image');
+        const blob = await res.blob();
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.alt = 'foto animale';
+        img.onload = () => { URL.revokeObjectURL(img.src); };
+        gallery.innerHTML = '';
+        gallery.appendChild(img);
+      } catch (err) {
+        gallery.innerHTML = '<div class="view-modal-no-photo">Non è presente alcuna foto</div>';
+      }
+    })();
+
+    document.getElementById('view-modal-body').innerHTML = `
+      <dl class="detail-list">
+        ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
+        <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
+        <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
+        <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
+        <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
+        <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
+        <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
+        <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
+        <dt>Data</dt><dd>${date}</dd>
+        <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
+        <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
+        <dt>Stato</dt><dd>${displayValue(data.status)}</dd>
+      </dl>
+      <p class="modal-description">${escapeHtml(data.description || '')}</p>
+      ${rifugioName ? `<div class="modal-contact"><strong>Rifugio:</strong><span>${escapeHtml(rifugioName)}</span></div>` : ''}
+    `;
+
+    document.getElementById('view-modal-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const similarGrid = document.getElementById('view-similar-grid');
+    similarGrid.innerHTML = '<div class="comments-empty">Caricamento annunci simili...</div>';
+    const matches = await fetchSimilarAnnouncements(data._id, 6);
+    renderSimilarAnnouncements(matches);
+  }
+
+  function renderSimilarAnnouncements(matches) {
+    const grid = document.getElementById('view-similar-grid');
+    grid.innerHTML = '';
+
+    if (!matches || matches.length === 0) {
+      grid.innerHTML = '<div class="comments-empty">Nessun annuncio simile trovato.</div>';
+      return;
+    }
+
+    matches.forEach((match) => {
+      const ann = match.announcement;
+      if (!ann) return;
+
+      const animal = ann.animalId || {};
+      const isLost = ann.type === 'LostAnimal';
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.dataset.id = ann._id;
+      const score = typeof match.score === 'number' ? `${(match.score * 100).toFixed(1)}%` : '';
+
+      card.innerHTML = `
+        <div class="card-image">
+          <div class="card-image-placeholder"><span>…</span></div>
+          <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
+            ${isLost ? 'Smarrito' : 'Avvistato'}
+          </span>
+          ${score ? `<span class="badge badge--score" style="right:10px;left:auto;">${escapeHtml(score)}</span>` : ''}
+        </div>
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="card-species">${escapeHtml(animal?.species || 'Specie')}</span>
+            <span class="card-date">${new Date(ann.date).toLocaleDateString('it-IT')}</span>
+          </div>
+          <h3 class="card-breed">${escapeHtml(animal?.name || animal?.breed || animal?.species || 'Animale')}</h3>
+          <p class="card-description">${escapeHtml(ann.description || '')}</p>
+        </div>
+      `;
+
+      card.addEventListener('click', () => openAnnouncementModal(ann._id));
+
+      (async () => {
+        const container = card.querySelector('.card-image');
+        try {
+          const res = await fetch(`http://localhost:3000/api/announcements/${ann._id}/photo`, { method: 'GET' });
+          if (!res.ok) throw new Error('no image');
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.startsWith('image')) throw new Error('not image');
+          const blob = await res.blob();
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.alt = animal?.species || 'Animale';
+          img.loading = 'lazy';
+          img.onload = () => { URL.revokeObjectURL(img.src); };
+          const placeholder = container.querySelector('.card-image-placeholder');
+          if (placeholder) placeholder.replaceWith(img);
+        } catch (err) {
+          const placeholder = container.querySelector('.card-image-placeholder');
+          if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(animal?.species?.[0] || '?')}</span>`;
+        }
+      })();
+
+      grid.appendChild(card);
+    });
+  }
 
   setProfileEditing(false);
   load();
@@ -1072,6 +1231,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('modal-close').addEventListener('click', ()=> showModal(false));
   document.getElementById('modal-cancel').addEventListener('click', ()=> showModal(false));
+
+  document.getElementById('view-modal-close')?.addEventListener('click', () => {
+    document.getElementById('view-modal-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+  });
+
+  document.getElementById('view-modal-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  });
 
   // Save from modal: create or update
   document.getElementById('modal-save').addEventListener('click', async () => {
@@ -1251,6 +1422,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!res.ok) { alert('Errore caricamento annuncio'); return; }
       const ann = await res.json();
       openModalForEdit(ann);
+    }
+  });
+
+  // note: opening by card click is handled above with delegated listener on grid
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const overlay = document.getElementById('view-modal-overlay');
+    if (overlay && overlay.style.display !== 'none') {
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
     }
   });
 
