@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rifugi — Trovami</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/rifugi.css" />
+</head>
+<body>
+  <div data-include="header"></div>
+
+  <main class="page rifugi-page">
+    <section class="rifugi-hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Rifugi nel territorio</div>
+        <h1>Controlla i rifugi, i posti disponibili e le adozioni in un’unica pagina.</h1>
+        <p>
+          Consulta i rifugi già attivi, verifica i posti disponibili, scopri gli animali in cerca di casa
+          e apri la mappa per raggiungere rapidamente ogni struttura.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#rifugi-lista">Esplora rifugi</a>
+          <a class="button" href="#mappa-rifugi">Apri mappa</a>
+          <a class="button" href="/pages/announcements.html">Vai agli annunci</a>
+        </div>
+      </div>
+      <div class="hero-aside">
+        <div class="hero-card">
+          <span class="hero-card-label">Rifugi attivi</span>
+          <strong id="stat-rifugi">0</strong>
+          <span>strutture approvate e visibili pubblicamente</span>
+        </div>
+        <div class="hero-card accent">
+          <span class="hero-card-label">Posti disponibili</span>
+          <strong id="stat-posti">0</strong>
+          <span>spazi complessivi dichiarati dai rifugi</span>
+        </div>
+        <div class="hero-card muted">
+          <span class="hero-card-label">Adozioni in evidenza</span>
+          <strong id="stat-adozioni">0</strong>
+          <span>annunci pubblicati dai rifugi presenti in piattaforma</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-head">
+        <div>
+          <h2>Adozioni in evidenza</h2>
+          <p>Ultimi annunci pubblicati dai rifugi per facilitare adozioni e accoglienza.</p>
+        </div>
+        <span id="adoptions-count" class="section-badge">0</span>
+      </div>
+      <div id="adoptions-grid" class="adoptions-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="section-card" id="rifugi-lista">
+      <div class="section-head">
+        <div>
+          <h2>Rifugi esistenti</h2>
+          <p>Apri la pagina dedicata di ogni rifugio per leggere informazioni, contatti e disponibilità.</p>
+        </div>
+        <span id="rifugi-count" class="section-badge">Caricamento…</span>
+      </div>
+      <div class="rifugi-layout">
+        <div id="rifugi-grid" class="rifugi-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="section-card" id="mappa-rifugi">
+      <div class="section-head">
+        <div>
+          <h2>Mappa rifugi</h2>
+          <p>Esplora le strutture sulla mappa e apri la pagina dedicata con un clic.</p>
+        </div>
+        <span class="section-badge">Trento e dintorni</span>
+      </div>
+      <div class="map-shell">
+        <div id="rifugi-map"></div>
+      </div>
+    </section>
+
+    
+  </main>
+
+  <div data-include="footer"></div>
+
+  <script src="/js/includes.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/rifugi.js"></script>
+</body>
+</html>
