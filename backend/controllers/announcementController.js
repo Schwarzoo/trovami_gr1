@@ -491,6 +491,45 @@ exports.getAnnouncementPhoto = async (req, res) => {
     }
 };
 
+// GET /api/announcements/:id/similar
+exports.getSimilarAnnouncements = async (req, res) => {
+    try {
+        const announcementId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(announcementId)) {
+            return res.status(400).json({ message: 'ID annuncio non valido' });
+        }
+
+        const base = await Announcement.findById(announcementId)
+            .select('type imageEmbedding animalId status')
+            .populate('animalId', 'species');
+
+        if (!base) return res.status(404).json({ message: 'Annuncio non trovato' });
+
+        if (!Array.isArray(base.imageEmbedding) || base.imageEmbedding.length === 0) {
+            return res.json({ matches: [] });
+        }
+
+        const animalSpecies = base.animalId?.species;
+        if (!animalSpecies) return res.json({ matches: [] });
+
+        const limit = Math.min(parseInt(req.query.limit, 10) || 6, 20);
+        const matches = await smartMatchingEngine.findMatches(base, animalSpecies);
+
+        const payload = matches.slice(0, limit).map((match) => {
+            const annObj = match.announcement?.toObject ? match.announcement.toObject() : match.announcement;
+            if (annObj?.publisherId) annObj.publisherId = maskPublisherContacts(annObj.publisherId);
+            return {
+                announcement: annObj,
+                score: match.score
+            };
+        });
+
+        res.json({ matches: payload });
+    } catch (err) {
+        res.status(500).json({ message: 'Errore recupero smart match', error: err.message });
+    }
+};
+
 exports.updateAnnouncement = async (req, res) => {
     try {
         const ann = await Announcement.findById(req.params.id);
