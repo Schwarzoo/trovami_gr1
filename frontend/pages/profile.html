@@ -110,6 +110,9 @@
 					<h3 style="margin:18px 0 10px;font-size:1rem;">Richieste rifugio</h3>
 					<div id="admin-rifugi-empty" style="color:var(--text-muted);">Nessuna richiesta rifugio</div>
 					<div id="admin-rifugi-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+					<h3 style="margin:18px 0 10px;font-size:1rem;">Richieste riammissione</h3>
+					<div id="admin-readmissions-empty" style="color:var(--text-muted);">Nessuna richiesta riammissione</div>
+					<div id="admin-readmissions-list" style="display:flex;flex-direction:column;gap:10px;"></div>
 				</section>
 
 				<section id="my-announcements" class="section-card">
@@ -123,6 +126,27 @@
 
 	<script src="../js/profile.js?v=rifugi-nome-2"></script>
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+	<div id="admin-announcement-overlay" role="dialog" aria-modal="true" style="display:none;">
+		<div class="modal admin-announcement-modal">
+			<div class="modal-header">
+				<h2 id="admin-announcement-title">Annuncio</h2>
+				<button id="admin-announcement-close" type="button" aria-label="Chiudi">X</button>
+			</div>
+			<div id="admin-modal-gallery"></div>
+			<div id="admin-announcement-body"></div>
+		</div>
+	</div>
+
+	<div id="admin-user-overlay" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+		<div class="modal-card admin-user-modal">
+			<div class="modal-header">
+				<h3 id="admin-user-title">Account</h3>
+				<button id="admin-user-close" type="button" aria-label="Chiudi">X</button>
+			</div>
+			<div id="admin-user-body" class="modal-body"></div>
+		</div>
+	</div>
 
 	<!-- Modal for create/edit announcement -->
 			<div id="modal-overlay" class="modal-overlay" style="display:none;">

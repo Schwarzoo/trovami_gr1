@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const nodemailer = require('nodemailer');
 const Announcement = require('../models/Announcement');
 const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
@@ -14,6 +15,53 @@ async function writeAudit(adminId, action, targetId, details) {
   await AuditLog.create({ adminId, action, targetId, details });
 }
 
+function escapeHtml(input) {
+  return String(input ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function createTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+}
+
+async function sendAccountBlockedEmail(user, reason) {
+  if (!user?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
+  const transporter = createTransporter();
+  const safeReason = escapeHtml(reason);
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: user.email,
+    subject: 'Account bloccato - Trovami',
+    html: `
+      <h2>Account bloccato</h2>
+      <p>Il tuo account Trovami e stato bloccato da un admin.</p>
+      <p><strong>Motivo:</strong> ${safeReason}</p>
+    `
+  });
+}
+
+async function getPublishedAnnouncementsCount(userId) {
+  return Announcement.countDocuments({ publisherId: userId });
+}
+
+async function withPublishedAnnouncementsCount(user) {
+  const obj = user.toObject ? user.toObject() : user;
+  obj.publishedAnnouncementsCount = await getPublishedAnnouncementsCount(obj._id);
+  return obj;
+}
+
 exports.getReports = async (req, res) => {
   try {
     const status = req.query.status || 'OPEN';
@@ -25,15 +73,59 @@ exports.getReports = async (req, res) => {
         select: '-photo',
         populate: [
           { path: 'animalId' },
-          { path: 'publisherId', select: 'username email role rifugioData isActive' }
+          { path: 'publisherId', select: 'username email phoneNumber role rifugioStatus rifugioData isActive createdAt conductWarnings' }
         ]
       })
       .sort({ createdAt: -1 })
       .limit(200);
 
-    res.json(reports);
+    const publisherIds = [
+      ...new Set(reports
+        .map(report => report.announcementId?.publisherId?._id)
+        .filter(Boolean)
+        .map(id => id.toString()))
+    ];
+    const counts = await Promise.all(publisherIds.map(async (userId) => ({
+      userId,
+      count: await getPublishedAnnouncementsCount(userId)
+    })));
+    const countByUserId = new Map(counts.map(({ userId, count }) => [userId, count]));
+
+    res.json(reports.map(report => {
+      const obj = report.toObject();
+      const publisher = obj.announcementId?.publisherId;
+      if (publisher?._id) {
+        publisher.publishedAnnouncementsCount = countByUserId.get(publisher._id.toString()) || 0;
+      }
+      return obj;
+    }));
   } catch (err) {
     res.status(500).json({ message: 'Errore recupero report', error: err.message });
+  }
+};
+
+exports.getUserDetails = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
+
+    const user = await User.findById(userId).select('-passwordHash -sessionToken');
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' });
+
+    res.json(await withPublishedAnnouncementsCount(user));
+  } catch (err) {
+    res.status(500).json({ message: 'Errore recupero utente', error: err.message });
+  }
+};
+
+exports.getUserAnnouncementCount = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
+
+    res.json({ publishedAnnouncementsCount: await getPublishedAnnouncementsCount(userId) });
+  } catch (err) {
+    res.status(500).json({ message: 'Errore conteggio annunci utente', error: err.message });
   }
 };
 
@@ -73,9 +165,8 @@ exports.deleteAnnouncementAsAdmin = async (req, res) => {
       await Notification.create({
         userId: publisherId,
         type: 'admin_warning',
-        announcementId,
         targetUserId: publisherId,
-        message: `Un tuo annuncio e' stato rimosso: ${reason}`
+        message: `Annuncio eliminato, motivo: ${reason}`
       });
     }
 
@@ -92,13 +183,152 @@ exports.blockUser = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
     if (userId === req.user.userId) return res.status(400).json({ message: 'Non puoi bloccare il tuo account admin' });
 
-    const user = await User.findByIdAndUpdate(userId, { isActive: false, sessionToken: null }, { new: true }).select('-passwordHash -sessionToken');
+    const reason = (req.body?.reason || 'Account bloccato da admin').toString().trim() || 'Account bloccato da admin';
+    const userAnnouncements = await Announcement.find({ publisherId: userId }).select('_id');
+    const announcementIds = userAnnouncements.map(announcement => announcement._id);
+    const relatedReports = announcementIds.length
+      ? await Report.find({ announcementId: { $in: announcementIds } }).select('_id')
+      : [];
+    const relatedReportIds = relatedReports.map(report => report._id);
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        isActive: false,
+        sessionToken: null,
+        conductWarnings: [],
+        readmissionRequest: {
+          status: 'none',
+          message: '',
+          requestedAt: null,
+          reviewedAt: null,
+          reviewedBy: null
+        }
+      },
+      { new: true }
+    ).select('-passwordHash -sessionToken');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
-    await writeAudit(req.user.userId, 'BLOCK_USER', user._id, req.body?.reason || 'Account bloccato da admin');
-    res.json(user);
+    await Promise.all(announcementIds.map(announcementId => removeAnnouncementCascade(announcementId)));
+    const reviewedReports = announcementIds.length
+      ? await Report.updateMany({ announcementId: { $in: announcementIds } }, { $set: { status: 'REVIEWED' } })
+      : { modifiedCount: 0 };
+    if (announcementIds.length || relatedReportIds.length) {
+      await Notification.updateMany(
+        {
+          type: 'report',
+          isRead: false,
+          $or: [
+            { announcementId: { $in: announcementIds } },
+            { reportId: { $in: relatedReportIds } }
+          ]
+        },
+        { $set: { isRead: true } }
+      );
+    }
+    await sendAccountBlockedEmail(user, reason);
+    await writeAudit(req.user.userId, 'BLOCK_USER', user._id, `${reason}; annunci eliminati: ${announcementIds.length}`);
+    const responseUser = await withPublishedAnnouncementsCount(user);
+    responseUser.removedAnnouncementsCount = announcementIds.length;
+    responseUser.reviewedReportsCount = reviewedReports.modifiedCount || 0;
+    res.json(responseUser);
   } catch (err) {
     res.status(500).json({ message: 'Errore blocco utente', error: err.message });
+  }
+};
+
+exports.getPendingReadmissionRequests = async (req, res) => {
+  try {
+    const users = await User.find({
+      isActive: false,
+      'readmissionRequest.status': 'pending'
+    })
+      .select('username email phoneNumber readmissionRequest conductWarnings createdAt')
+      .sort({ 'readmissionRequest.requestedAt': -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Errore recupero richieste riammissione', error: err.message });
+  }
+};
+
+exports.reviewReadmissionRequest = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const action = req.params.action;
+    if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
+    if (!['approve', 'reject'].includes(action)) return res.status(400).json({ message: 'Azione riammissione non valida' });
+
+    const update = {
+      'readmissionRequest.status': action === 'approve' ? 'approved' : 'rejected',
+      'readmissionRequest.reviewedAt': new Date(),
+      'readmissionRequest.reviewedBy': req.user.userId
+    };
+    if (action === 'approve') {
+      update.isActive = true;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-passwordHash -sessionToken');
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' });
+
+    try {
+      await Notification.create({
+        userId: user._id,
+        type: 'admin_warning',
+        targetUserId: user._id,
+        message: action === 'approve'
+          ? 'La tua richiesta di riammissione e stata approvata. Ora puoi accedere.'
+          : 'La tua richiesta di riammissione e stata rifiutata.'
+      });
+      await Notification.updateMany(
+        {
+          targetUserId: user._id,
+          type: 'admin_warning',
+          isRead: false,
+          message: { $regex: '^Richiesta di riammissione da ' }
+        },
+        { $set: { isRead: true } }
+      );
+      await writeAudit(req.user.userId, action === 'approve' ? 'APPROVE_READMISSION' : 'REJECT_READMISSION', user._id, user.readmissionRequest?.message || '');
+    } catch (sideEffectErr) {
+      console.warn('Errore side effect riammissione:', sideEffectErr.message);
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Errore gestione riammissione', error: err.message });
+  }
+};
+
+exports.warnUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
+    if (userId === req.user.userId) return res.status(400).json({ message: 'Non puoi ammonire il tuo account admin' });
+
+    const reason = (req.body?.reason || 'Ammonimento sulla condotta account').toString().trim() || 'Ammonimento sulla condotta account';
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $push: {
+          conductWarnings: {
+            adminId: req.user.userId,
+            reason,
+            createdAt: new Date()
+          }
+        }
+      },
+      { new: true }
+    ).select('-passwordHash -sessionToken');
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' });
+
+    await Notification.create({
+      userId: user._id,
+      type: 'admin_warning',
+      targetUserId: user._id,
+      message: "Hai ricevuto un ammonimento sulla condotta dell'account; al prossimo ammonimento ci sara il blocco dell'account."
+    });
+    await writeAudit(req.user.userId, 'WARN_USER', user._id, reason);
+    res.json(await withPublishedAnnouncementsCount(user));
+  } catch (err) {
+    res.status(500).json({ message: 'Errore ammonimento utente', error: err.message });
   }
 };
 

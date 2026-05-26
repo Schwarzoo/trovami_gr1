@@ -23,6 +23,57 @@ body {
 }
 .page-header p { color: var(--text-muted); font-size: 0.95rem; }
 
+.user-announcements-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.2rem;
+    margin-bottom: .75rem;
+    background: #ead8cc;
+    border: 1px solid rgba(200, 90, 42, 0.22);
+    border-radius: 18px;
+}
+
+.user-announcements-heading h1 {
+    margin: 0;
+}
+
+.user-announcements-actions {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+}
+
+.user-action-btn {
+    border: 1px solid #c85a2a;
+    background: #d96a2f;
+    color: #fff;
+    border-radius: 999px;
+    padding: .62rem 1rem;
+    font-family: inherit;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s, transform .2s, box-shadow .2s;
+}
+
+.user-action-btn:hover {
+    background: #c85a2a;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(200, 90, 42, 0.18);
+}
+
+.user-action-btn--block {
+    background: #bd4a20;
+    border-color: #bd4a20;
+}
+
+.user-action-btn--block:hover {
+    background: #a43f1a;
+}
+
 /* ── FILTERS ── */
 .filters {
     display: flex;

@@ -138,17 +138,22 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Credenziali non valide' });
     }
 
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ message: 'Credenziali non valide' });
+    }
+
     if (!user.isActive) {
-      return res.status(403).json({ message: 'Account bloccato' });
+      return res.status(403).json({
+        message: 'Account bloccato',
+        blocked: true,
+        userId: user._id,
+        readmissionStatus: user.readmissionRequest?.status || 'none'
+      });
     }
 
     if (!user.isEmailVerified) {
       return res.status(403).json({ message: 'Email non verificata' });
-    }
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return res.status(401).json({ message: 'Credenziali non valide' });
     }
 
     user.role = normalizeAccountRole(user.role);
@@ -165,6 +170,46 @@ exports.login = async (req, res) => {
     res.json({ message: 'Login effettuato', token, role: user.role });
   } catch (err) {
     res.status(500).json({ message: 'Errore server', error: err.message });
+  }
+};
+
+exports.requestReadmission = async (req, res) => {
+  try {
+    const { userId, email, message } = req.body;
+    const text = String(message || '').trim();
+    if (!text) return res.status(400).json({ message: 'Testo richiesta obbligatorio' });
+    if (text.length > 1000) return res.status(400).json({ message: 'Testo troppo lungo (max 1000 caratteri)' });
+    if (!userId && !email) return res.status(400).json({ message: 'Account richiesto' });
+
+    const filter = userId ? { _id: userId } : { email };
+    if (userId && !userId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: 'ID utente non valido' });
+    }
+
+    const user = await User.findOne(filter);
+    if (!user) return res.status(404).json({ message: 'Account non trovato' });
+    if (user.isActive) return res.status(400).json({ message: 'Account gia attivo' });
+
+    user.readmissionRequest = {
+      status: 'pending',
+      message: text,
+      requestedAt: new Date(),
+      reviewedAt: null,
+      reviewedBy: null
+    };
+    await user.save();
+
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
+    await Promise.all(admins.map(admin => Notification.create({
+      userId: admin._id,
+      targetUserId: user._id,
+      type: 'admin_warning',
+      message: `Richiesta di riammissione da ${user.username}`
+    })));
+
+    res.json({ message: 'Richiesta di riammissione inviata' });
+  } catch (err) {
+    res.status(500).json({ message: 'Errore richiesta riammissione', error: err.message });
   }
 };
 

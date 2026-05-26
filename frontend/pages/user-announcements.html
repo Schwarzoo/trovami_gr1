@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Annunci utente - Trovami</title>
+  <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/announcements.css" />
+</head>
+<body>
+  <div data-include="header"></div>
+
+  <main class="page">
+    <div class="page-header">
+      <div class="user-announcements-heading">
+        <h1 id="user-announcements-title">Annunci utente</h1>
+        <div class="user-announcements-actions">
+          <button id="warn-user" class="user-action-btn user-action-btn--warn" type="button">Avverti</button>
+          <button id="block-user" class="user-action-btn user-action-btn--block" type="button">Blocca account</button>
+        </div>
+      </div>
+      <p id="user-announcements-subtitle">Annunci pubblicati da questo account</p>
+    </div>
+
+    <div id="error-banner"></div>
+    <div id="empty-state">
+      <div class="empty-icon">?</div>
+      <p>Nessun annuncio trovato per questo account.</p>
+    </div>
+    <div id="announcements-grid"></div>
+  </main>
+
+  <div data-include="footer"></div>
+
+  <div id="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button id="modal-close" aria-label="Chiudi">X</button>
+      </div>
+      <div id="modal-gallery"></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="/js/includes.js"></script>
+  <script src="../js/user-announcements.js"></script>
+</body>
+</html>

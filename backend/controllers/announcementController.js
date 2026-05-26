@@ -159,10 +159,16 @@ async function notifyAdmins(payload) {
 
 exports.getAnnouncements = async (req, res) => {
     try {
-        const { type, species, status, rifugioId } = req.query;
+        const { type, species, status, rifugioId, userId } = req.query;
         const filter = {};
-        filter.status = status || 'ACTIVE';
+        if (status !== 'all') filter.status = status || 'ACTIVE';
         if (type) filter.type = type;
+        if (userId) {
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                return res.status(400).json({ message: 'ID utente non valido' });
+            }
+            filter.publisherId = userId;
+        }
         if (rifugioId) {
             if (!mongoose.Types.ObjectId.isValid(rifugioId)) {
                 return res.status(400).json({ message: 'ID rifugio non valido' });

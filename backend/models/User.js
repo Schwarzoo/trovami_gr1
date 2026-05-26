@@ -22,6 +22,20 @@ const userSchema = new mongoose.Schema({
         soundOnSite:    { type: Boolean, default: true }
     },
 
+    conductWarnings: [{
+        adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        reason: { type: String, default: 'Ammonimento sulla condotta account' },
+        createdAt: { type: Date, default: Date.now }
+    }],
+
+    readmissionRequest: {
+        status: { type: String, enum: ['none', 'pending', 'approved', 'rejected'], default: 'none' },
+        message: { type: String, default: '' },
+        requestedAt: { type: Date, default: null },
+        reviewedAt: { type: Date, default: null },
+        reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+    },
+
     resetPasswordToken: { type: String, default: null },
     resetPasswordExpires: { type: Date, default: null },
     emailVerificationToken: { type: String, default: null },

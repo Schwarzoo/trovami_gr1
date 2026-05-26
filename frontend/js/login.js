@@ -28,6 +28,10 @@ form.addEventListener('submit', async (e) => {
   const data = await res.json();
 
   if (!res.ok) {
+    if (data?.blocked && data?.userId) {
+      window.location.href = `./readmission.html?userId=${encodeURIComponent(data.userId)}&status=${encodeURIComponent(data.readmissionStatus || 'none')}`;
+      return;
+    }
     errorBox.textContent = data.message || 'Errore di login';
     return;
   }

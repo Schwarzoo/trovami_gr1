@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/login.css" />
+  <title>Richiesta riammissione - Trovami</title>
+</head>
+<body>
+  <div data-include="header"></div>
+
+  <main class="auth-page">
+    <form id="readmissionForm" class="auth-card">
+      <h1>Richiesta riammissione</h1>
+      <p>Account bloccato. Scrivi agli admin per chiedere la riattivazione.</p>
+
+      <label for="readmissionMessage">Messaggio</label>
+      <textarea id="readmissionMessage" rows="6" maxlength="1000" required placeholder="Spiega perche chiedi la riammissione"></textarea>
+
+      <button type="submit">Invia richiesta</button>
+      <p id="readmissionStatus" class="error" aria-live="polite"></p>
+      <p><a href="login.html">Torna al login</a></p>
+    </form>
+  </main>
+
+  <script src="/js/includes.js"></script>
+  <div data-include="footer"></div>
+  <script src="../js/readmission.js"></script>
+</body>
+</html>
