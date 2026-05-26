@@ -108,6 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   ];
   const editProfileButton = document.getElementById('editProfileBtn');
   const saveProfileButton = document.getElementById('saveProfileBtn');
+  const adminUserLookup = new Map();
 
   function setProfileEditing(enabled) {
     editableProfileFields.forEach((id) => {
@@ -192,6 +193,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replaceAll("'", '&#39;');
   }
 
+  function displayValue(value) {
+    const text = String(value ?? '').trim();
+    return text ? escapeHtml(text) : '<span class="muted">Non specificato</span>';
+  }
+
+  function renderAdminCommentsHtml(comments) {
+    if (!Array.isArray(comments) || comments.length === 0) {
+      return '<div class="comments-empty">Nessun commento</div>';
+    }
+
+    return [...comments]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((c) => {
+        const when = c?.createdAt ? new Date(c.createdAt).toLocaleString('it-IT') : '';
+        return `
+          <div class="comment-item">
+            <div class="comment-meta">
+              <span class="comment-user">${escapeHtml(c?.username || 'utente')}</span>
+              <span class="comment-date">${escapeHtml(when)}</span>
+            </div>
+            <div class="comment-text">${escapeHtml(c?.text || '')}</div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
   function renderNotifications(list) {
     const empty = document.getElementById('notifications-empty');
     const container = document.getElementById('notifications-list');
@@ -207,6 +235,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     list.forEach((n) => {
       const when = n?.createdAt ? new Date(n.createdAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
       const annId = n?.announcementId;
+      const isDeletedAnnouncementNotification = String(n?.message || '').startsWith('Annuncio eliminato, motivo:');
+      const isReportNotification = n?.type === 'report';
+      const announcementLinkHtml = !isDeletedAnnouncementNotification && !isReportNotification && annId
+        ? `
+            <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+              <a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(annId)}">Vedi annuncio</a>
+            </div>
+          `
+        : '';
       const item = document.createElement('div');
       item.className = 'comment-item';
       item.innerHTML = `
@@ -215,9 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="comment-date">${escapeHtml(when)}</span>
         </div>
         <div class="comment-text">${escapeHtml(n?.message || '')}</div>
-        <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
-          <a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(annId)}">Vedi annuncio</a>
-        </div>
+        ${announcementLinkHtml}
       `;
       const link = item.querySelector('a');
       if (link) {
@@ -371,10 +406,241 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  async function fetchPendingReadmissions() {
+    const res = await fetch('http://localhost:3000/api/admin/readmission-requests', { headers: authHeader });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
+  async function readResponseError(res, fallback) {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const json = await res.json().catch(() => ({}));
+      if (json?.message) return json.message;
+    }
+    return `${fallback} (${res.status})`;
+  }
+
+  async function fetchAdminUserAnnouncementCount(userId) {
+    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/announcement-count`, { headers: authHeader });
+    if (!res.ok) throw new Error(await readResponseError(res, 'Errore conteggio annunci'));
+    const json = await res.json().catch(() => ({}));
+    return Number(json?.publishedAnnouncementsCount || 0);
+  }
+
+  async function fetchAdminUser(userId) {
+    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}`, { headers: authHeader });
+    if (!res.ok) throw new Error(await readResponseError(res, 'Errore recupero account'));
+    const user = await res.json();
+    try {
+      user.publishedAnnouncementsCount = await fetchAdminUserAnnouncementCount(userId);
+    } catch (err) {
+      console.warn('Errore conteggio annunci account:', err);
+    }
+    return user;
+  }
+
+  function closeAdminAnnouncementModal() {
+    const overlay = document.getElementById('admin-announcement-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function closeAdminUserModal() {
+    const overlay = document.getElementById('admin-user-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function renderAdminUserModal(user) {
+    const overlay = document.getElementById('admin-user-overlay');
+    const title = document.getElementById('admin-user-title');
+    const body = document.getElementById('admin-user-body');
+    if (!overlay || !title || !body) return;
+
+    const warnings = Array.isArray(user?.conductWarnings) ? user.conductWarnings : [];
+    const rifugioName = user?.rifugioData?.rifugioName || user?.shelterData?.shelterName || '';
+    title.textContent = user?.username || 'Account';
+    body.innerHTML = `
+      <div class="admin-warning-count">
+        <span class="admin-warning-count__number">${warnings.length}</span>
+        <span class="admin-warning-count__label">${warnings.length === 1 ? 'ammonimento ricevuto' : 'ammonimenti ricevuti'}</span>
+      </div>
+      <dl class="admin-user-details">
+        <dt>Username</dt><dd>${displayValue(user?.username)}</dd>
+        <dt>Email</dt><dd>${displayValue(user?.email)}</dd>
+        <dt>Telefono</dt><dd>${displayValue(user?.phoneNumber)}</dd>
+        <dt>Ammonimenti</dt><dd>${warnings.length}</dd>
+        <dt>Annunci pubblicati</dt><dd>${Number(user?.publishedAnnouncementsCount || 0)}</dd>
+        ${rifugioName ? `<dt>Rifugio</dt><dd>${escapeHtml(rifugioName)}</dd>` : ''}
+      </dl>
+      <div class="admin-user-actions">
+        <a class="btn btn--orange btn--compact" href="/pages/user-announcements.html?userId=${encodeURIComponent(user?._id || '')}&user=${encodeURIComponent(user?.username || 'Account')}">Mostra annunci</a>
+        <button class="btn btn--orange btn--compact" data-admin-action="warn-user" data-user-id="${escapeHtml(user?._id || '')}">Avverti</button>
+        <button class="btn btn--danger btn--compact" data-admin-action="block-user" data-user-id="${escapeHtml(user?._id || '')}">Blocca account</button>
+      </div>
+    `;
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  async function openAdminUserModal(userId) {
+    const key = String(userId || '');
+    let user = adminUserLookup.get(key);
+    if (userId) {
+      try {
+        const freshUser = await fetchAdminUser(userId);
+        user = freshUser;
+        adminUserLookup.set(String(freshUser?._id || userId), freshUser);
+      } catch (err) {
+        if (!user) throw err;
+      }
+    }
+    if (!user) {
+      alert('Informazioni account non disponibili');
+      return;
+    }
+    renderAdminUserModal(user);
+  }
+
+  async function warnAdminUser(userId) {
+    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/warn`, {
+      method: 'PATCH',
+      headers: authHeader,
+      body: JSON.stringify({ reason: 'Ammonimento da moderazione report' })
+    });
+    if (!res.ok) throw new Error(await readResponseError(res, 'Errore ammonimento'));
+    const warnedUser = await res.json().catch(() => null);
+    if (warnedUser?._id) {
+      adminUserLookup.set(String(warnedUser._id), warnedUser);
+      renderAdminUserModal(warnedUser);
+    }
+  }
+
+  async function blockAdminUser(userId) {
+    const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
+    if (reason === null) return;
+    const blockReason = reason.trim() || 'Account bloccato da admin';
+    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/block`, {
+      method: 'PATCH',
+      headers: authHeader,
+      body: JSON.stringify({ reason: blockReason })
+    });
+    if (!res.ok) throw new Error(await readResponseError(res, 'Errore blocco'));
+    const blockedUser = await res.json().catch(() => null);
+    if (blockedUser?._id) {
+      adminUserLookup.set(String(blockedUser._id), blockedUser);
+    }
+    closeAdminUserModal();
+    return blockedUser;
+  }
+
+  function renderAdminAnnouncementModal(ann) {
+    const overlay = document.getElementById('admin-announcement-overlay');
+    const title = document.getElementById('admin-announcement-title');
+    const gallery = document.getElementById('admin-modal-gallery');
+    const body = document.getElementById('admin-announcement-body');
+    if (!overlay || !title || !gallery || !body) return;
+
+    const animal = ann?.animalId || {};
+    const publisher = ann?.publisherId || {};
+    const isQuick = !!ann?.isQuick || !publisher?._id;
+    const isLost = ann?.type === 'LostAnimal';
+    const isRifugioAnnouncement = publisher?.role === 'shelter';
+    const typeLabel = ann?.type === 'LostAnimal' ? 'Smarrito' : 'Avvistamento';
+    const dateLabel = ann?.date
+      ? new Date(ann.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : (ann?.lastSeenDate ? new Date(ann.lastSeenDate).toLocaleDateString('it-IT') : 'Non disponibile');
+    const photoUrl = ann?._id ? `http://localhost:3000/api/announcements/${encodeURIComponent(ann._id)}/photo` : '';
+    const comments = Array.isArray(ann?.comments) ? ann.comments : [];
+    const coords = ann?.location?.coordinates;
+    const locationInfo = coords?.length === 2
+      ? `<dt>Posizione</dt><dd><a class="position-link" href="map.html?highlight=${encodeURIComponent(ann._id)}"><em>trovami</em></a></dd>`
+      : '';
+    const rifugioAddress = [publisher?.rifugioData?.address, publisher?.rifugioData?.city]
+      .filter(Boolean)
+      .join(', ');
+    const rifugioCoords = publisher?.rifugioData?.location?.coordinates;
+    const rifugioLocationHtml = publisher?.role === 'shelter'
+      ? `
+          ${rifugioAddress ? `<span>${escapeHtml(rifugioAddress)}</span>` : ''}
+          ${Array.isArray(rifugioCoords) && rifugioCoords.length === 2 ? `<a href="map.html?rifugioId=${encodeURIComponent(publisher._id)}">Vedi posizione rifugio</a>` : ''}
+        `
+      : '';
+
+    title.textContent = animal?.name || (isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
+    gallery.innerHTML = '<div class="modal-spinner">...</div>';
+    (async () => {
+      try {
+        const res = await fetch(photoUrl, { method: 'GET' });
+        if (!res.ok) throw new Error('no image');
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.startsWith('image')) throw new Error('not image');
+        const blob = await res.blob();
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.alt = 'foto animale';
+        img.onload = () => { URL.revokeObjectURL(img.src); };
+        gallery.innerHTML = '';
+        gallery.appendChild(img);
+      } catch (err) {
+        gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
+      }
+    })();
+
+    body.innerHTML = `
+      <dl class="detail-list">
+        ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
+        <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
+        <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
+        <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
+        <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
+        <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
+        <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
+        <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
+        ${locationInfo}
+        <dt>Data</dt><dd>${escapeHtml(dateLabel)}</dd>
+        <dt>Condizioni</dt><dd>${displayValue(ann?.healthCondition)}</dd>
+        <dt>Comportamento</dt><dd>${displayValue(ann?.animalBehaviour)}</dd>
+      </dl>
+      <p class="modal-description">${escapeHtml(ann?.description || 'Nessuna descrizione')}</p>
+
+      <section class="comments-section" aria-label="Commenti">
+        <div class="comments-header">
+          <h3>Commenti</h3>
+          <span class="comments-count">${comments.length}</span>
+        </div>
+        <div id="admin-comments-list" class="comments-list">
+          ${renderAdminCommentsHtml(comments)}
+        </div>
+      </section>
+
+      <div class="modal-contact">
+        <strong>Contatto:</strong>
+        <span>${isQuick ? 'Segnalazione veloce anonima' : escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '-')}</span>
+        ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">${escapeHtml(publisher.phoneNumber)}</a>` : ''}
+        ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
+        ${rifugioLocationHtml}
+      </div>
+    `;
+
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  async function openAdminAnnouncementModal(annId) {
+    if (!annId) return;
+    const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(annId)}`);
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Errore caricamento annuncio');
+    renderAdminAnnouncementModal(await res.json());
+  }
+
   function renderAdminReports(list) {
     const empty = document.getElementById('admin-reports-empty');
     const container = document.getElementById('admin-reports-list');
     if (!empty || !container) return;
+    adminUserLookup.clear();
     container.innerHTML = '';
     if (!list.length) {
       empty.style.display = 'block';
@@ -388,6 +654,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const publisherId = publisher?._id || publisher || '';
       const animal = ann?.animalId;
       const isQuick = !!ann?.isQuick || !publisherId;
+      if (publisherId && publisher && typeof publisher === 'object') {
+        adminUserLookup.set(String(publisherId), publisher);
+      }
       const item = document.createElement('div');
       item.className = 'comment-item';
       item.innerHTML = `
@@ -400,10 +669,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           <br>Annuncio: ${escapeHtml(animal?.species || 'non disponibile')} - ${isQuick ? 'segnalazione veloce anonima' : escapeHtml(publisher?.username || 'utente')}
         </div>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-          ${ann?._id ? `<a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(ann._id)}">Vedi</a>` : ''}
+          ${ann?._id ? `<button class="btn btn--orange" data-admin-action="view-ann" data-ann-id="${escapeHtml(ann._id)}">Vedi annuncio</button>` : ''}
           ${ann?._id ? `<button class="btn btn--danger" data-admin-action="delete-ann" data-ann-id="${escapeHtml(ann._id)}">Elimina annuncio</button>` : ''}
-          ${publisherId ? `<button class="btn btn--danger" data-admin-action="block-user" data-user-id="${escapeHtml(publisherId)}">Blocca account</button>` : ''}
-          <button class="btn btn--ghost" data-admin-action="dismiss-report" data-report-id="${escapeHtml(report._id)}">Archivia report</button>
+          ${publisherId ? `<button class="btn btn--orange" data-admin-action="view-user" data-user-id="${escapeHtml(publisherId)}">Visualizza account</button>` : ''}
+          <button class="btn btn--orange" data-admin-action="dismiss-report" data-report-id="${escapeHtml(report._id)}">Archivia segnalazione</button>
         </div>
       `;
       container.appendChild(item);
@@ -443,13 +712,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function renderPendingReadmissions(list) {
+    const empty = document.getElementById('admin-readmissions-empty');
+    const container = document.getElementById('admin-readmissions-list');
+    if (!empty || !container) return;
+    container.innerHTML = '';
+    if (!list.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.forEach((user) => {
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(user.username || user.email || 'Account')}</span>
+          <span class="comment-date">${user.readmissionRequest?.requestedAt ? new Date(user.readmissionRequest.requestedAt).toLocaleString('it-IT') : ''}</span>
+        </div>
+        <div class="comment-text">
+          ${escapeHtml(user.readmissionRequest?.message || '')}
+          ${user.email ? `<br>${escapeHtml(user.email)}` : ''}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn--primary" data-admin-action="approve-readmission" data-user-id="${escapeHtml(user._id)}">Approva riammissione</button>
+          <button class="btn btn--danger" data-admin-action="reject-readmission" data-user-id="${escapeHtml(user._id)}">Rifiuta</button>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
   async function loadAdminData() {
     if (currentUser?.role !== 'admin') return;
     const section = document.getElementById('admin-section');
     if (section) section.style.display = 'block';
-    const [reports, rifugi] = await Promise.all([fetchAdminReports(), fetchPendingRifugi()]);
+    const [reports, rifugi, readmissions] = await Promise.all([fetchAdminReports(), fetchPendingRifugi(), fetchPendingReadmissions()]);
     renderAdminReports(reports);
     renderPendingRifugi(rifugi);
+    renderPendingReadmissions(readmissions);
   }
 
   async function load() {
@@ -513,6 +815,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('adminRefresh')?.addEventListener('click', loadAdminData);
+  document.getElementById('admin-announcement-close')?.addEventListener('click', closeAdminAnnouncementModal);
+  document.getElementById('admin-announcement-overlay')?.addEventListener('click', (e) => {
+    if (e.target?.id === 'admin-announcement-overlay') closeAdminAnnouncementModal();
+  });
+  document.getElementById('admin-user-close')?.addEventListener('click', closeAdminUserModal);
+  document.getElementById('admin-user-overlay')?.addEventListener('click', async (e) => {
+    const button = e.target?.closest?.('[data-admin-action]');
+    if (button) {
+      try {
+        if (button.dataset.adminAction === 'warn-user') await warnAdminUser(button.dataset.userId);
+        if (button.dataset.adminAction === 'block-user') {
+          await blockAdminUser(button.dataset.userId);
+          await loadAdminData();
+          await loadMyAnnouncements();
+        }
+      } catch (err) {
+        alert(err.message || 'Errore moderazione');
+      }
+      return;
+    }
+    if (e.target?.id === 'admin-user-overlay') closeAdminUserModal();
+  });
   document.getElementById('editRifugioPosition')?.addEventListener('click', openRifugioPositionEditor);
   document.getElementById('saveRifugioPosition')?.addEventListener('click', saveRifugioPosition);
 
@@ -522,26 +846,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     const action = button.dataset.adminAction;
 
     try {
+      if (action === 'view-ann') {
+        await openAdminAnnouncementModal(button.dataset.annId);
+        return;
+      }
+
+      if (action === 'view-user') {
+        await openAdminUserModal(button.dataset.userId);
+        return;
+      }
+
       if (action === 'delete-ann') {
         const annId = button.dataset.annId;
-        const reason = prompt('Motivo rimozione annuncio:', 'annuncio falso/offensivo') || 'violazione delle regole';
+        const reason = prompt('Motivo rimozione annuncio:', 'annuncio falso/offensivo');
+        if (reason === null) return;
+        const deleteReason = reason.trim() || 'violazione delle regole';
         const res = await fetch(`http://localhost:3000/api/admin/announcements/${encodeURIComponent(annId)}`, {
           method: 'DELETE',
           headers: authHeader,
-          body: JSON.stringify({ reason })
+          body: JSON.stringify({ reason: deleteReason })
         });
         if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore eliminazione');
       }
 
       if (action === 'block-user') {
-        const userId = button.dataset.userId;
-        if (!confirm('Bloccare questo account?')) return;
-        const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/block`, {
-          method: 'PATCH',
-          headers: authHeader,
-          body: JSON.stringify({ reason: 'Blocco da moderazione report' })
-        });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore blocco');
+        await blockAdminUser(button.dataset.userId);
+      }
+
+      if (action === 'warn-user') {
+        await warnAdminUser(button.dataset.userId);
       }
 
       if (action === 'dismiss-report') {
@@ -552,6 +885,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           body: JSON.stringify({ status: 'DISMISSED', details: 'Archiviato da admin' })
         });
         if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore archiviazione');
+      }
+
+      if (action === 'approve-readmission' || action === 'reject-readmission') {
+        const userId = button.dataset.userId;
+        const verb = action === 'approve-readmission' ? 'approve' : 'reject';
+        const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/readmission/${verb}`, {
+          method: 'PATCH',
+          headers: authHeader
+        });
+        if (!res.ok) throw new Error(await readResponseError(res, 'Errore riammissione'));
       }
 
       if (action === 'approve-rifugio' || action === 'reject-rifugio') {

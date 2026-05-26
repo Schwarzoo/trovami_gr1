@@ -15,7 +15,7 @@ const auditLogSchema = new mongoose.Schema({
 
     action: { 
         type: String, 
-        enum: ['APPROVE_CONTENT', 'DELETE_CONTENT', 'BLOCK_USER', 'UNBLOCK_USER', 'CREATE_SHELTER', 'APPROVE_RIFUGIO', 'REJECT_RIFUGIO', 'WARN_USER', 'DISMISS_REPORT'], 
+        enum: ['APPROVE_CONTENT', 'DELETE_CONTENT', 'BLOCK_USER', 'UNBLOCK_USER', 'CREATE_SHELTER', 'APPROVE_RIFUGIO', 'REJECT_RIFUGIO', 'WARN_USER', 'DISMISS_REPORT', 'APPROVE_READMISSION', 'REJECT_READMISSION'], 
         required: true 
     },
    

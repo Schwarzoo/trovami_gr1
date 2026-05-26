@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, logout, forgotPassword, resetPassword, verifyEmail, resendVerification } = require('../controllers/authController');
+const { register, login, logout, forgotPassword, resetPassword, verifyEmail, resendVerification, requestReadmission } = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/auth');
 
 // UC1 - Registrazione
@@ -10,6 +10,9 @@ router.post('/register', register);
 // UC3 - Login
 // POST /api/auth/login
 router.post('/login', login);
+
+// Request readmission for blocked account
+router.post('/readmission-request', requestReadmission);
 
 // Logout (richiede autenticazione)
 // POST /api/auth/logout
