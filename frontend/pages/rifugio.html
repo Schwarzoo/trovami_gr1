@@ -22,7 +22,7 @@
         <p id="shelter-description">Recupero delle informazioni in corso.</p>
         <div class="hero-actions">
           <div class="hero-actions-main">
-              <!-- Annunci link removed per UI change -->
+              <button class="button primary" id="follow-shelter-button" type="button" style="display:none;">Segui rifugio</button>
             </div>
           <div class="hero-actions-secondary">
             <a class="button" id="shelter-map-link" href="#scheda-rifugio">Apri mappa</a>
@@ -62,6 +62,23 @@
   </main>
 
   <div data-include="footer"></div>
+
+  <div id="follow-shelter-overlay" class="follow-modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+    <div class="follow-modal">
+      <div class="modal-header">
+        <h3>Segui rifugio</h3>
+        <button id="follow-shelter-close" type="button" aria-label="Chiudi">X</button>
+      </div>
+      <div class="follow-modal-body">
+        <p>Come vuoi ricevere gli aggiornamenti sui nuovi annunci?</p>
+        <div class="follow-options">
+          <button id="follow-site-only" type="button" class="button primary">Solo notifiche sul sito</button>
+          <button id="follow-site-email" type="button" class="button">Sito e email</button>
+        </div>
+        <div id="follow-shelter-status" class="follow-status"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Animal detail modal (reuse profile modal markup for consistency) -->
   <div id="animal-modal-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">

@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Announcement = require('../models/Announcement');
 const { writeAuditLog } = require('../services/auditService');
+const mongoose = require('mongoose');
 
 function toBool(v) {
   if (typeof v === 'boolean') return v;
@@ -108,6 +109,95 @@ exports.getPublicRifugi = async (req, res) => {
     }));
   } catch (err) {
     res.status(500).json({ message: 'Errore recupero rifugi', error: err.message });
+  }
+};
+
+function formatShelterPayload(shelter, emailEnabled) {
+  const showEmail = shelter.contactVisibility?.showEmail !== false;
+  const showPhone = shelter.contactVisibility?.showPhone !== false;
+  return {
+    _id: shelter._id,
+    username: shelter.username,
+    email: showEmail ? shelter.email : null,
+    phoneNumber: showPhone ? shelter.phoneNumber : null,
+    rifugioData: shelter.rifugioData,
+    emailEnabled: !!emailEnabled
+  };
+}
+
+exports.getFollowedShelters = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId)
+      .select('followedShelters')
+      .populate('followedShelters.shelterId', 'username email phoneNumber contactVisibility rifugioData role rifugioStatus');
+
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' });
+
+    const followed = (user.followedShelters || [])
+      .filter(item => item.shelterId && item.shelterId.role === 'shelter' && item.shelterId.rifugioStatus === 'approved')
+      .map(item => formatShelterPayload(item.shelterId, item.emailEnabled));
+
+    res.json(followed);
+  } catch (err) {
+    res.status(500).json({ message: 'Errore recupero rifugi seguiti', error: err.message });
+  }
+};
+
+exports.followShelter = async (req, res) => {
+  try {
+    const shelterId = req.params.shelterId;
+    if (!mongoose.Types.ObjectId.isValid(shelterId)) {
+      return res.status(400).json({ message: 'ID rifugio non valido' });
+    }
+
+    const me = await User.findById(req.user.userId).select('role followedShelters');
+    if (!me) return res.status(404).json({ message: 'Utente non trovato' });
+    if (me.role !== 'user') return res.status(403).json({ message: 'Solo gli utenti possono seguire un rifugio' });
+    if (String(me._id) === String(shelterId)) return res.status(400).json({ message: 'Non puoi seguire il tuo account' });
+
+    const shelter = await User.findOne({ _id: shelterId, role: 'shelter', rifugioStatus: 'approved', isActive: true })
+      .select('username email phoneNumber contactVisibility rifugioData role rifugioStatus');
+    if (!shelter) return res.status(404).json({ message: 'Rifugio non trovato o non approvato' });
+
+    const emailEnabled = toBool(req.body?.emailEnabled) === true;
+    const existing = (me.followedShelters || []).find(item => String(item.shelterId) === String(shelterId));
+
+    if (existing) {
+      existing.emailEnabled = emailEnabled;
+    } else {
+      me.followedShelters.push({ shelterId, emailEnabled });
+    }
+
+    await me.save();
+    await writeAuditLog({ actor: me, action: 'seguito rifugio', target: shelter });
+    res.json(formatShelterPayload(shelter, emailEnabled));
+  } catch (err) {
+    res.status(500).json({ message: 'Errore follow rifugio', error: err.message });
+  }
+};
+
+exports.unfollowShelter = async (req, res) => {
+  try {
+    const shelterId = req.params.shelterId;
+    if (!mongoose.Types.ObjectId.isValid(shelterId)) {
+      return res.status(400).json({ message: 'ID rifugio non valido' });
+    }
+
+    const user = await User.findById(req.user.userId).select('followedShelters role');
+    if (!user) return res.status(404).json({ message: 'Utente non trovato' });
+    if (user.role !== 'user') return res.status(403).json({ message: 'Solo gli utenti possono smettere di seguire un rifugio' });
+
+    const before = user.followedShelters.length;
+    user.followedShelters = user.followedShelters.filter(item => String(item.shelterId) !== String(shelterId));
+    await user.save();
+
+    if (before !== user.followedShelters.length) {
+      await writeAuditLog({ actor: user, action: 'non segue piu rifugio', target: shelterId });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Errore unfollow rifugio', error: err.message });
   }
 };
 

@@ -44,6 +44,19 @@ function buildAnnouncementUrl(announcementId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
 }
 
+function buildShelterAnimalUrl(shelterId, animalId) {
+    return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/rifugio.html?rifugioId=${shelterId}&animalId=${animalId}`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 async function sendSmartMatchEmail(userId, subject, html) {
     try {
         const recipient = await User.findById(userId).select('email username');
@@ -58,6 +71,80 @@ async function sendSmartMatchEmail(userId, subject, html) {
         });
     } catch (err) {
         console.error('Errore invio email smart match:', err);
+    }
+}
+
+async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
+    try {
+        if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
+
+        const animalName = animal?.name || 'un nuovo animale';
+        const species = animal?.species || 'Non specificata';
+        const breed = animal?.breed || 'Non specificata';
+        const age = animal?.age || 'Non specificata';
+        const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'un rifugio che segui';
+
+        const transporter = createTransporter();
+        await transporter.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: recipient.email,
+            subject: `Trovami - Nuovo annuncio da ${shelterName}`,
+            html: `
+                <p>Ciao ${escapeHtml(recipient.username || '')},</p>
+                <p>${escapeHtml(shelterName)} ha pubblicato un nuovo annuncio.</p>
+                <ul>
+                    <li><strong>Nome:</strong> ${escapeHtml(animalName)}</li>
+                    <li><strong>Eta:</strong> ${escapeHtml(age)}</li>
+                    <li><strong>Specie:</strong> ${escapeHtml(species)}</li>
+                    <li><strong>Razza:</strong> ${escapeHtml(breed)}</li>
+                </ul>
+                <p><a href="${escapeHtml(url)}">Apri la scheda animale</a></p>
+            `
+        });
+    } catch (err) {
+        console.error('Errore invio email annuncio rifugio:', err);
+    }
+}
+
+async function notifyShelterFollowers(announcement, animal, shelter) {
+    try {
+        if (!shelter || shelter.role !== 'shelter' || shelter.rifugioStatus !== 'approved') return;
+
+        const shelterId = shelter._id || announcement.publisherId;
+        const animalId = animal?._id || announcement.animalId;
+        if (!shelterId || !animalId) return;
+
+        const followers = await User.find({
+            role: 'user',
+            isActive: true,
+            'followedShelters.shelterId': shelterId
+        }).select('username email followedShelters');
+
+        if (!followers.length) return;
+
+        const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'Il rifugio che segui';
+        const animalLabel = animal?.name || animal?.species || 'un animale';
+        const url = buildShelterAnimalUrl(shelterId, animalId);
+
+        await Promise.all(followers.map(async (follower) => {
+            const follow = (follower.followedShelters || []).find(item => String(item.shelterId) === String(shelterId));
+            if (!follow) return;
+
+            await Notification.create({
+                userId: follower._id,
+                type: 'shelter_announcement',
+                announcementId: announcement._id,
+                shelterId,
+                animalId,
+                message: `${shelterName} ha pubblicato un nuovo annuncio: ${animalLabel}`
+            });
+
+            if (follow.emailEnabled) {
+                await sendShelterAnnouncementEmail(follower, shelter, animal, url);
+            }
+        }));
+    } catch (err) {
+        console.error('Errore notifiche follower rifugio:', err);
     }
 }
 
@@ -312,7 +399,7 @@ exports.createAnnouncement = async (req,res)=>{
             await animal.save();
         }
 
-        const publisher = await User.findById(req.user.userId).select('username role rifugioStatus rifugioData.location');
+        const publisher = await User.findById(req.user.userId).select('username role rifugioStatus rifugioData');
         if (!publisher) return res.status(401).json({ message: 'Utente non valido' });
         if (publisher.role === 'shelter' && publisher.rifugioStatus !== 'approved') {
             return res.status(403).json({ message: 'Il rifugio deve essere approvato da un admin prima di pubblicare annunci' });
@@ -374,6 +461,8 @@ exports.createAnnouncement = async (req,res)=>{
                 await saveMatchNotification(announcement, matches);
             }
         }
+
+        await notifyShelterFollowers(announcement, animal, publisher);
 
         res.status(201).json(announcement);
     } catch (err) {

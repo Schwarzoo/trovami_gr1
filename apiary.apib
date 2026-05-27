@@ -1284,3 +1284,71 @@ Restituisce rifugi in attesa approvazione.
             "_id": "645a1b2c3d4e5f6g7h8i9j0k",
             "rifugioStatus": "rejected"
         }
+
+# Group Follow Rifugi
+
+API per utenti registrati che vogliono seguire rifugi approvati e ricevere aggiornamenti sui nuovi annunci.
+
+## Rifugi Seguiti [/api/v1/users/me/followed-shelters]
+
+### Lista rifugi seguiti [GET]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "rifugio_arco",
+                "email": "rifugio@example.com",
+                "phoneNumber": "3331234567",
+                "rifugioData": {
+                    "rifugioName": "Rifugio Arco",
+                    "city": "Trento"
+                },
+                "emailEnabled": true
+            }
+        ]
+
+## Follow Rifugio [/api/v1/users/me/followed-shelters/{shelterId}]
+
++ Parameters
+    + shelterId: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio approvato.
+
+### Segui o aggiorna preferenza [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "emailEnabled": true
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "username": "rifugio_arco",
+            "emailEnabled": true
+        }
+
+### Non seguire più [DELETE]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "success": true
+        }

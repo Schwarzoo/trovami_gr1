@@ -18,6 +18,7 @@ let isSavingAnnouncement = false;
 let selectedAdoptionRequest = null;
 const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
 const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
+const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-shelters';
 
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
@@ -159,6 +160,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  async function fetchFollowedShelters() {
+    const res = await fetch(API_FOLLOWED_SHELTERS, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
+  async function unfollowShelter(shelterId) {
+    const res = await fetch(`${API_FOLLOWED_SHELTERS}/${encodeURIComponent(shelterId)}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Errore: impossibile smettere di seguire il rifugio');
+    return data;
+  }
+
   async function clearRepliedAdoptionRequests() {
     const res = await fetch(`${API_CONTACT_REQUESTS}?status=replied`, {
       method: 'PATCH',
@@ -272,13 +290,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       const annId = n?.announcementId;
       const isDeletedAnnouncementNotification = String(n?.message || '').startsWith('Annuncio eliminato, motivo:');
       const isReportNotification = n?.type === 'report';
-      const announcementLinkHtml = !isDeletedAnnouncementNotification && !isReportNotification && annId
+      const shelterAnimalLink = n?.type === 'shelter_announcement' && n?.shelterId && n?.animalId
+        ? `/pages/rifugio.html?rifugioId=${encodeURIComponent(n.shelterId)}&animalId=${encodeURIComponent(n.animalId)}`
+        : null;
+      const announcementLinkHtml = shelterAnimalLink
+        ? `
+            <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+              <a class="btn btn--ghost" href="${shelterAnimalLink}">Apri scheda animale</a>
+            </div>
+          `
+        : (!isDeletedAnnouncementNotification && !isReportNotification && annId
         ? `
             <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
               <a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(annId)}">Vedi annuncio</a>
             </div>
           `
-        : '';
+        : '');
       const item = document.createElement('div');
       item.className = 'comment-item';
       item.innerHTML = `
@@ -374,6 +401,60 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       container.appendChild(item);
     });
+  }
+
+  function getRifugioName(rifugio) {
+    return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
+  }
+
+  function renderFollowedShelters(list) {
+    const section = document.getElementById('followed-shelters-section');
+    const empty = document.getElementById('followed-shelters-empty');
+    const container = document.getElementById('followed-shelters-list');
+    if (!section || !empty || !container) return;
+
+    if (currentUser?.role !== 'user') {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    container.innerHTML = '';
+
+    if (!list || list.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    list.forEach((rifugio) => {
+      const id = rifugio._id;
+      const name = getRifugioName(rifugio);
+      const city = rifugio?.rifugioData?.city || '';
+      const pref = rifugio.emailEnabled ? 'Sito e email' : 'Solo sito';
+      const item = document.createElement('div');
+      item.className = 'comment-item followed-shelter-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(name)}</span>
+          <span class="comment-date">${escapeHtml(pref)}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(city || 'Rifugio seguito')}</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <a class="btn btn--ghost" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}">Apri pagina</a>
+          <button type="button" class="btn btn--ghost" data-follow-action="unfollow" data-shelter-id="${escapeHtml(id)}">Non seguire più</button>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  async function loadFollowedShelters() {
+    if (currentUser?.role !== 'user') {
+      renderFollowedShelters([]);
+      return;
+    }
+    renderFollowedShelters(await fetchFollowedShelters());
   }
 
   async function loadContactRequests() {
@@ -982,6 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // if user is a shelter, load their animals
     await loadMyAnimals();
     await loadContactRequests();
+    await loadFollowedShelters();
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
@@ -1021,6 +1103,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
+  document.getElementById('followedSheltersRefresh')?.addEventListener('click', loadFollowedShelters);
+  document.getElementById('followed-shelters-list')?.addEventListener('click', async (e) => {
+    const button = e.target?.closest?.('[data-follow-action="unfollow"]');
+    if (!button) return;
+    const shelterId = button.dataset.shelterId;
+    if (!shelterId) return;
+    button.disabled = true;
+    try {
+      await unfollowShelter(shelterId);
+      await loadFollowedShelters();
+    } catch (err) {
+      alert(err.message || 'Errore');
+      button.disabled = false;
+    }
+  });
   document.getElementById('clearRepliedAdoptionRequests')?.addEventListener('click', async () => {
     try {
       await clearRepliedAdoptionRequests();

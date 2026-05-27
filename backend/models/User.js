@@ -22,6 +22,12 @@ const userSchema = new mongoose.Schema({
         soundOnSite:    { type: Boolean, default: true }
     },
 
+    followedShelters: [{
+        shelterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        emailEnabled: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now }
+    }],
+
     conductWarnings: [{
         adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         reason: { type: String, default: 'Ammonimento sulla condotta account' },
@@ -64,6 +70,8 @@ const userSchema = new mongoose.Schema({
         }
     }
 }, { timestamps: true });
+
+userSchema.index({ _id: 1, 'followedShelters.shelterId': 1 });
 
 userSchema.pre('validate', function normalizeRole() {
     if (typeof this.role === 'string') {
