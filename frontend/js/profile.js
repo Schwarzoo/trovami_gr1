@@ -15,7 +15,9 @@ let currentEditStatus = 'ACTIVE';
 let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
+let selectedAdoptionRequest = null;
 const API_ANIMALS = 'http://localhost:3000/api/animals';
+const API_CONTACT_REQUESTS = 'http://localhost:3000/api/contact-requests';
 
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
@@ -150,6 +152,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  async function fetchContactRequests() {
+    const res = await fetch(API_CONTACT_REQUESTS, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
+  async function clearRepliedAdoptionRequests() {
+    const endpoint = currentUser?.role === 'user'
+      ? `${API_CONTACT_REQUESTS}/clear-replied/requester`
+      : `${API_CONTACT_REQUESTS}/clear-replied`;
+    const res = await fetch(endpoint, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Errore svuotamento richieste');
+    return data;
+  }
+
   async function fetchAnnouncementById(id) {
     const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(id)}`);
     if (!res.ok) return null;
@@ -278,6 +300,134 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       container.appendChild(item);
     });
+  }
+
+  function formatContactRequestStatus(status) {
+    const labels = {
+      pending: currentUser?.role === 'user' ? 'In attesa di risposta' : 'Da rispondere',
+      replied: 'Risposta inviata',
+      closed: 'Chiusa'
+    };
+    return labels[status] || status || 'Da rispondere';
+  }
+
+  function renderContactRequests(list) {
+    const section = document.getElementById('contact-requests-section');
+    const title = document.getElementById('contact-requests-title');
+    const empty = document.getElementById('contact-requests-empty');
+    const container = document.getElementById('contact-requests-list');
+    const clearButton = document.getElementById('clearRepliedAdoptionRequests');
+    if (!section || !empty || !container) return;
+
+    if (!['shelter', 'user'].includes(currentUser?.role)) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    if (title) title.textContent = currentUser.role === 'shelter' ? 'Richieste adozione' : 'Le mie richieste adozione';
+    if (clearButton) {
+      const hasReplied = ['shelter', 'user'].includes(currentUser.role)
+        && Array.isArray(list)
+        && list.some(request => request.status === 'replied');
+      clearButton.style.display = hasReplied ? 'inline-block' : 'none';
+    }
+    container.innerHTML = '';
+    if (!list || list.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    list.forEach((request) => {
+      const animal = request.animalId || {};
+      const requester = request.requesterId || {};
+      const shelter = request.shelterId || {};
+      const when = request.createdAt ? new Date(request.createdAt).toLocaleString('it-IT') : '';
+      const isShelter = currentUser.role === 'shelter';
+      const canReply = isShelter && request.status === 'pending';
+      const shelterName = shelter.rifugioData?.rifugioName || shelter.shelterData?.shelterName || shelter.username || 'Rifugio';
+      const animalName = animal.name || animal.species || 'Animale';
+      const item = document.createElement('div');
+      item.className = 'comment-item contact-request-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(animalName)}</span>
+          <span class="comment-date">${escapeHtml(when)} - ${escapeHtml(formatContactRequestStatus(request.status))}</span>
+        </div>
+        <div class="comment-text">
+          ${escapeHtml(isShelter ? (requester.username || 'utente') : shelterName)}
+          ${request.replyMessage ? `<br><strong>Risposta:</strong> ${escapeHtml(request.replyMessage)}` : ''}
+        </div>
+        ${canReply ? `
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn--primary" data-adoption-action="open-reply" data-request-id="${escapeHtml(request._id)}">Rispondi</button>
+          </div>
+        ` : ''}
+      `;
+      item.dataset.request = JSON.stringify({
+        _id: request._id,
+        animalName,
+        requesterUsername: requester.username || 'utente',
+        requesterEmail: requester.email || '',
+        requesterPhone: requester.phoneNumber || '',
+        message: request.message || ''
+      });
+      container.appendChild(item);
+    });
+  }
+
+  async function loadContactRequests() {
+    if (!['shelter', 'user'].includes(currentUser?.role)) return;
+    renderContactRequests(await fetchContactRequests());
+  }
+
+  async function replyToContactRequest(requestId, replyMessage) {
+    const res = await fetch(`${API_CONTACT_REQUESTS}/${encodeURIComponent(requestId)}/reply`, {
+      method: 'PATCH',
+      headers: authHeader,
+      body: JSON.stringify({ replyMessage })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Errore risposta richiesta');
+    return data;
+  }
+
+  function closeAdoptionReplyModal() {
+    const overlay = document.getElementById('adoption-reply-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    selectedAdoptionRequest = null;
+    const status = document.getElementById('adoption-reply-status');
+    if (status) status.textContent = '';
+  }
+
+  function openAdoptionReplyModal(request) {
+    selectedAdoptionRequest = request;
+    const overlay = document.getElementById('adoption-reply-overlay');
+    const title = document.getElementById('adoption-reply-title');
+    const summary = document.getElementById('adoption-reply-summary');
+    const message = document.getElementById('adoption-reply-message');
+    const status = document.getElementById('adoption-reply-status');
+    if (!overlay || !summary || !message) return;
+
+    if (title) title.textContent = `Rispondi a ${request.requesterUsername}`;
+    summary.innerHTML = `
+      <div class="comment-meta">
+        <span class="comment-user">${escapeHtml(request.animalName)}</span>
+        <span class="comment-date">${escapeHtml(request.requesterUsername)}</span>
+      </div>
+      <div class="comment-text">
+        ${escapeHtml(request.message)}
+        ${request.requesterEmail ? `<br>Email: ${escapeHtml(request.requesterEmail)}` : ''}
+        ${request.requesterPhone ? `<br>Telefono: ${escapeHtml(request.requesterPhone)}` : ''}
+      </div>
+    `;
+    message.value = '';
+    if (status) status.textContent = '';
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    message.focus();
   }
 
   function renderRifugioStatus(me) {
@@ -832,6 +982,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMyAnnouncements();
     // if user is a shelter, load their animals
     await loadMyAnimals();
+    await loadContactRequests();
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
@@ -868,6 +1019,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     await markAllNotificationsRead();
     const notifications = await fetchNotifications();
     renderNotifications(notifications);
+  });
+
+  document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
+  document.getElementById('clearRepliedAdoptionRequests')?.addEventListener('click', async () => {
+    try {
+      await clearRepliedAdoptionRequests();
+      await loadContactRequests();
+    } catch (err) {
+      alert(err.message || 'Errore svuotamento richieste');
+    }
+  });
+  document.getElementById('contact-requests-list')?.addEventListener('click', (e) => {
+    const button = e.target?.closest?.('[data-adoption-action="open-reply"]');
+    if (!button) return;
+    const item = button.closest('.contact-request-item');
+    if (!item?.dataset?.request) return;
+    openAdoptionReplyModal(JSON.parse(item.dataset.request));
+  });
+  document.getElementById('adoption-reply-close')?.addEventListener('click', closeAdoptionReplyModal);
+  document.getElementById('adoption-reply-cancel')?.addEventListener('click', closeAdoptionReplyModal);
+  document.getElementById('adoption-reply-overlay')?.addEventListener('click', (e) => {
+    if (e.target?.id === 'adoption-reply-overlay') closeAdoptionReplyModal();
+  });
+  document.getElementById('adoption-reply-send')?.addEventListener('click', async () => {
+    const textarea = document.getElementById('adoption-reply-message');
+    const hint = document.getElementById('adoption-reply-status');
+    const replyMessage = textarea?.value.trim() || '';
+    if (!replyMessage) {
+      if (hint) hint.textContent = 'Scrivi una risposta.';
+      return;
+    }
+    if (hint) hint.textContent = 'Invio...';
+    try {
+      await replyToContactRequest(selectedAdoptionRequest._id, replyMessage);
+      closeAdoptionReplyModal();
+      await loadContactRequests();
+    } catch (err) {
+      if (hint) hint.textContent = err.message || 'Errore invio risposta';
+    }
   });
 
   document.getElementById('adminRefresh')?.addEventListener('click', loadAdminData);

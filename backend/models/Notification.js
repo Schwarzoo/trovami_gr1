@@ -2,11 +2,12 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, enum: ['comment', 'report', 'rifugio_request', 'admin_warning', 'SMART_MATCH'], required: true },
+  type: { type: String, enum: ['comment', 'report', 'rifugio_request', 'admin_warning', 'SMART_MATCH', 'contact_request'], required: true },
   announcementId: { type: mongoose.Schema.Types.ObjectId, ref: 'Announcement', required: false, default: null },
   reportId: { type: mongoose.Schema.Types.ObjectId, ref: 'Report', required: false, default: null },
   targetUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false, default: null },
   commentId: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
+  contactRequestId: { type: mongoose.Schema.Types.ObjectId, ref: 'ContactRequest', required: false, default: null },
   message: { type: String, required: true },
   isRead: { type: Boolean, default: false }
 }, { timestamps: true });
