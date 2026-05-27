@@ -1,30 +1,40 @@
 const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema({
-    adminId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true 
+    actorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
     },
 
-    date: { 
-        type: Date, 
-        required: true, 
-        default: Date.now 
+    actorName: {
+        type: String,
+        required: true,
+        default: 'anonimo',
+        trim: true
     },
 
-    action: { 
-        type: String, 
-        enum: ['APPROVE_CONTENT', 'DELETE_CONTENT', 'BLOCK_USER', 'UNBLOCK_USER', 'CREATE_SHELTER', 'APPROVE_RIFUGIO', 'REJECT_RIFUGIO', 'WARN_USER', 'DISMISS_REPORT', 'APPROVE_READMISSION', 'REJECT_READMISSION'], 
-        required: true 
-    },
-   
-    targetId: { //per capire il target dell'azione dell'admin (es. id dell'annuncio approvato o utente bloccato) 
-        type: mongoose.Schema.Types.ObjectId, 
-        required: true 
+    action: {
+        type: String,
+        required: true,
+        trim: true
     },
 
-    details: { type: String } 
+    targetId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
+    },
+
+    targetUsername: {
+        type: String,
+        default: null,
+        trim: true
+    }
 }, { timestamps: true });
 
-module.exports = mongoose.model('AuditLog', auditLogSchema);
+auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ actorName: 1 });
+auditLogSchema.index({ targetUsername: 1 });
+
+module.exports = mongoose.model('AuditLog', auditLogSchema, 'audit_logs');

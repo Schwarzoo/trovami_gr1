@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="../css/announcements.css" />
+  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/profile.css" />
+  <title>Audit logs - Trovami</title>
+</head>
+
+<body>
+  <div data-include="header"></div>
+
+  <main class="page">
+    <div class="page-header">
+      <h1>Audit logs</h1>
+      <p>Azioni registrate sulla piattaforma</p>
+    </div>
+
+    <section class="section-card audit-page">
+      <div class="audit-toolbar">
+        <label class="audit-search">
+          <span>Cerca username</span>
+          <input id="auditSearch" type="search" placeholder="Username" />
+        </label>
+        <button id="auditRefresh" type="button" class="btn btn--ghost">Aggiorna</button>
+      </div>
+
+      <div id="auditStatus" class="form-hint">Caricamento...</div>
+      <div class="audit-table-wrap">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th><button type="button" data-sort="actorName">Account</button></th>
+              <th><button type="button" data-sort="action">Azione</button></th>
+              <th><button type="button" data-sort="targetUsername">Target</button></th>
+              <th><button type="button" data-sort="createdAt">Timestamp</button></th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="../js/audit-logs.js"></script>
+  <script src="/js/includes.js"></script>
+  <div data-include="footer"></div>
+</body>
+
+</html>
