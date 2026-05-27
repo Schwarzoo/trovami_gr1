@@ -4,34 +4,34 @@ const { register, login, logout, forgotPassword, resetPassword, verifyEmail, res
 const { authMiddleware } = require('../middleware/auth');
 
 // UC1 - Registrazione
-// POST /api/auth/register
-router.post('/register', register);
+// POST /api/v1/auth/users
+router.post('/users', register);
 
 // UC3 - Login
-// POST /api/auth/login
-router.post('/login', login);
+// POST /api/v1/auth/sessions
+router.post('/sessions', login);
 
 // Request readmission for blocked account
-router.post('/readmission-request', requestReadmission);
+router.post('/readmission-requests', requestReadmission);
 
 // Logout (richiede autenticazione)
-// POST /api/auth/logout
-router.post('/logout', authMiddleware, logout);
+// DELETE /api/v1/auth/sessions/current
+router.delete('/sessions/current', authMiddleware, logout);
 
 // Forgot Password
-// POST /api/auth/forgot-password
-router.post('/forgot-password', forgotPassword);
+// POST /api/v1/auth/password-reset-requests
+router.post('/password-reset-requests', forgotPassword);
 
 // Reset Password
-// POST /api/auth/reset-password
-router.post('/reset-password', resetPassword);
+// PATCH /api/v1/auth/password
+router.patch('/password', resetPassword);
 
 // Verify Email
-// GET /api/auth/verify-email?token=...
-router.get('/verify-email', verifyEmail);
+// GET /api/v1/auth/email-verifications?token=...
+router.get('/email-verifications', verifyEmail);
 
 // Resend verification email
-// POST /api/auth/resend-verification
-router.post('/resend-verification', resendVerification);
+// POST /api/v1/auth/email-verifications
+router.post('/email-verifications', resendVerification);
 
 module.exports = router;

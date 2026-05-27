@@ -41,7 +41,7 @@ function buildUrl() {
     sortDir: state.sortDir
   });
   if (state.search) params.set('search', state.search);
-  return `http://localhost:3000/api/admin/audit-logs?${params.toString()}`;
+  return `http://localhost:3000/api/v1/admin/audit-logs?${params.toString()}`;
 }
 
 function renderRows(logs) {

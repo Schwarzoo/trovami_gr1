@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 
-// GET /api/notifications?unread=1
+// GET /api/v1/notifications?unread=1
 exports.getNotifications = async (req, res) => {
   try {
     const unread = (req.query.unread === undefined) ? true : (String(req.query.unread) !== '0');
@@ -18,7 +18,7 @@ exports.getNotifications = async (req, res) => {
   }
 };
 
-// POST /api/notifications/:id/read
+// PATCH /api/v1/notifications/:id
 exports.markNotificationRead = async (req, res) => {
   try {
     const id = req.params.id;
@@ -37,7 +37,7 @@ exports.markNotificationRead = async (req, res) => {
   }
 };
 
-// POST /api/notifications/read-all
+// PATCH /api/v1/notifications
 exports.markAllRead = async (req, res) => {
   try {
     const r = await Notification.updateMany(

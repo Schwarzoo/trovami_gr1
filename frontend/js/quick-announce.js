@@ -136,6 +136,8 @@ async function handleQuickAnnounceSubmit(e) {
 
 // API Call to Create Announcement
 async function submitQuickAnnounce(data) {
+  setQuickAnnounceLoading(true);
+
   const announcementPayload = {
     type: data.type,
     species: data.species,
@@ -151,90 +153,17 @@ async function submitQuickAnnounce(data) {
     lastSeenDate: new Date().toISOString()
   };
 
-  let announcementRes;
-  if (data.photo && data.photo.size > 0) {
-    const announcementForm = new FormData();
-    announcementForm.append('type', announcementPayload.type);
-    announcementForm.append('species', announcementPayload.species);
-    announcementForm.append('breed', announcementPayload.breed);
-    announcementForm.append('gender', announcementPayload.gender);
-    announcementForm.append('color', announcementPayload.color);
-    if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
-    if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
-    announcementForm.append('description', announcementPayload.description);
-    announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
-    announcementForm.append('healthCondition', announcementPayload.healthCondition);
-    announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
-    announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
-    announcementForm.append('photo', data.photo);
-
-    announcementRes = await fetch('http://localhost:3000/api/announcements/quick', {
-      method: 'POST',
-      body: announcementForm
-    });
-  } else {
-    announcementRes = await fetch('http://localhost:3000/api/announcements/quick', {
-  // First, check if user is authenticated
-  const authToken = localStorage.getItem('token');
-  if (!authToken) {
-    alert('Devi essere loggato per segnalare un animale. Reindirizzamento al login...');
-    window.location.href = '/pages/login.html';
-    return;
-  }
-
-  setQuickAnnounceLoading(true);
-
   try {
-    // Step 1: Create Animal
-    const animalPayload = {
-      species: data.species,
-      breed: data.breed,
-      gender: data.gender,
-      color: data.color,
-      lunghezzaPelo: data.lunghezzaPelo,
-      distinctiveFeatures: data.distinctiveFeatures
-    };
-
-    const animalRes = await fetch('http://localhost:3000/api/animals', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(animalPayload)
-    });
-
-    if (!animalRes.ok) {
-      const errorData = await animalRes.json();
-      throw new Error(`Errore nella creazione dell'animale: ${errorData.message}`);
-    }
-
-  // Success!
-  alert('✅ Annuncio pubblicato con successo!');
-  closeQuickAnnounceModal();
-  
-  // Optionally redirect to announcements page or refresh
-  setTimeout(() => {
-    window.location.href = '/pages/announcements.html';
-  }, 1500);
-    const animal = await animalRes.json();
-    const animalId = animal._id;
-
-    // Step 2: Create Announcement
-    const announcementPayload = {
-      type: data.type,
-      animalId: animalId,
-      description: data.description,
-      coordinates: data.coordinates,
-      healthCondition: data.healthCondition,
-      animalBehaviour: data.animalBehaviour,
-      lastSeenDate: new Date().toISOString()
-    };
-
     let announcementRes;
     if (data.photo && data.photo.size > 0) {
       const announcementForm = new FormData();
       announcementForm.append('type', announcementPayload.type);
-      announcementForm.append('animalId', announcementPayload.animalId);
+      announcementForm.append('species', announcementPayload.species);
+      announcementForm.append('breed', announcementPayload.breed);
+      announcementForm.append('gender', announcementPayload.gender);
+      announcementForm.append('color', announcementPayload.color);
+      if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
+      if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
       announcementForm.append('description', announcementPayload.description);
       announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
       announcementForm.append('healthCondition', announcementPayload.healthCondition);
@@ -242,36 +171,27 @@ async function submitQuickAnnounce(data) {
       announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
       announcementForm.append('photo', data.photo);
 
-      announcementRes = await fetch('http://localhost:3000/api/announcements', {
+      announcementRes = await fetch('http://localhost:3000/api/v1/announcements/quick', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        },
         body: announcementForm
       });
     } else {
-      announcementRes = await fetch('http://localhost:3000/api/announcements', {
+      announcementRes = await fetch('http://localhost:3000/api/v1/announcements/quick', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(announcementPayload)
       });
     }
 
     if (!announcementRes.ok) {
-      const errorData = await announcementRes.json();
-      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message}`);
+      const errorData = await announcementRes.json().catch(() => ({}));
+      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message || announcementRes.status}`);
     }
 
     await announcementRes.json();
-
-    // Success!
-    alert('✅ Annuncio pubblicato con successo!');
+    alert('Annuncio pubblicato con successo!');
     closeQuickAnnounceModal();
-    
-    // Optionally redirect to announcements page or refresh
+
     setTimeout(() => {
       window.location.href = '/pages/announcements.html';
     }, 1500);

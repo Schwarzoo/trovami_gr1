@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: http://localhost:3000/api
+HOST: http://localhost:3000/api/v1
 
 # API Gestione Trovami!
 Questa è la documentazione ufficiale dell'applicazione Trovami!. Di seguito sono elencate tutte le API utilizzate all'interno del software.
@@ -12,7 +12,7 @@ Le rotte protette richiedono header:
 # Group Autenticazione
 Risorse dedicate alla registrazione, login e gestione credenziali degli utenti.
 
-## Registrazione Utente [/auth/register]
+## Utenti Auth [/auth/users]
 ### Registra Account [POST]
 Permette a un nuovo utente di registrarsi sulla piattaforma.
 
@@ -69,8 +69,8 @@ Per creare un account rifugio, usare `accountType = rifugio` e compilare `rifugi
             "rifugioStatus": "pending"
         }
 
-## Login [/auth/login]
-### Effettua Login [POST]
+## Sessioni [/auth/sessions]
+### Crea Sessione [POST]
 Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
 
 + Request (application/json)
@@ -109,8 +109,8 @@ Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
             "readmissionStatus": "pending"
         }
 
-## Logout [/auth/logout]
-### Effettua Logout [POST]
+## Sessione Corrente [/auth/sessions/current]
+### Elimina Sessione [DELETE]
 Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Bearer Token.
 
 + Request
@@ -124,8 +124,8 @@ Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Beare
             "message": "Logout effettuato"
         }
 
-## Recupero Password [/auth/forgot-password]
-### Richiedi Recupero [POST]
+## Richieste Reset Password [/auth/password-reset-requests]
+### Crea Richiesta [POST]
 Invia una email contenente un link per reimpostare la password.
 
 + Request (application/json)
@@ -146,8 +146,8 @@ Invia una email contenente un link per reimpostare la password.
             "message": "Email non trovata"
         }
 
-## Reset Password [/auth/reset-password]
-### Reimposta Password [POST]
+## Password [/auth/password]
+### Reimposta Password [PATCH]
 Reimposta la password tramite token ricevuto via email.
 
 + Request (application/json)
@@ -169,7 +169,7 @@ Reimposta la password tramite token ricevuto via email.
             "message": "Token non valido o scaduto"
         }
 
-## Verifica Email [/auth/verify-email{?token}]
+## Verifiche Email [/auth/email-verifications{?token}]
 ### Verifica [GET]
 Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON oppure fare redirect a una pagina frontend.
 
@@ -188,8 +188,8 @@ Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON o
             "message": "Token non valido o scaduto"
         }
 
-## Reinvia Verifica Email [/auth/resend-verification]
-### Reinvia [POST]
+## Verifiche Email [/auth/email-verifications]
+### Crea Nuovo Invio [POST]
 Reinvia la mail di verifica, se non ancora verificata.
 
 + Request (application/json)
@@ -204,7 +204,7 @@ Reinvia la mail di verifica, se non ancora verificata.
             "message": "Email di verifica reinviata"
         }
 
-## Richiesta Riammissione [/auth/readmission-request]
+## Richieste Riammissione [/auth/readmission-requests]
 ### Richiedi Riammissione [POST]
 Invia una richiesta di riammissione per un account bloccato.
 
@@ -770,11 +770,11 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             }
         ]
 
-## Lettura Notifica [/notifications/{id}/read]
+## Notifica [/notifications/{id}]
 + Parameters
     + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID notifica.
 
-### Segna Come Letta [POST]
+### Aggiorna Lettura [PATCH]
 
 + Request
     + Headers
@@ -788,8 +788,8 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             "isRead": true
         }
 
-## Lettura Tutte [/notifications/read-all]
-### Segna Tutte Come Lette [POST]
+## Notifiche [/notifications]
+### Aggiorna Tutte [PATCH]
 
 + Request
     + Headers
@@ -939,7 +939,7 @@ Elimina annuncio e (se presente publisher) invia notifica. Richiede admin.
             "warnedUser": true
         }
 
-## Gestione Account [/admin/users/{id}/block]
+## Stato Account [/admin/users/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -954,6 +954,7 @@ Blocca utente e rimuove annunci collegati.
     + Body
 
             {
+                "status": "blocked",
                 "reason": "Spam ripetuto"
             }
 
@@ -966,11 +967,11 @@ Blocca utente e rimuove annunci collegati.
             "reviewedReportsCount": 0
         }
 
-## Ammonisci Utente [/admin/users/{id}/warn]
+## Ammonimenti Utente [/admin/users/{id}/warnings]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
-### Ammonisci [PATCH]
+### Crea Ammonimento [POST]
 
 + Request (application/json)
     + Headers
@@ -990,16 +991,22 @@ Blocca utente e rimuove annunci collegati.
             "conductWarnings": []
         }
 
-## Sblocca Utente [/admin/users/{id}/unblock]
+## Stato Account [/admin/users/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
 ### Sblocca [PATCH]
 
-+ Request
++ Request (application/json)
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "status": "active"
+            }
 
 + Response 200 (application/json)
 
@@ -1008,7 +1015,7 @@ Blocca utente e rimuove annunci collegati.
             "isActive": true
         }
 
-## Riammissioni [/admin/readmission-requests]
+## Riammissioni [/admin/readmissions]
 ### Elenco Richieste [GET]
 Restituisce richieste riammissione pendenti.
 
@@ -1029,17 +1036,22 @@ Restituisce richieste riammissione pendenti.
             }
         ]
 
-## Valuta Riammissione [/admin/users/{id}/readmission/{action}]
+## Valutazione Riammissione [/admin/readmissions/{id}]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
-    + action: `approve` (string, required) - `approve` o `reject`.
 
 ### Approva/Rifiuta [PATCH]
 
-+ Request
++ Request (application/json)
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "status": "approved"
+            }
 
 + Response 200 (application/json)
 
@@ -1068,16 +1080,22 @@ Restituisce rifugi in attesa approvazione.
             }
         ]
 
-## Approva Rifugio [/admin/rifugi/{id}/approve]
+## Stato Rifugio [/admin/rifugi/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
 
 ### Approva [PATCH]
 
-+ Request
++ Request (application/json)
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "rifugioStatus": "approved"
+            }
 
 + Response 200 (application/json)
 
@@ -1086,7 +1104,7 @@ Restituisce rifugi in attesa approvazione.
             "rifugioStatus": "approved"
         }
 
-## Rifiuta Rifugio [/admin/rifugi/{id}/reject]
+## Stato Rifugio [/admin/rifugi/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
 
@@ -1100,6 +1118,7 @@ Restituisce rifugi in attesa approvazione.
     + Body
 
             {
+                "rifugioStatus": "rejected",
                 "reason": "Documentazione incompleta"
             }
 
