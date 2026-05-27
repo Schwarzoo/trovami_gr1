@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Announcement = require('../models/Announcement');
+const { writeAuditLog } = require('../services/auditService');
 
 function toBool(v) {
   if (typeof v === 'boolean') return v;
@@ -58,6 +59,7 @@ exports.updateMe = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-passwordHash -__v');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
+    await writeAuditLog({ actor: user, action: 'modificato profilo', target: null });
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Errore server', error: err.message });
@@ -132,9 +134,8 @@ exports.deleteMe = async(req,res)=>{
             );
         }
 
-        await User.findByIdAndDelete(
-            userId
-        );
+        const user = await User.findByIdAndDelete(userId).select('username');
+        await writeAuditLog({ actor: user || userId, action: 'eliminato account', target: null });
 
         res.json({
             success:true

@@ -3,6 +3,7 @@ const router = express.Router();
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const {
   getReports,
+  getAuditLogs,
   getUserDetails,
   getUserAnnouncementCount,
   updateReportStatus,
@@ -20,6 +21,7 @@ const {
 router.use(authMiddleware, requireRole('admin'));
 
 router.get('/reports', getReports);
+router.get('/audit-logs', getAuditLogs);
 router.get('/users/:id/announcement-count', getUserAnnouncementCount);
 router.get('/users/:id', getUserDetails);
 router.get('/readmission-requests', getPendingReadmissionRequests);

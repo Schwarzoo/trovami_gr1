@@ -6,13 +6,14 @@ const Notification = require('../models/Notification');
 const Report = require('../models/Report');
 const User = require('../models/User');
 const { removeAnnouncementCascade } = require('./announcementController');
+const { buildAuditQuery, writeAuditLog } = require('../services/auditService');
 
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
 }
 
-async function writeAudit(adminId, action, targetId, details) {
-  await AuditLog.create({ adminId, action, targetId, details });
+async function writeAudit(actorId, action, target) {
+  await writeAuditLog({ actor: actorId, action, target });
 }
 
 function escapeHtml(input) {
@@ -129,6 +130,16 @@ exports.getUserAnnouncementCount = async (req, res) => {
   }
 };
 
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const { filter, sort, limit } = buildAuditQuery(req.query);
+    const logs = await AuditLog.find(filter).sort(sort).limit(limit);
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ message: 'Errore recupero audit logs', error: err.message });
+  }
+};
+
 exports.updateReportStatus = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return invalidId(res, 'ID report');
@@ -140,7 +151,7 @@ exports.updateReportStatus = async (req, res) => {
     if (!report) return res.status(404).json({ message: 'Report non trovato' });
 
     if (status === 'DISMISSED') {
-      await writeAudit(req.user.userId, 'DISMISS_REPORT', report._id, req.body.details || 'Report archiviato');
+      await writeAudit(req.user.userId, 'archiviato report', null);
     }
     res.json(report);
   } catch (err) {
@@ -170,7 +181,7 @@ exports.deleteAnnouncementAsAdmin = async (req, res) => {
       });
     }
 
-    await writeAudit(req.user.userId, 'DELETE_CONTENT', announcementId, reason);
+    await writeAudit(req.user.userId, 'eliminato annuncio', announcement.publisherId || null);
     res.json({ success: true, warnedUser: !!publisherId });
   } catch (err) {
     res.status(500).json({ message: 'Errore eliminazione admin', error: err.message });
@@ -226,7 +237,7 @@ exports.blockUser = async (req, res) => {
       );
     }
     await sendAccountBlockedEmail(user, reason);
-    await writeAudit(req.user.userId, 'BLOCK_USER', user._id, `${reason}; annunci eliminati: ${announcementIds.length}`);
+    await writeAudit(req.user.userId, 'bloccato utente', user);
     const responseUser = await withPublishedAnnouncementsCount(user);
     responseUser.removedAnnouncementsCount = announcementIds.length;
     responseUser.reviewedReportsCount = reviewedReports.modifiedCount || 0;
@@ -287,7 +298,7 @@ exports.reviewReadmissionRequest = async (req, res) => {
         },
         { $set: { isRead: true } }
       );
-      await writeAudit(req.user.userId, action === 'approve' ? 'APPROVE_READMISSION' : 'REJECT_READMISSION', user._id, user.readmissionRequest?.message || '');
+      await writeAudit(req.user.userId, action === 'approve' ? 'approvato riammissione' : 'rifiutato riammissione', user);
     } catch (sideEffectErr) {
       console.warn('Errore side effect riammissione:', sideEffectErr.message);
     }
@@ -325,7 +336,7 @@ exports.warnUser = async (req, res) => {
       targetUserId: user._id,
       message: "Hai ricevuto un ammonimento sulla condotta dell'account; al prossimo ammonimento ci sara il blocco dell'account."
     });
-    await writeAudit(req.user.userId, 'WARN_USER', user._id, reason);
+    await writeAudit(req.user.userId, 'ammonito utente', user);
     res.json(await withPublishedAnnouncementsCount(user));
   } catch (err) {
     res.status(500).json({ message: 'Errore ammonimento utente', error: err.message });
@@ -340,7 +351,7 @@ exports.unblockUser = async (req, res) => {
     const user = await User.findByIdAndUpdate(userId, { isActive: true }, { new: true }).select('-passwordHash -sessionToken');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
-    await writeAudit(req.user.userId, 'UNBLOCK_USER', user._id, 'Account sbloccato da admin');
+    await writeAudit(req.user.userId, 'sbloccato utente', user);
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Errore sblocco utente', error: err.message });
@@ -376,7 +387,7 @@ exports.approveRifugio = async (req, res) => {
       targetUserId: user._id,
       message: 'Il tuo account rifugio e stato approvato'
     });
-    await writeAudit(req.user.userId, 'APPROVE_RIFUGIO', user._id, 'Rifugio approvato');
+    await writeAudit(req.user.userId, 'approvato rifugio', user);
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Errore approvazione rifugio', error: err.message });
@@ -402,7 +413,7 @@ exports.rejectRifugio = async (req, res) => {
       targetUserId: user._id,
       message: `Richiesta rifugio rifiutata: ${reason}`
     });
-    await writeAudit(req.user.userId, 'REJECT_RIFUGIO', user._id, reason);
+    await writeAudit(req.user.userId, 'rifiutato rifugio', user);
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Errore rifiuto rifugio', error: err.message });

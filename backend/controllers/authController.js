@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const Notification = require('../models/Notification');
+const { writeAuditLog } = require('../services/auditService');
 
 function createTransporter() {
   return nodemailer.createTransport({
@@ -101,6 +102,7 @@ exports.register = async (req, res) => {
         message: `Nuova richiesta rifugio: ${rifugioData.rifugioName}`
       })));
     }
+    await writeAuditLog({ actor: user, action: 'creato account', target: null });
 
     try {
       await sendVerificationEmail(user, verifyToken);
