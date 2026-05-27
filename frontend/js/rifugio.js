@@ -198,13 +198,17 @@ function renderContactRequestPanel(animal) {
   const token = localStorage.getItem('token');
   const payload = token ? decodeJwt(token) : null;
   const role = payload?.role || localStorage.getItem('role');
+  const nextUrl = `${window.location.pathname}${window.location.search ? window.location.search : `?rifugioId=${encodeURIComponent(getRifugioId() || '')}`}`;
+  const next = new URL(nextUrl, window.location.origin);
+  next.searchParams.set('animalId', animal._id);
+  const loginUrl = `/pages/login.html?next=${encodeURIComponent(next.pathname + next.search)}`;
 
   if (!token) {
     panel.innerHTML = `
       <div class="contact-request-box">
         <strong>Ti interessa questo animale?</strong>
         <p>Accedi come utente registrato per inviare una richiesta al rifugio.</p>
-        <a class="button" href="/pages/login.html">Accedi</a>
+        <a class="button" href="${escapeHtml(loginUrl)}">Accedi</a>
       </div>
     `;
     return;
@@ -217,7 +221,7 @@ function renderContactRequestPanel(animal) {
 
   panel.innerHTML = `
     <form id="contact-request-form" class="contact-request-box">
-      <strong>Richiedi informazioni al rifugio</strong>
+      <strong>Richiedi informazioni per l'adozione</strong>
       <textarea id="contact-request-message" maxlength="1000" placeholder="Scrivi cosa vuoi chiedere o quando vorresti vedere l'animale"></textarea>
       <div class="contact-request-actions">
         <button type="submit" class="button primary">Invia richiesta</button>

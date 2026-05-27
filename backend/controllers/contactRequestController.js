@@ -51,12 +51,12 @@ exports.createContactRequest = async (req, res) => {
       type: 'contact_request',
       contactRequestId: contactRequest._id,
       targetUserId: requester._id,
-      message: `Nuova richiesta per ${animal.name || animal.species || 'un animale'} da ${requester.username}`
+      message: `Nuova richiesta di adozione per ${animal.name || animal.species || 'un animale'} da ${requester.username}`
     });
 
     await writeAuditLog({
       actor: requester,
-      action: 'inviata richiesta contatto',
+      action: 'inviata richiesta di adozione',
       target: animal.shelterId
     });
 
@@ -64,7 +64,7 @@ exports.createContactRequest = async (req, res) => {
     res.status(201).json(fullRequest);
   } catch (err) {
     const status = /obbligatorio|troppo lungo/i.test(err.message) ? 400 : 500;
-    res.status(status).json({ message: err.message || 'Errore invio richiesta contatto' });
+    res.status(status).json({ message: err.message || 'Errore invio richiesta adozione' });
   }
 };
 
@@ -74,7 +74,7 @@ exports.getContactRequests = async (req, res) => {
     if (!user) return res.status(401).json({ message: 'Utente non valido' });
 
     const filter = user.role === 'shelter'
-      ? { shelterId: user._id }
+      ? { shelterId: user._id, hiddenForShelter: { $ne: true } }
       : { requesterId: user._id };
 
     const list = await populateRequest(ContactRequest.find(filter))
@@ -82,7 +82,26 @@ exports.getContactRequests = async (req, res) => {
       .limit(200);
     res.json(list);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero richieste contatto', error: err.message });
+    res.status(500).json({ message: 'Errore recupero richieste adozione', error: err.message });
+  }
+};
+
+exports.clearRepliedContactRequests = async (req, res) => {
+  try {
+    const shelter = await User.findById(req.user.userId).select('role rifugioStatus');
+    if (!shelter) return res.status(401).json({ message: 'Utente non valido' });
+    if (shelter.role !== 'shelter' || shelter.rifugioStatus !== 'approved') {
+      return res.status(403).json({ message: 'Solo un rifugio approvato puo svuotare le richieste risposte' });
+    }
+
+    const result = await ContactRequest.updateMany(
+      { shelterId: shelter._id, status: 'replied', hiddenForShelter: { $ne: true } },
+      { $set: { hiddenForShelter: true } }
+    );
+
+    res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
+  } catch (err) {
+    res.status(500).json({ message: 'Errore svuotamento richieste risposte', error: err.message });
   }
 };
 
@@ -114,12 +133,12 @@ exports.replyToContactRequest = async (req, res) => {
       type: 'contact_request',
       contactRequestId: contactRequest._id,
       targetUserId: shelter._id,
-      message: 'Il rifugio ha risposto alla tua richiesta'
+      message: 'Il rifugio ha risposto alla tua richiesta di adozione'
     });
 
     await writeAuditLog({
       actor: shelter,
-      action: 'risposto richiesta contatto',
+      action: 'risposto richiesta di adozione',
       target: contactRequest.requesterId
     });
 
@@ -127,6 +146,6 @@ exports.replyToContactRequest = async (req, res) => {
     res.json(fullRequest);
   } catch (err) {
     const status = /obbligatoria|troppo lungo/i.test(err.message) ? 400 : 500;
-    res.status(status).json({ message: err.message || 'Errore risposta richiesta contatto' });
+    res.status(status).json({ message: err.message || 'Errore risposta richiesta adozione' });
   }
 };

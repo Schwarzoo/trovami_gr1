@@ -15,10 +15,10 @@ function normalizeName(value, fallback) {
   return text || fallback;
 }
 
-function getRifugioAuditName(target) {
-  if (!target || target.role !== 'shelter') return null;
+function getRifugioAuditName(user) {
+  if (!user || user.role !== 'shelter') return null;
   const rifugioName = normalizeName(
-    target.rifugioData?.rifugioName || target.shelterData?.shelterName,
+    user.rifugioData?.rifugioName || user.shelterData?.shelterName,
     null
   );
   return rifugioName ? `rifugio ${rifugioName}` : null;
@@ -27,13 +27,16 @@ function getRifugioAuditName(target) {
 function buildAuditEntry({ actor, action, target }) {
   const actorId = toObjectId(actor);
   const targetId = toObjectId(target);
+  const actorName = getRifugioAuditName(actor)
+    || actor?.username
+    || actor?.actorName;
   const targetName = getRifugioAuditName(target)
     || target?.username
     || target?.targetUsername;
 
   return {
     actorId,
-    actorName: normalizeName(actor?.username || actor?.actorName, 'anonimo'),
+    actorName: normalizeName(actorName, 'anonimo'),
     action: normalizeName(action, 'azione'),
     targetId,
     targetUsername: targetId ? normalizeName(targetName, null) : null
@@ -70,7 +73,7 @@ async function resolveActor(actor) {
   if (actor.username || actor.actorName) return actor;
   const actorId = toObjectId(actor);
   if (!actorId) return null;
-  return User.findById(actorId).select('username');
+  return User.findById(actorId).select('username role rifugioData shelterData');
 }
 
 async function writeAuditLog({ actor, action, target }) {

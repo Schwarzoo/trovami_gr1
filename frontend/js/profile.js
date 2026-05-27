@@ -15,6 +15,7 @@ let currentEditStatus = 'ACTIVE';
 let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
+let selectedAdoptionRequest = null;
 const API_ANIMALS = 'http://localhost:3000/api/animals';
 const API_CONTACT_REQUESTS = 'http://localhost:3000/api/contact-requests';
 
@@ -156,6 +157,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
+  }
+
+  async function clearRepliedAdoptionRequests() {
+    const res = await fetch(`${API_CONTACT_REQUESTS}/clear-replied`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Errore svuotamento richieste');
+    return data;
   }
 
   async function fetchAnnouncementById(id) {
@@ -302,6 +313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const title = document.getElementById('contact-requests-title');
     const empty = document.getElementById('contact-requests-empty');
     const container = document.getElementById('contact-requests-list');
+    const clearButton = document.getElementById('clearRepliedAdoptionRequests');
     if (!section || !empty || !container) return;
 
     if (!['shelter', 'user'].includes(currentUser?.role)) {
@@ -310,7 +322,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     section.style.display = 'block';
-    if (title) title.textContent = currentUser.role === 'shelter' ? 'Richieste contatto' : 'Le mie richieste';
+    if (title) title.textContent = currentUser.role === 'shelter' ? 'Richieste adozione' : 'Le mie richieste adozione';
+    if (clearButton) {
+      const hasReplied = currentUser.role === 'shelter' && Array.isArray(list) && list.some(request => request.status === 'replied');
+      clearButton.style.display = hasReplied ? 'inline-block' : 'none';
+    }
     container.innerHTML = '';
     if (!list || list.length === 0) {
       empty.style.display = 'block';
@@ -324,33 +340,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       const shelter = request.shelterId || {};
       const when = request.createdAt ? new Date(request.createdAt).toLocaleString('it-IT') : '';
       const isShelter = currentUser.role === 'shelter';
-      const isPending = isShelter && request.status === 'pending';
+      const canReply = isShelter && request.status === 'pending';
       const shelterName = shelter.rifugioData?.rifugioName || shelter.shelterData?.shelterName || shelter.username || 'Rifugio';
+      const animalName = animal.name || animal.species || 'Animale';
       const item = document.createElement('div');
       item.className = 'comment-item contact-request-item';
       item.innerHTML = `
         <div class="comment-meta">
-          <span class="comment-user">${escapeHtml(isShelter ? (requester.username || 'utente') : shelterName)}</span>
+          <span class="comment-user">${escapeHtml(animalName)}</span>
           <span class="comment-date">${escapeHtml(when)} - ${escapeHtml(formatContactRequestStatus(request.status))}</span>
         </div>
         <div class="comment-text">
-          <strong>${escapeHtml(animal.name || animal.species || 'Animale')}</strong>
-          ${animal.breed ? ` - ${escapeHtml(animal.breed)}` : ''}
-          <br>${escapeHtml(request.message || '')}
-          ${isShelter && requester.email ? `<br>Email: ${escapeHtml(requester.email)}` : ''}
-          ${isShelter && requester.phoneNumber ? `<br>Telefono: ${escapeHtml(requester.phoneNumber)}` : ''}
+          ${escapeHtml(isShelter ? (requester.username || 'utente') : shelterName)}
           ${request.replyMessage ? `<br><strong>Risposta:</strong> ${escapeHtml(request.replyMessage)}` : ''}
         </div>
-        ${isPending ? `
-          <form class="contact-request-reply" data-request-id="${escapeHtml(request._id)}">
-            <textarea maxlength="1000" placeholder="Scrivi la risposta per l'utente"></textarea>
-            <div class="form-actions">
-              <button type="submit" class="btn btn--primary">Rispondi</button>
-              <span class="form-hint"></span>
-            </div>
-          </form>
+        ${canReply ? `
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn--primary" data-adoption-action="open-reply" data-request-id="${escapeHtml(request._id)}">Rispondi</button>
+          </div>
         ` : ''}
       `;
+      item.dataset.request = JSON.stringify({
+        _id: request._id,
+        animalName,
+        requesterUsername: requester.username || 'utente',
+        requesterEmail: requester.email || '',
+        requesterPhone: requester.phoneNumber || '',
+        message: request.message || ''
+      });
       container.appendChild(item);
     });
   }
@@ -369,6 +386,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Errore risposta richiesta');
     return data;
+  }
+
+  function closeAdoptionReplyModal() {
+    const overlay = document.getElementById('adoption-reply-overlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    selectedAdoptionRequest = null;
+    const status = document.getElementById('adoption-reply-status');
+    if (status) status.textContent = '';
+  }
+
+  function openAdoptionReplyModal(request) {
+    selectedAdoptionRequest = request;
+    const overlay = document.getElementById('adoption-reply-overlay');
+    const title = document.getElementById('adoption-reply-title');
+    const summary = document.getElementById('adoption-reply-summary');
+    const message = document.getElementById('adoption-reply-message');
+    const status = document.getElementById('adoption-reply-status');
+    if (!overlay || !summary || !message) return;
+
+    if (title) title.textContent = `Rispondi a ${request.requesterUsername}`;
+    summary.innerHTML = `
+      <div class="comment-meta">
+        <span class="comment-user">${escapeHtml(request.animalName)}</span>
+        <span class="comment-date">${escapeHtml(request.requesterUsername)}</span>
+      </div>
+      <div class="comment-text">
+        ${escapeHtml(request.message)}
+        ${request.requesterEmail ? `<br>Email: ${escapeHtml(request.requesterEmail)}` : ''}
+        ${request.requesterPhone ? `<br>Telefono: ${escapeHtml(request.requesterPhone)}` : ''}
+      </div>
+    `;
+    message.value = '';
+    if (status) status.textContent = '';
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    message.focus();
   }
 
   function renderRifugioStatus(me) {
@@ -963,20 +1017,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
-  document.getElementById('contact-requests-list')?.addEventListener('submit', async (e) => {
-    const form = e.target?.closest?.('.contact-request-reply');
-    if (!form) return;
-    e.preventDefault();
-    const textarea = form.querySelector('textarea');
-    const hint = form.querySelector('.form-hint');
-    const replyMessage = textarea.value.trim();
+  document.getElementById('clearRepliedAdoptionRequests')?.addEventListener('click', async () => {
+    try {
+      await clearRepliedAdoptionRequests();
+      await loadContactRequests();
+    } catch (err) {
+      alert(err.message || 'Errore svuotamento richieste');
+    }
+  });
+  document.getElementById('contact-requests-list')?.addEventListener('click', (e) => {
+    const button = e.target?.closest?.('[data-adoption-action="open-reply"]');
+    if (!button) return;
+    const item = button.closest('.contact-request-item');
+    if (!item?.dataset?.request) return;
+    openAdoptionReplyModal(JSON.parse(item.dataset.request));
+  });
+  document.getElementById('adoption-reply-close')?.addEventListener('click', closeAdoptionReplyModal);
+  document.getElementById('adoption-reply-cancel')?.addEventListener('click', closeAdoptionReplyModal);
+  document.getElementById('adoption-reply-overlay')?.addEventListener('click', (e) => {
+    if (e.target?.id === 'adoption-reply-overlay') closeAdoptionReplyModal();
+  });
+  document.getElementById('adoption-reply-send')?.addEventListener('click', async () => {
+    const textarea = document.getElementById('adoption-reply-message');
+    const hint = document.getElementById('adoption-reply-status');
+    const replyMessage = textarea?.value.trim() || '';
     if (!replyMessage) {
       if (hint) hint.textContent = 'Scrivi una risposta.';
       return;
     }
     if (hint) hint.textContent = 'Invio...';
     try {
-      await replyToContactRequest(form.dataset.requestId, replyMessage);
+      await replyToContactRequest(selectedAdoptionRequest._id, replyMessage);
+      closeAdoptionReplyModal();
       await loadContactRequests();
     } catch (err) {
       if (hint) hint.textContent = err.message || 'Errore invio risposta';

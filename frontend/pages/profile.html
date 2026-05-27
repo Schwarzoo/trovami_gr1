@@ -131,10 +131,13 @@
 
 				<section id="contact-requests-section" class="section-card" style="display:none;">
 					<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-						<h2 id="contact-requests-title" style="margin:0;">Richieste contatto</h2>
-						<button id="contactRequestsRefresh" type="button" class="btn btn--ghost">Aggiorna</button>
+						<h2 id="contact-requests-title" style="margin:0;">Richieste adozione</h2>
+						<div style="display:flex;gap:8px;flex-wrap:wrap;">
+							<button id="clearRepliedAdoptionRequests" type="button" class="btn btn--ghost" style="display:none;">Svuota richieste lette</button>
+							<button id="contactRequestsRefresh" type="button" class="btn btn--ghost">Aggiorna</button>
+						</div>
 					</div>
-					<div id="contact-requests-empty" style="margin-top:10px;color:var(--text-muted);">Nessuna richiesta contatto</div>
+					<div id="contact-requests-empty" style="margin-top:10px;color:var(--text-muted);">Nessuna richiesta adozione</div>
 					<div id="contact-requests-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
 				</section>
         
@@ -171,6 +174,27 @@
 				<button id="admin-user-close" type="button" aria-label="Chiudi">X</button>
 			</div>
 			<div id="admin-user-body" class="modal-body"></div>
+		</div>
+	</div>
+
+	<div id="adoption-reply-overlay" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+		<div class="modal-card admin-user-modal">
+			<div class="modal-header">
+				<h3 id="adoption-reply-title">Rispondi richiesta</h3>
+				<button id="adoption-reply-close" type="button" aria-label="Chiudi">X</button>
+			</div>
+			<div class="modal-body">
+				<div id="adoption-reply-summary" class="comment-item" style="margin-bottom:12px;"></div>
+				<div class="field">
+					<label>Risposta</label>
+					<textarea id="adoption-reply-message" maxlength="1000" rows="5" placeholder="Scrivi la risposta per l'utente"></textarea>
+				</div>
+				<div class="form-actions">
+					<button id="adoption-reply-send" type="button" class="btn btn--primary">Invia risposta</button>
+					<button id="adoption-reply-cancel" type="button" class="btn btn--ghost">Annulla</button>
+				</div>
+				<div id="adoption-reply-status" class="form-hint" style="margin-top:8px;"></div>
+			</div>
 		</div>
 	</div>
 
