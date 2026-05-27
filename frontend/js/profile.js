@@ -1070,6 +1070,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (res.ok) loadMyAnnouncements(); else alert('Errore chiusura');
   }));
 
+  
+
   document.querySelectorAll('button.del').forEach(b => b.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
     if (!confirm('Eliminare annuncio?')) return;
@@ -1325,6 +1327,48 @@ document.addEventListener('DOMContentLoaded', async () => {
       <p class="modal-description">${escapeHtml(data.description || '')}</p>
       ${rifugioName ? `<div class="modal-contact"><strong>Rifugio:</strong><span>${escapeHtml(rifugioName)}</span></div>` : ''}
     `;
+
+    // add flyer button for owner inside modal
+    try {
+      const bodyEl = document.getElementById('view-modal-body');
+      const isOwner = (publisher && ((publisher._id && String(publisher._id) === String(myUserId)) || (String(publisher) === String(myUserId))));
+      if (isOwner && bodyEl) {
+        const actions = document.createElement('div');
+        actions.style = 'margin-top:12px;display:flex;gap:8px;justify-content:flex-end;';
+        const btn = document.createElement('button');
+        btn.className = 'btn btn--ghost';
+        btn.id = 'downloadFlyerBtn';
+        btn.dataset.id = data._id;
+        btn.textContent = 'Volantino';
+        actions.appendChild(btn);
+        bodyEl.appendChild(actions);
+
+        btn.addEventListener('click', async (e) => {
+          const id = e.target.dataset.id;
+          try {
+            const res = await fetch(`http://localhost:3000/api/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
+            if (!res.ok) {
+              const d = await res.json().catch(()=>({}));
+              alert(d.message || ('Errore generazione volantino (' + res.status + ')'));
+              return;
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `volantino-${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+          } catch (err) {
+            alert('Errore generazione volantino: ' + (err.message || err));
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Errore preparazione pulsante volantino:', err);
+    }
 
     document.getElementById('view-modal-overlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';
