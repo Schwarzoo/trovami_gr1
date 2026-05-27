@@ -4,8 +4,13 @@ HOST: http://localhost:3000/api
 # API Gestione Trovami!
 Questa è la documentazione ufficiale dell'applicazione Trovami!. Di seguito sono elencate tutte le API utilizzate all'interno del software.
 
+**Nota autenticazione**
+Le rotte protette richiedono header:
+
+        Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
 # Group Autenticazione
-Risorse dedicate alla registrazione, login e logout degli utenti.
+Risorse dedicate alla registrazione, login e gestione credenziali degli utenti.
 
 ## Registrazione Utente [/auth/register]
 ### Registra Account [POST]
@@ -17,20 +22,51 @@ Permette a un nuovo utente di registrarsi sulla piattaforma.
             "username": "mario_rossi",
             "email": "mario@example.com",
             "password": "passwordSicura123",
-            "phoneNumber": "+393331234567"
+            "phoneNumber": "+393331234567",
+            "accountType": "user"
         }
 
 + Response 201 (application/json)
 
         {
-            "message": "Account creato con successo",
-            "userId": "645a1b2c3d4e5f6g7h8i9j0k"
+            "message": "Account creato. Controlla la mail per verificare l'account",
+            "userId": "645a1b2c3d4e5f6g7h8i9j0k",
+            "role": "user",
+            "rifugioStatus": "none"
         }
 
 + Response 400 (application/json)
 
         {
             "message": "Email già registrata"
+        }
+
+### Registra Account Rifugio [POST]
+Per creare un account rifugio, usare `accountType = rifugio` e compilare `rifugioData`.
+
++ Request (application/json)
+
+        {
+            "username": "rifugio_arco",
+            "email": "rifugio@example.com",
+            "password": "passwordSicura123",
+            "phoneNumber": "+390461000000",
+            "accountType": "rifugio",
+            "rifugioData": {
+                "rifugioName": "Rifugio Arco",
+                "address": "Via Roma 1",
+                "city": "Trento",
+                "description": "Rifugio convenzionato"
+            }
+        }
+
++ Response 201 (application/json)
+
+        {
+            "message": "Account rifugio creato. Controlla la mail e attendi approvazione admin",
+            "userId": "645a1b2c3d4e5f6g7h8i9j0k",
+            "role": "shelter",
+            "rifugioStatus": "pending"
         }
 
 ## Login [/auth/login]
@@ -49,13 +85,28 @@ Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
         {
             "message": "Login effettuato",
             "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "role": "USER"
+            "role": "user"
         }
 
 + Response 401 (application/json)
 
         {
             "message": "Credenziali non valide"
+        }
+
++ Response 403 (application/json)
+
+        {
+            "message": "Email non verificata"
+        }
+
++ Response 403 (application/json)
+
+        {
+            "message": "Account bloccato",
+            "blocked": true,
+            "userId": "645a1b2c3d4e5f6g7h8i9j0k",
+            "readmissionStatus": "pending"
         }
 
 ## Logout [/auth/logout]
@@ -73,11 +124,107 @@ Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Beare
             "message": "Logout effettuato"
         }
 
+## Recupero Password [/auth/forgot-password]
+### Richiedi Recupero [POST]
+Invia una email contenente un link per reimpostare la password.
+
++ Request (application/json)
+
+        {
+            "email": "mario@example.com"
+        }
+
++ Response 200 (application/json)
+
+        {
+            "message": "Email di recupero inviata"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Email non trovata"
+        }
+
+## Reset Password [/auth/reset-password]
+### Reimposta Password [POST]
+Reimposta la password tramite token ricevuto via email.
+
++ Request (application/json)
+
+        {
+            "token": "RESET_TOKEN_RICEVUTO_VIA_EMAIL",
+            "newPassword": "nuovaPasswordSicura123"
+        }
+
++ Response 200 (application/json)
+
+        {
+            "message": "Password aggiornata con successo"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "message": "Token non valido o scaduto"
+        }
+
+## Verifica Email [/auth/verify-email{?token}]
+### Verifica [GET]
+Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON oppure fare redirect a una pagina frontend.
+
++ Parameters
+    + token (string, required) - Token di verifica ricevuto via email.
+
++ Response 200 (application/json)
+
+        {
+            "message": "Email verificata con successo"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "message": "Token non valido o scaduto"
+        }
+
+## Reinvia Verifica Email [/auth/resend-verification]
+### Reinvia [POST]
+Reinvia la mail di verifica, se non ancora verificata.
+
++ Request (application/json)
+
+        {
+            "email": "mario@example.com"
+        }
+
++ Response 200 (application/json)
+
+        {
+            "message": "Email di verifica reinviata"
+        }
+
+## Richiesta Riammissione [/auth/readmission-request]
+### Richiedi Riammissione [POST]
+Invia una richiesta di riammissione per un account bloccato.
+
++ Request (application/json)
+
+        {
+            "email": "mario@example.com",
+            "message": "Chiedo riammissione: errore, ho risolto."
+        }
+
++ Response 200 (application/json)
+
+        {
+            "message": "Richiesta di riammissione inviata"
+        }
 
 # Group Profilo Utente
 Operazioni sul profilo dell'utente loggato.
 
-## Gestione Profilo [/user/me]
+## Gestione Profilo [/users/me]
 ### Recupera Profilo [GET]
 Restituisce i dati dell'utente attualmente autenticato.
 
@@ -94,11 +241,21 @@ Restituisce i dati dell'utente attualmente autenticato.
             "email": "mario@example.com",
             "phoneNumber": "+393331234567",
             "isActive": true,
-            "role": "USER"
+            "isEmailVerified": true,
+            "role": "user",
+            "rifugioStatus": "none",
+            "contactVisibility": {
+                "showEmail": true,
+                "showPhone": true
+            },
+            "notificationPrefs": {
+                "emailOnComment": false,
+                "soundOnSite": true
+            }
         }
 
 ### Aggiorna Profilo [PUT]
-Permette di modificare lo username o il numero di telefono dell'utente loggato.
+Permette di modificare campi profilo e preferenze.
 
 + Request (application/json)
     + Headers
@@ -109,7 +266,15 @@ Permette di modificare lo username o il numero di telefono dell'utente loggato.
 
             {
                 "username": "mario_rossi_updated",
-                "phoneNumber": "+393339876543"
+                "phoneNumber": "+393339876543",
+                "contactVisibility": {
+                    "showEmail": true,
+                    "showPhone": false
+                },
+                "notificationPrefs": {
+                    "emailOnComment": true,
+                    "soundOnSite": true
+                }
             }
 
 + Response 200 (application/json)
@@ -120,9 +285,69 @@ Permette di modificare lo username o il numero di telefono dell'utente loggato.
             "email": "mario@example.com",
             "phoneNumber": "+393339876543",
             "isActive": true,
-            "role": "USER"
+            "role": "user"
         }
 
+### Elimina Profilo [DELETE]
+Elimina l'account autenticato e cascata sugli annunci pubblicati.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "success": true
+        }
+
+# Group Utenti Pubblici
+Risorse pubbliche/mascherate per contatti e rifugi.
+
+## Rifugi Pubblici [/users/rifugi/public]
+### Elenco Rifugi [GET]
+Restituisce rifugi approvati con coordinate, rispettando le preferenze di visibilità contatti.
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "rifugio_arco",
+                "email": "rifugio@example.com",
+                "phoneNumber": null,
+                "rifugioData": {
+                    "rifugioName": "Rifugio Arco",
+                    "city": "Trento",
+                    "location": {
+                        "type": "Point",
+                        "coordinates": [11.12108, 46.06787]
+                    }
+                }
+            }
+        ]
+
+## Utente Pubblico [/users/{id}/public]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Dettaglio Utente (Mascherato) [GET]
+Restituisce contatti mascherati in base alle preferenze dell'utente. Richiede autenticazione.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "username": "mario_rossi",
+            "email": "mario@example.com",
+            "phoneNumber": null
+        }
 
 # Group Animali
 Risorse per la gestione delle anagrafiche degli animali legati agli annunci.
@@ -134,14 +359,14 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio.
 + Request (application/json)
 
         {
+            "name": "Rex",
             "species": "Cane",
             "breed": "Pastore Tedesco",
-            "gender": "M",
+            "gender": "Maschio",
             "color": "Nero e Focato",
             "lunghezzaPelo": "Medio",
             "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
             "microchipId": "380260000123456",
-            "photos": ["https://example.com/dog1.jpg"],
             "shelterId": null
         }
 
@@ -149,37 +374,80 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio.
 
         {
             "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+            "name": "Rex",
             "species": "Cane",
             "breed": "Pastore Tedesco",
-            "gender": "M",
+            "gender": "Maschio",
             "color": "Nero e Focato",
             "lunghezzaPelo": "Medio",
             "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
             "microchipId": "380260000123456",
-            "photos": ["https://example.com/dog1.jpg"],
             "shelterId": null,
             "createdAt": "2026-05-15T09:00:00.000Z"
         }
 
+## Modifica / Eliminazione Animale [/animals/{id}]
++ Parameters
+    + id: `645b2c3d4e5f6g7h8i9j0k1l` (string, required) - ID animale.
+
+### Aggiorna Animale [PUT]
+Aggiorna campi dell'animale. Richiede autenticazione.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "name": "Rex",
+                "color": "Nero"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+            "name": "Rex",
+            "color": "Nero"
+        }
+
+### Elimina Animale [DELETE]
+Elimina l'animale. Richiede autenticazione.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "message": "Animal eliminato",
+            "id": "645b2c3d4e5f6g7h8i9j0k1l"
+        }
 
 # Group Annunci
 Risorse per creare, visualizzare, modificare o eliminare annunci di smarrimento o avvistamento.
 
-## Lista e Creazione Annunci [/announcements{?type,species,status}]
+## Lista e Creazione Annunci [/announcements{?type,species,status,rifugioId,userId}]
 ### Elenco Annunci [GET]
 Recupera gli annunci inseriti sulla piattaforma. Permette il filtraggio tramite Query Parameters. Di default mostra solo quelli `ACTIVE`.
 
 + Parameters
-    + type (string, optional) - Filtra per tipo di annuncio (es. 'LOST', 'FOUND')
+    + type (string, optional) - Filtra per tipo di annuncio (es. 'LostAnimal', 'Sighting')
     + species (string, optional) - Filtra per specie dell'animale (es. 'Cane')
-    + status (string, optional) - Stato dell'annuncio (Default: 'ACTIVE')
+    + status (string, optional) - Stato dell'annuncio (Default: 'ACTIVE', usare `all` per tutti)
+    + rifugioId (string, optional) - Filtra per publisherId (rifugio)
+    + userId (string, optional) - Filtra per publisherId (utente)
 
 + Response 200 (application/json)
 
         [
             {
                 "_id": "645c3d4e5f6g7h8i9j0k1l2m",
-                "type": "LOST",
+                "type": "LostAnimal",
                 "status": "ACTIVE",
                 "publisherId": {
                     "_id": "645a1b2c3d4e5f6g7h8i9j0k",
@@ -199,16 +467,16 @@ Recupera gli annunci inseriti sulla piattaforma. Permette il filtraggio tramite 
                 },
                 "lastSeenDate": "2026-05-14T18:30:00.000Z",
                 "isCurrentlyThere": false,
-                "animalBehaviour": "Spaventato ma docile",
-                "healthCondition": "Buona, collare rosso presente",
+                "animalBehaviour": "spaventato",
+                "healthCondition": "in salute",
                 "createdAt": "2026-05-15T08:15:00.000Z"
             }
         ]
 
 ### Crea Annuncio [POST]
-Crea un nuovo annuncio. Richiede autenticazione (il publisherId viene estratto dal token).
+Crea un nuovo annuncio. Richiede autenticazione. Se vuoi caricare una foto, usa `multipart/form-data` e campo file `photo`.
 
-+ Request (application/json)
++ Request (multipart/form-data)
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
@@ -216,21 +484,22 @@ Crea un nuovo annuncio. Richiede autenticazione (il publisherId viene estratto d
     + Body
 
             {
-                "type": "LOST",
+                "type": "LostAnimal",
                 "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
+                "name": "Rex",
                 "description": "Smarrito in zona parco centrale",
                 "coordinates": [11.12108, 46.06787],
                 "lastSeenDate": "2026-05-14T18:30:00.000Z",
                 "isCurrentlyThere": false,
-                "animalBehaviour": "Spaventato ma docile",
-                "healthCondition": "Buona, collare rosso presente"
+                "animalBehaviour": "spaventato",
+                "healthCondition": "in salute"
             }
 
 + Response 201 (application/json)
 
         {
             "_id": "645c3d4e5f6g7h8i9j0k1l2m",
-            "type": "LOST",
+            "type": "LostAnimal",
             "status": "ACTIVE",
             "publisherId": "645a1b2c3d4e5f6g7h8i9j0k",
             "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
@@ -241,8 +510,8 @@ Crea un nuovo annuncio. Richiede autenticazione (il publisherId viene estratto d
             },
             "lastSeenDate": "2026-05-14T18:30:00.000Z",
             "isCurrentlyThere": false,
-            "animalBehaviour": "Spaventato ma docile",
-            "healthCondition": "Buona, collare rosso presente",
+            "animalBehaviour": "spaventato",
+            "healthCondition": "in salute",
             "createdAt": "2026-05-15T08:15:00.000Z"
         }
 
@@ -251,13 +520,13 @@ Crea un nuovo annuncio. Richiede autenticazione (il publisherId viene estratto d
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID univoco dell'annuncio.
 
 ### Singolo Annuncio [GET]
-Mostra i dettagli completi di un singolo annuncio popolando i dati dell'animale e del creatore.
+Mostra i dettagli di un singolo annuncio popolando i dati dell'animale e del creatore.
 
 + Response 200 (application/json)
 
         {
             "_id": "645c3d4e5f6g7h8i9j0k1l2m",
-            "type": "LOST",
+            "type": "LostAnimal",
             "status": "ACTIVE",
             "publisherId": {
                 "_id": "645a1b2c3d4e5f6g7h8i9j0k",
@@ -277,8 +546,8 @@ Mostra i dettagli completi di un singolo annuncio popolando i dati dell'animale 
             },
             "lastSeenDate": "2026-05-14T18:30:00.000Z",
             "isCurrentlyThere": false,
-            "animalBehaviour": "Spaventato ma docile",
-            "healthCondition": "Buona, collare rosso presente"
+            "animalBehaviour": "spaventato",
+            "healthCondition": "in salute"
         }
 
 + Response 404 (application/json)
@@ -288,9 +557,9 @@ Mostra i dettagli completi di un singolo annuncio popolando i dati dell'animale 
         }
 
 ### Modifica Annuncio [PUT]
-Consente al proprietario dell'annuncio di modificarne i campi principali. Richiede token.
+Consente al proprietario dell'annuncio di modificarne i campi principali. Richiede token. Se aggiorni la foto, usa `multipart/form-data` con campo file `photo`.
 
-+ Request (application/json)
++ Request (multipart/form-data)
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
@@ -306,7 +575,6 @@ Consente al proprietario dell'annuncio di modificarne i campi principali. Richie
 
         {
             "_id": "645c3d4e5f6g7h8i9j0k1l2m",
-            "type": "LOST",
             "status": "ACTIVE",
             "description": "Aggiornamento: visto vicino alla fontana",
             "isCurrentlyThere": true
@@ -323,7 +591,7 @@ Consente all'autore di rimuovere l'annuncio. Richiede token.
 + Response 200 (application/json)
 
         {
-            "message": "Annuncio eliminato"
+            "success": true
         }
 
 ## Stato Annuncio [/announcements/{id}/status]
@@ -331,7 +599,7 @@ Consente all'autore di rimuovere l'annuncio. Richiede token.
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID dell'annuncio.
 
 ### Cambia Stato [PATCH]
-Permette all'autore di variare rapidamente lo stato dell'annuncio (Es: portarlo a `RESOLVED`).
+Permette all'autore di variare rapidamente lo stato dell'annuncio (Es: portarlo a `RESOLVED`). Richiede token.
 
 + Request (application/json)
     + Headers
@@ -349,4 +617,495 @@ Permette all'autore di variare rapidamente lo stato dell'annuncio (Es: portarlo 
         {
             "_id": "645c3d4e5f6g7h8i9j0k1l2m",
             "status": "RESOLVED"
+        }
+
+## Annuncio Veloce [/announcements/quick]
+### Crea Annuncio Veloce [POST]
+Crea un annuncio veloce anonimo (publisherId = null). Se presente, la foto va in `photo` (file).
+
++ Request (multipart/form-data)
+
+        {
+            "type": "Sighting",
+            "name": "Sconosciuto",
+            "species": "Cane",
+            "breed": "Non specificato",
+            "gender": "Sconosciuto",
+            "color": "Marrone",
+            "distinctiveFeatures": "Collare blu",
+            "description": "Avvistato vicino al parco",
+            "coordinates": [11.12108, 46.06787],
+            "isCurrentlyThere": true,
+            "animalBehaviour": "tranquillo",
+            "healthCondition": "in salute",
+            "contactName": "Mario",
+            "contactEmail": "mario@example.com",
+            "contactPhone": "+393331234567"
+        }
+
++ Response 201 (application/json)
+
+        {
+            "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+            "type": "Sighting",
+            "isQuick": true,
+            "publisherId": null,
+            "status": "ACTIVE"
+        }
+
+## Foto Annuncio [/announcements/{id}/photo]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
+
+### Recupera Foto [GET]
+Restituisce il contenuto binario della foto dell'annuncio.
+
++ Response 200 (image/jpeg)
+
+## Smart Match [/announcements/{id}/similar{?limit}]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
+    + limit (number, optional) - Numero massimo risultati (max 20, default 6).
+
+### Annunci Simili [GET]
+Restituisce i match visivi basati su embedding immagine.
+
++ Response 200 (application/json)
+
+        {
+            "matches": [
+                {
+                    "announcement": {
+                        "_id": "645c3d4e5f6g7h8i9j0k1l2m",
+                        "type": "Sighting",
+                        "status": "ACTIVE"
+                    },
+                    "score": 0.82
+                }
+            ]
+        }
+
+## Commenti [/announcements/{id}/comments]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
+
+### Aggiungi Commento [POST]
+Aggiunge un commento all'annuncio. Richiede autenticazione.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "text": "Ho visto un cane simile in zona fontana."
+            }
+
++ Response 201 (application/json)
+
+        {
+            "comment": {
+                "_id": "665c3d4e5f6g7h8i9j0k1l2f",
+                "username": "mario_rossi",
+                "text": "Ho visto un cane simile in zona fontana."
+            },
+            "comments": []
+        }
+
+## Segnalazioni [/announcements/{id}/reports]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
+
+### Segnala Annuncio [POST]
+Invia una segnalazione agli admin. Richiede autenticazione.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "reason": "falso",
+                "details": "Annuncio sospetto, foto presa da internet."
+            }
+
++ Response 201 (application/json)
+
+        {
+            "message": "Segnalazione inviata",
+            "report": {
+                "_id": "665c3d4e5f6g7h8i9j0k1l2a",
+                "status": "OPEN"
+            }
+        }
+
+# Group Notifiche
+Gestione notifiche utente (commenti, smart match, azioni admin).
+
+## Lista Notifiche [/notifications{?unread}]
+### Elenco Notifiche [GET]
+Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richiede autenticazione.
+
++ Parameters
+    + unread (number, optional) - `1` solo non lette (default), `0` tutte.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "665c3d4e5f6g7h8i9j0k1l2a",
+                "type": "comment",
+                "message": "Nuovo commento su annuncio: ...",
+                "isRead": false,
+                "createdAt": "2026-05-15T08:15:00.000Z"
+            }
+        ]
+
+## Lettura Notifica [/notifications/{id}/read]
++ Parameters
+    + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID notifica.
+
+### Segna Come Letta [POST]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "665c3d4e5f6g7h8i9j0k1l2a",
+            "isRead": true
+        }
+
+## Lettura Tutte [/notifications/read-all]
+### Segna Tutte Come Lette [POST]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "success": true,
+            "modified": 3
+        }
+
+# Group Admin
+Rotte amministrative. Richiedono autenticazione e ruolo `admin`.
+
+## Report [/admin/reports{?status}]
+### Elenco Segnalazioni [GET]
+Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
+
++ Parameters
+    + status (string, optional) - `OPEN`, `REVIEWED`, `DISMISSED`, `all`.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "665c3d4e5f6g7h8i9j0k1l2a",
+                "status": "OPEN"
+            }
+        ]
+
+## Aggiorna Report [/admin/reports/{id}/status]
++ Parameters
+    + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID report.
+
+### Cambia Stato Report [PATCH]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "status": "REVIEWED"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "665c3d4e5f6g7h8i9j0k1l2a",
+            "status": "REVIEWED"
+        }
+
+## Audit Log [/admin/audit-logs{?search,sortBy,sortDir,limit}]
+### Elenco Audit Log [GET]
+Ricerca e ordinamento audit log.
+
++ Parameters
+    + search (string, optional) - Filtra per actor/target (contiene).
+    + sortBy (string, optional) - `actorName`, `action`, `targetUsername`, `createdAt` (default `createdAt`).
+    + sortDir (string, optional) - `asc` o `desc` (default `desc`).
+    + limit (number, optional) - max 500 (default 200).
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "665c3d4e5f6g7h8i9j0k1l2b",
+                "actorName": "admin",
+                "action": "bloccato utente",
+                "createdAt": "2026-05-15T08:15:00.000Z"
+            }
+        ]
+
+## Utente Admin [/admin/users/{id}]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Dettaglio Utente [GET]
+Restituisce dati utente (include `publishedAnnouncementsCount`).
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "username": "mario_rossi",
+            "publishedAnnouncementsCount": 2
+        }
+
+## Conteggio Annunci [/admin/users/{id}/announcement-count]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Conteggio [GET]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "publishedAnnouncementsCount": 2
+        }
+
+## Elimina Annuncio (Admin) [/admin/announcements/{id}]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
+
+### Elimina Annuncio [DELETE]
+Elimina annuncio e (se presente publisher) invia notifica. Richiede admin.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "reason": "violazione delle regole"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "success": true,
+            "warnedUser": true
+        }
+
+## Gestione Account [/admin/users/{id}/block]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Blocca Utente [PATCH]
+Blocca utente e rimuove annunci collegati.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "reason": "Spam ripetuto"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "isActive": false,
+            "removedAnnouncementsCount": 1,
+            "reviewedReportsCount": 0
+        }
+
+## Ammonisci Utente [/admin/users/{id}/warn]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Ammonisci [PATCH]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "reason": "Contenuti offensivi"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "conductWarnings": []
+        }
+
+## Sblocca Utente [/admin/users/{id}/unblock]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Sblocca [PATCH]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "isActive": true
+        }
+
+## Riammissioni [/admin/readmission-requests]
+### Elenco Richieste [GET]
+Restituisce richieste riammissione pendenti.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "mario_rossi",
+                "readmissionRequest": {
+                    "status": "pending"
+                }
+            }
+        ]
+
+## Valuta Riammissione [/admin/users/{id}/readmission/{action}]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+    + action: `approve` (string, required) - `approve` o `reject`.
+
+### Approva/Rifiuta [PATCH]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "readmissionRequest": {
+                "status": "approved"
+            }
+        }
+
+## Rifugi Pending [/admin/rifugi/pending]
+### Elenco Pending [GET]
+Restituisce rifugi in attesa approvazione.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "rifugioStatus": "pending"
+            }
+        ]
+
+## Approva Rifugio [/admin/rifugi/{id}/approve]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
+
+### Approva [PATCH]
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "rifugioStatus": "approved"
+        }
+
+## Rifiuta Rifugio [/admin/rifugi/{id}/reject]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
+
+### Rifiuta [PATCH]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "reason": "Documentazione incompleta"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "rifugioStatus": "rejected"
         }
