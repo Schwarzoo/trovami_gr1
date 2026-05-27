@@ -1,4 +1,5 @@
 const API_BASE = 'http://localhost:3000/api/v1/announcements';
+const CURRENT_ROLE = localStorage.getItem('role') || '';
 
 let allAnnouncements = [];
 let currentLocation = null;
@@ -82,6 +83,24 @@ async function postAnnouncementReport(id, reason, details) {
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json?.message || 'Errore invio segnalazione');
+    return json;
+}
+
+async function patchAnnouncementStatus(id, status) {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('not logged in');
+
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.message || 'Errore aggiornamento stato');
     return json;
 }
 
@@ -346,6 +365,16 @@ async function openModal(ann) {
             </section>
         `
         : '';
+    const adminResolveBoxHtml = CURRENT_ROLE === 'admin' && data.status !== 'RESOLVED'
+        ? `
+            <section class="comments-section" aria-label="Moderazione annuncio">
+                <div class="comments-header">
+                    <h3>Moderazione</h3>
+                </div>
+                <button type="button" class="comment-submit" id="admin-resolve-announcement">Segna come risolto</button>
+            </section>
+        `
+        : '';
 
     document.getElementById('modal-body').innerHTML = `
         <dl class="detail-list">
@@ -375,6 +404,7 @@ async function openModal(ann) {
             </div>
         </section>
         ${reportBoxHtml}
+        ${adminResolveBoxHtml}
 
         <div class="modal-contact">
             ${isLoggedIn
@@ -450,6 +480,23 @@ async function openModal(ann) {
                 }
             } finally {
                 submit.disabled = false;
+            }
+        });
+    }
+
+    const resolveButton = document.getElementById('admin-resolve-announcement');
+    if (resolveButton) {
+        resolveButton.addEventListener('click', async () => {
+            if (!confirm('Segnare l\'annuncio come risolto?')) return;
+            resolveButton.disabled = true;
+            try {
+                await patchAnnouncementStatus(data._id, 'RESOLVED');
+                window.dispatchEvent(new Event('announcements:resolved-updated'));
+                closeModal();
+            } catch (err) {
+                alert(err.message || 'Errore aggiornamento stato');
+            } finally {
+                resolveButton.disabled = false;
             }
         });
     }

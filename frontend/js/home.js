@@ -1,6 +1,7 @@
 const HOME_API = 'http://localhost:3000/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
+const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/resolved/count';
 
 function homeDisplayValue(value) {
   if (value === null || value === undefined) return HOME_EMPTY_VALUE;
@@ -36,6 +37,18 @@ async function fetchHomeAnnouncementById(id) {
     return await res.json();
   } catch (err) {
     return null;
+  }
+}
+
+async function fetchResolvedAnnouncementsCount() {
+  try {
+    const res = await fetch(HOME_RESOLVED_API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return Number(json?.resolvedCount || 0);
+  } catch (err) {
+    console.error('Errore fetch annunci risolti', err);
+    return 0;
   }
 }
 
@@ -354,6 +367,13 @@ function closeHomeModal() {
   document.body.style.overflow = '';
 }
 
+async function renderResolvedCounter() {
+  const counter = document.getElementById('resolved-announcements-count');
+  if (!counter) return;
+  const count = await fetchResolvedAnnouncementsCount();
+  counter.textContent = String(count);
+}
+
 async function initHomeAnnouncements() {
   const grid = document.getElementById('home-announcements-grid');
   const empty = document.getElementById('home-empty');
@@ -379,4 +399,8 @@ async function initHomeAnnouncements() {
   trimmed.forEach((ann) => grid.appendChild(buildHomeCard(ann)));
 }
 
-document.addEventListener('DOMContentLoaded', initHomeAnnouncements);
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([initHomeAnnouncements(), renderResolvedCounter()]);
+  window.addEventListener('announcements:resolved-updated', renderResolvedCounter);
+  setInterval(renderResolvedCounter, 30000);
+});

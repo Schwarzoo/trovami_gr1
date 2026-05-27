@@ -91,6 +91,62 @@ function setAnnouncementSavingState(isSaving) {
   if (saveButton) saveButton.disabled = isSaving;
   if (cancelButton) cancelButton.disabled = isSaving;
 }
+
+function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger = true }) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('profile-confirm-overlay');
+    const titleEl = document.getElementById('profile-confirm-title');
+    const messageEl = document.getElementById('profile-confirm-message');
+    const okButton = document.getElementById('profile-confirm-ok');
+    const cancelButton = document.getElementById('profile-confirm-cancel');
+    const closeButton = document.getElementById('profile-confirm-close');
+
+    if (!overlay || !titleEl || !messageEl || !okButton || !cancelButton || !closeButton) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    const cleanup = () => {
+      overlay.style.display = 'none';
+      overlay.removeEventListener('click', onOverlayClick);
+      okButton.removeEventListener('click', onConfirm);
+      cancelButton.removeEventListener('click', onCancel);
+      closeButton.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onEscape);
+    };
+
+    const onConfirm = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const onCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    const onOverlayClick = (event) => {
+      if (event.target === overlay) onCancel();
+    };
+
+    const onEscape = (event) => {
+      if (event.key === 'Escape') onCancel();
+    };
+
+    titleEl.textContent = title || 'Conferma azione';
+    messageEl.textContent = message || '';
+    okButton.textContent = confirmLabel;
+    okButton.classList.toggle('btn--danger', danger);
+    okButton.classList.toggle('btn--primary', !danger);
+    overlay.style.display = 'flex';
+    overlay.addEventListener('click', onOverlayClick);
+    okButton.addEventListener('click', onConfirm);
+    cancelButton.addEventListener('click', onCancel);
+    closeButton.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onEscape);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -1159,7 +1215,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
   document.getElementById('deleteAccount')?.addEventListener('click', async () => {
-    if (!confirm('Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non è reversibile.')) return;
+    const confirmed = await showProfileConfirm({
+      title: 'Elimina account',
+      message: 'Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non è reversibile.',
+      confirmLabel: 'Elimina',
+      danger: true
+    });
+    if (!confirmed) return;
     const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'DELETE', headers: authHeader });
     if (!res.ok) {
       const d = await res.json().catch(()=>({}));
@@ -1187,11 +1249,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
       <div class="card-body">
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:${a.status === 'RESOLVED' ? 'var(--sighting)' : 'var(--accent)'};font-weight:700;">${a.status === 'RESOLVED' ? 'Risolto' : 'Attivo'}</div>
         <div class="card-breed">${a.animalId?.name ? escapeHtml(a.animalId.name) + ' - ' : ''}${a.animalId?.species ?? ''} ${a.animalId?.breed ?? ''}</div>
         <div class="card-description">${a.description}</div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <button data-id="${a._id}" class="edit btn btn--ghost">Modifica</button>
-          <button data-id="${a._id}" class="close btn btn--ghost">Chiudi</button>
+          ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost">Chiudi</button>` : ''}
           <button data-id="${a._id}" class="del btn btn--danger">Elimina</button>
           <a href="/pages/announcements.html" style="margin-left:auto;">Vedi su lista</a>
         </div>
@@ -1234,16 +1297,31 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('button.close').forEach(b => b.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
-    if (!confirm('Segni l\'annuncio come risolto?')) return;
+    const confirmed = await showProfileConfirm({
+      title: 'Segna come risolto',
+      message: 'Segni l\'annuncio come risolto? Non comparirà più nella lista pubblica.',
+      confirmLabel: 'Segna come risolto',
+      danger: false
+    });
+    if (!confirmed) return;
     const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/status`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
-    if (res.ok) loadMyAnnouncements(); else alert('Errore chiusura');
+    if (res.ok) {
+      loadMyAnnouncements();
+      window.dispatchEvent(new Event('announcements:resolved-updated'));
+    } else alert('Errore chiusura');
   }));
 
   
 
   document.querySelectorAll('button.del').forEach(b => b.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
-    if (!confirm('Eliminare annuncio?')) return;
+    const confirmed = await showProfileConfirm({
+      title: 'Elimina annuncio',
+      message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
+      confirmLabel: 'Elimina',
+      danger: true
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
       if (res.ok) {

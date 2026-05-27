@@ -226,6 +226,15 @@ exports.getAnnouncements = async (req, res) => {
     }
 };
 
+exports.getResolvedAnnouncementsCount = async (req, res) => {
+    try {
+        const resolvedCount = await Announcement.countDocuments({ status: 'RESOLVED' });
+        res.json({ resolvedCount });
+    } catch (err) {
+        res.status(500).json({ message: 'Errore recupero conteggio annunci risolti', error: err.message });
+    }
+};
+
 
 // POST /api/v1/announcements/:id/comments  (auth) - add comment
 exports.addAnnouncementComment = async (req, res) => {
@@ -820,12 +829,16 @@ exports.changeStatus = async (req, res) => {
     try {
         const { status } = req.body;
         if (!status) return res.status(400).json({ message: 'Status mancante' });
+        if (!['ACTIVE', 'RESOLVED', 'ARCHIVED'].includes(status)) {
+            return res.status(400).json({ message: 'Status non valido' });
+        }
         const ann = await Announcement.findById(req.params.id);
         if (!ann) return res.status(404).json({ message: 'Annuncio non trovato' });
         
-        if (!ann.publisherId) return res.status(403).json({ message: 'Non autorizzato' });
-        const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : ann.publisherId.toString();
-        if (publisherIdStr !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
+        const publisherIdStr = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id.toString() : (ann.publisherId ? ann.publisherId.toString() : null);
+        const isOwner = publisherIdStr && publisherIdStr === req.user.userId;
+        const isAdmin = req.user?.role === 'admin';
+        if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Non autorizzato' });
 
         ann.status = status;
         await ann.save();
