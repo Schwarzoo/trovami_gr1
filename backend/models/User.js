@@ -18,8 +18,7 @@ const userSchema = new mongoose.Schema({
     },
 
     notificationPrefs: {
-        emailOnComment: { type: Boolean, default: false },
-        soundOnSite:    { type: Boolean, default: true }
+        emailOnComment: { type: Boolean, default: false }
     },
 
     conductWarnings: [{

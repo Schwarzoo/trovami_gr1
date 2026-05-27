@@ -106,8 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     'phoneNumber',
     'showEmail',
     'showPhone',
-    'emailOnComment',
-    'soundOnSite'
+    'emailOnComment'
   ];
   const editProfileButton = document.getElementById('editProfileBtn');
   const saveProfileButton = document.getElementById('saveProfileBtn');
@@ -188,6 +187,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: authHeader,
       body: JSON.stringify({ isRead: true })
     });
+    window.dispatchEvent(new Event('notifications:updated'));
   }
 
   async function markAllNotificationsRead() {
@@ -196,27 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: authHeader,
       body: JSON.stringify({ isRead: true })
     });
-  }
-
-  function playBeep() {
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.value = 880;
-      g.gain.value = 0.0001;
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.start();
-      const now = ctx.currentTime;
-      g.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-      o.stop(now + 0.2);
-      o.onended = () => ctx.close();
-    } catch (e) {}
+    window.dispatchEvent(new Event('notifications:updated'));
   }
 
   function escapeHtml(input) {
@@ -967,7 +947,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('showEmail').checked = me.contactVisibility?.showEmail !== false;
     document.getElementById('showPhone').checked = me.contactVisibility?.showPhone !== false;
     document.getElementById('emailOnComment').checked = !!me.notificationPrefs?.emailOnComment;
-    document.getElementById('soundOnSite').checked = me.notificationPrefs?.soundOnSite !== false;
     renderRifugioStatus(me);
     renderRifugioPosition(me);
 
@@ -975,7 +954,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const notifications = await fetchNotifications();
     renderNotifications(notifications);
-    if (notifications.length > 0 && (me.notificationPrefs?.soundOnSite !== false)) playBeep();
+    window.dispatchEvent(new Event('notifications:updated'));
     await loadAdminData();
 
     await loadMyAnnouncements();
@@ -996,8 +975,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPhone: !!document.getElementById('showPhone').checked
       },
       notificationPrefs: {
-        emailOnComment: !!document.getElementById('emailOnComment').checked,
-        soundOnSite: !!document.getElementById('soundOnSite').checked
+        emailOnComment: !!document.getElementById('emailOnComment').checked
       }
     };
     const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
@@ -1018,6 +996,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await markAllNotificationsRead();
     const notifications = await fetchNotifications();
     renderNotifications(notifications);
+    window.dispatchEvent(new Event('notifications:updated'));
   });
 
   document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);

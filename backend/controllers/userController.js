@@ -38,9 +38,7 @@ exports.updateMe = async (req, res) => {
     if (showPhone !== undefined) updates['contactVisibility.showPhone'] = showPhone;
 
     const emailOnComment = toBool(req.body?.notificationPrefs?.emailOnComment);
-    const soundOnSite = toBool(req.body?.notificationPrefs?.soundOnSite);
     if (emailOnComment !== undefined) updates['notificationPrefs.emailOnComment'] = emailOnComment;
-    if (soundOnSite !== undefined) updates['notificationPrefs.soundOnSite'] = soundOnSite;
 
     if (req.body?.rifugioData?.location !== undefined) {
       const me = await User.findById(req.user.userId).select('role rifugioStatus');
