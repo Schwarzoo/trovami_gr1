@@ -331,6 +331,17 @@ exports.createAnnouncement = async (req,res)=>{
         await announcement.save();
         await writeAuditLog({ actor: publisher, action: 'creato annuncio', target: null });
 
+            // If announcement has a photo, add/update animal.photos with a URL to this announcement photo
+            try {
+                if (announcement.photo && announcement._id) {
+                    const base = req.protocol + '://' + req.get('host');
+                    const photoUrl = `${base}/api/announcements/${announcement._id}/photo`;
+                    await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
+                }
+            } catch (err) {
+                console.warn('Impossibile aggiornare foto animale:', err.message || err);
+            }
+
         if (announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
             const matches = await smartMatchingEngine.findMatches(announcement, animal.species);
             if (matches.length > 0) {
@@ -419,6 +430,16 @@ exports.createQuickAnnouncement = async (req, res) => {
         }
 
         await announcement.save();
+        // if quick announcement has photo, update animal.photos
+        try {
+            if (announcement.photo && announcement._id) {
+                const base = req.protocol + '://' + req.get('host');
+                const photoUrl = `${base}/api/announcements/${announcement._id}/photo`;
+                await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
+            }
+        } catch (err) {
+            console.warn('Impossibile aggiornare foto animale (quick):', err.message || err);
+        }
         await writeAuditLog({ actor: null, action: 'creato annuncio', target: null });
         res.status(201).json(announcement);
     } catch (err) {
@@ -604,6 +625,17 @@ exports.updateAnnouncement = async (req, res) => {
 
         await ann.save();
         await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
+
+        // If updated announcement has a new photo, update animal.photos
+        try {
+            if (ann.photo && ann._id) {
+                const base = req.protocol + '://' + req.get('host');
+                const photoUrl = `${base}/api/announcements/${ann._id}/photo`;
+                await Animal.findByIdAndUpdate(ann.animalId, { $set: { photos: [photoUrl] } });
+            }
+        } catch (err) {
+            console.warn('Impossibile aggiornare foto animale:', err.message || err);
+        }
 
         if (embeddingRegenerated && ann.imageEmbedding && ann.imageEmbedding.length > 0) {
             const matches = await smartMatchingEngine.findMatches(ann, animal.species);

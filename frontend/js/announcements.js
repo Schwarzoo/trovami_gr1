@@ -228,9 +228,22 @@ async function openModal(ann) {
             ${Array.isArray(rifugioCoords) && rifugioCoords.length === 2 ? `<a href="map.html?rifugioId=${encodeURIComponent(publisher._id)}">Vedi posizione rifugio</a>` : ''}
         `
         : '';
+    const shelterAnimalLinkHtml = isRifugioAnnouncement && animal?._id
+        ? `<a class="position-link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher?._id || publisher)}&animalId=${encodeURIComponent(animal._id)}">Apri scheda animale</a>`
+        : '';
 
-    document.getElementById('modal-title').textContent =
-        animal?.name || (isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
+    const rifugioLink = isRifugioAnnouncement && animal?._id
+        ? `/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher?._id || publisher)}&animalId=${encodeURIComponent(animal._id)}`
+        : null;
+
+    const shelterName = publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username;
+    if (isRifugioAnnouncement) {
+        const displayName = shelterName || 'il rifugio';
+        document.getElementById('modal-title').textContent = `Questo animale si trova attualmente al rifugio ${displayName}`;
+    } else {
+        document.getElementById('modal-title').textContent =
+            (animal?.name || (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
+    }
 
         const gallery = document.getElementById('modal-gallery');
         // try to load announcement photo from backend endpoint and fallback to text if missing
@@ -247,10 +260,50 @@ async function openModal(ann) {
                 img.src = URL.createObjectURL(blob);
                 img.alt = 'foto animale';
                 img.onload = () => { URL.revokeObjectURL(img.src); };
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'modal-gallery-wrapper';
+                wrapper.appendChild(img);
+
+                if (rifugioLink) {
+                    const btn = document.createElement('button');
+                    btn.className = 'modal-open-animal-btn';
+                    btn.type = 'button';
+                    btn.textContent = 'Scheda animale';
+                    btn.setAttribute('aria-label', 'Apri scheda animale');
+                    btn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        window.location.href = rifugioLink;
+                    });
+                    wrapper.appendChild(btn);
+                }
+
                 gallery.innerHTML = '';
-                gallery.appendChild(img);
+                gallery.appendChild(wrapper);
             } catch (err) {
-                gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
+                // show fallback and overlay button if available
+                if (rifugioLink) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'modal-gallery-wrapper';
+                    const noPhoto = document.createElement('div');
+                    noPhoto.className = 'modal-no-photo';
+                    noPhoto.textContent = 'Non è presente alcuna foto';
+                    wrapper.appendChild(noPhoto);
+                    const btn = document.createElement('button');
+                    btn.className = 'modal-open-animal-btn';
+                    btn.type = 'button';
+                    btn.textContent = 'Scheda animale';
+                    btn.setAttribute('aria-label', 'Apri scheda animale');
+                    btn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        window.location.href = rifugioLink;
+                    });
+                    wrapper.appendChild(btn);
+                    gallery.innerHTML = '';
+                    gallery.appendChild(wrapper);
+                } else {
+                    gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
+                }
             }
         })();
 
@@ -329,7 +382,8 @@ async function openModal(ann) {
                    <span>${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</span>
                    ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">${publisher.phoneNumber}</a>` : ''}
                    ${publisher?.email ? `<a href="mailto:${publisher.email}">${publisher.email}</a>` : ''}
-                   ${rifugioLocationHtml}`
+                   ${rifugioLocationHtml}
+                   ${shelterAnimalLinkHtml}`
                 : `<span class="contact-locked">🔒 Accedi per vedere i contatti</span>`
             }
         </div>

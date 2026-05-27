@@ -4,7 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate:remove-inStallo": "node scripts/remove_inStallo_migration.js"
   },
   "keywords": [],
   "author": "",
