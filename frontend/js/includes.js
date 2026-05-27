@@ -1,3 +1,5 @@
+let notificationBadgeTimer = null;
+
 async function loadPartials() {
   const targets = Array.from(document.querySelectorAll('[data-include]'));
   if (targets.length === 0) return;
@@ -19,6 +21,7 @@ async function loadPartials() {
 
   personalizeNav();
   setActiveNav();
+  startNotificationBadgeUpdates();
 }
 
 function setActiveNav() {
@@ -50,6 +53,46 @@ function personalizeNav() {
       a.setAttribute('href', '/pages/login.html?next=' + encodeURIComponent(target));
     }
   });
+}
+
+async function updateNotificationBadge() {
+  const badge = document.getElementById('notificationBadge');
+  const token = localStorage.getItem('token');
+  if (!badge) return;
+
+  if (!token) {
+    badge.hidden = true;
+    badge.textContent = '';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/v1/notifications?unread=1', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('badge fetch failed');
+    const notifications = await res.json();
+    const unreadCount = Array.isArray(notifications) ? notifications.length : 0;
+
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+      badge.textContent = '';
+    }
+  } catch (err) {
+    badge.hidden = true;
+    badge.textContent = '';
+  }
+}
+
+function startNotificationBadgeUpdates() {
+  if (notificationBadgeTimer) clearInterval(notificationBadgeTimer);
+  updateNotificationBadge();
+  notificationBadgeTimer = setInterval(updateNotificationBadge, 30000);
+  window.removeEventListener('notifications:updated', updateNotificationBadge);
+  window.addEventListener('notifications:updated', updateNotificationBadge);
 }
 
 document.addEventListener('DOMContentLoaded', loadPartials);
