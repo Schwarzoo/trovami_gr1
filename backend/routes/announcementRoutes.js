@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAnnouncements, getAnnouncementById, getSimilarAnnouncements, createAnnouncement, createQuickAnnouncement, updateAnnouncement, changeStatus, deleteAnnouncement, getAnnouncementPhoto, addAnnouncementComment, reportAnnouncement, generateFlyer } = require('../controllers/announcementController');
+const { getAnnouncements, getAnnouncementById, getSimilarAnnouncements, createAnnouncement, createQuickAnnouncement, updateAnnouncement, changeStatus, deleteAnnouncement, getAnnouncementPhoto, addAnnouncementComment, reportAnnouncement, generateFlyer, getResolvedAnnouncementsCount } = require('../controllers/announcementController');
 const { authMiddleware } = require('../middleware/auth');
 const multer = require('multer');
 
@@ -9,6 +9,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 *
 
 
 router.get('/',  getAnnouncements);           // pubblica
+router.get('/resolved/count', getResolvedAnnouncementsCount);
 router.post('/quick', upload.single('photo'), createQuickAnnouncement);
 router.post('/', authMiddleware, upload.single('photo'), createAnnouncement);   // richiede login
 router.get('/:id/similar', getSimilarAnnouncements);

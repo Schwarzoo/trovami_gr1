@@ -37,6 +37,37 @@
   gap: 0.8rem;
 }
 
+.resolved-counter {
+  background: linear-gradient(135deg, rgba(42, 110, 200, 0.12), rgba(200, 90, 42, 0.14));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 2rem 2.2rem;
+  display: grid;
+  gap: 0.4rem;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.resolved-counter__label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.resolved-counter__value {
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem, 8vw, 5.6rem);
+  line-height: 1;
+  color: var(--accent);
+}
+
+.resolved-counter p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 .button {
   display: inline-flex;
   align-items: center;

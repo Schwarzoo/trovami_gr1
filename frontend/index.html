@@ -27,6 +27,12 @@
       </div>
     </section>
 
+    <section class="resolved-counter">
+      <div class="resolved-counter__label">Annunci risolti</div>
+      <div id="resolved-announcements-count" class="resolved-counter__value">0</div>
+      <p></p>
+    </section>
+
     <section>
       <div class="section-header">
         <div>
@@ -79,7 +85,7 @@
           <!-- Campi obbligatori in evidenza -->
           <fieldset class="form-section">
             <legend>Informazioni essenziali *</legend>
-            
+
             <div class="form-group">
               <label for="qa-type">Tipo di segnalazione *</label>
               <select id="qa-type" name="type" required>
@@ -113,7 +119,7 @@
           <!-- Campi aggiuntivi -->
           <fieldset class="form-section">
             <legend>Informazioni aggiuntive</legend>
-            
+
             <div class="form-group">
               <label for="qa-breed">Razza</label>
               <input type="text" id="qa-breed" name="breed" placeholder="Es. Labrador, Persiano...">
