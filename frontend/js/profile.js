@@ -15,6 +15,7 @@ let currentEditStatus = 'ACTIVE';
 let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
+const API_ANIMALS = 'http://localhost:3000/api/animals';
 
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
@@ -783,12 +784,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderRifugioStatus(me);
     renderRifugioPosition(me);
 
+    
+
     const notifications = await fetchNotifications();
     renderNotifications(notifications);
     if (notifications.length > 0 && (me.notificationPrefs?.soundOnSite !== false)) playBeep();
     await loadAdminData();
 
-    loadMyAnnouncements();
+    await loadMyAnnouncements();
+    // if user is a shelter, load their animals
+    await loadMyAnimals();
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
@@ -1044,6 +1049,184 @@ document.addEventListener('DOMContentLoaded', async () => {
   }));
 }
 
+  async function loadMyAnimals() {
+    const section = document.getElementById('my-animals');
+    const grid = document.getElementById('my-animals-grid');
+    const counter = document.getElementById('my-animals-count');
+    if (!section || !grid || !counter) return;
+    if (currentUser?.role !== 'shelter') {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = 'block';
+    try {
+      const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(currentUser._id)}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+      if (!res.ok) throw new Error('Errore recupero animali');
+      const list = await res.json();
+      counter.textContent = `${(list && list.length) || 0} animali`;
+      if (!list || list.length === 0) {
+        grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
+        return;
+      }
+      grid.innerHTML = list.map(a => {
+        const name = a.name || a.breed || a.species || 'Animale';
+          const status = a.adoptable ? 'Adottabile' : 'Non disponibile';
+        return `
+          <article class="card" data-id="${escapeHtml(a._id)}">
+            <div class="card-image"><div class="card-image-placeholder"><span>${escapeHtml((a.species||'A')[0])}</span></div></div>
+            <div class="card-body">
+              <div class="card-meta"><span class="card-species">${escapeHtml(a.species || '')}</span></div>
+              <h3 class="card-breed">${escapeHtml(name)}</h3>
+              <p class="card-description">${escapeHtml(a.distinctiveFeatures || '')}</p>
+              <div style="margin-top:8px;font-size:0.9rem;color:var(--text-muted)">${escapeHtml(status)}</div>
+            </div>
+          </article>
+        `;
+      }).join('');
+      // load photos for animals
+      // load photos for animals
+      list.forEach(a => {
+        const card = grid.querySelector(`.card[data-id="${a._id}"]`);
+        if (!card) return;
+        const container = card.querySelector('.card-image');
+        const placeholder = container.querySelector('.card-image-placeholder');
+        const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
+        if (!photo) {
+          if (placeholder) placeholder.innerHTML = '🐾';
+          return;
+        }
+        (async () => {
+          try {
+            const res = await fetch(photo, { method: 'GET' });
+            if (!res.ok) throw new Error('no image');
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.startsWith('image')) throw new Error('not image');
+            const blob = await res.blob();
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(blob);
+            img.alt = a.species || 'Animale';
+            img.loading = 'lazy';
+            img.onload = () => { URL.revokeObjectURL(img.src); };
+            if (placeholder) placeholder.replaceWith(img);
+          } catch (err) {
+            if (placeholder) placeholder.innerHTML = '🐾';
+          }
+        })();
+      });
+
+      // attach click handler to open animal modal
+      grid.addEventListener('click', (e) => {
+        const clicked = e.target.closest('.card');
+        if (!clicked || !grid.contains(clicked)) return;
+        // ignore clicks on buttons/inputs
+        if (e.target.closest('button, a, input, textarea')) return;
+        const id = clicked.dataset.id;
+        if (id) openAnimalModal(id);
+      });
+    } catch (err) {
+      grid.innerHTML = `<div class="empty-state">${escapeHtml(err.message || 'Errore')}</div>`;
+      counter.textContent = '0 animali';
+    }
+  }
+
+  async function openAnimalModal(animalId) {
+    try {
+      const res = await fetch(`http://localhost:3000/api/animals/${encodeURIComponent(animalId)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) throw new Error('Animale non trovato');
+      const a = await res.json();
+      // populate modal
+      document.getElementById('animal-modal-title').textContent = a.name || (a.species || 'Animale');
+      document.getElementById('animal-name').value = a.name || '';
+      document.getElementById('animal-species').value = a.species || '';
+      document.getElementById('animal-breed').value = a.breed || '';
+      document.getElementById('animal-dateArrived').value = a.dateArrived ? new Date(a.dateArrived).toISOString().slice(0,10) : '';
+      document.getElementById('animal-age').value = a.age || '';
+      document.getElementById('animal-otherInfo').value = a.otherInfo || '';
+      // adoptable segmented control
+      function setSegmentedValue(segId, boolVal) {
+        const seg = document.getElementById(segId);
+        if (!seg) return;
+        const buttons = Array.from(seg.querySelectorAll('button'));
+        buttons.forEach(b => b.classList.toggle('is-active', String(b.dataset.value) === String(!!boolVal)));
+      }
+      function getSegmentedValue(segId) {
+        const seg = document.getElementById(segId);
+        if (!seg) return false;
+        const active = seg.querySelector('button.is-active');
+        return active ? String(active.dataset.value) === 'true' : false;
+      }
+      setSegmentedValue('seg-animal-adoptable', !!a.adoptable);
+      // wire segmented control for adoptable only
+      const seg = document.getElementById('seg-animal-adoptable');
+      if (seg) {
+        Array.from(seg.querySelectorAll('button')).forEach(btn => {
+          btn.onclick = () => {
+            seg.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+            btn.classList.add('is-active');
+          };
+        });
+      }
+
+      const notesContainer = document.getElementById('animal-medicalNotes');
+      notesContainer.innerHTML = '';
+      const notes = Array.isArray(a.medicalNotes) ? a.medicalNotes.slice().reverse() : [];
+      if (notes.length === 0) notesContainer.innerHTML = '<div class="muted">Nessuna nota medica</div>';
+      notes.forEach(n => {
+        const el = document.createElement('div');
+        el.style.padding = '6px 0';
+        el.innerHTML = `<div style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(new Date(n.createdAt).toLocaleString())}</div><div>${escapeHtml(n.text)}</div>`;
+        notesContainer.appendChild(el);
+      });
+
+      // gallery
+      const gallery = document.getElementById('animal-modal-gallery');
+      gallery.innerHTML = '';
+      const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
+      if (photo) {
+        const img = document.createElement('img');
+        img.src = photo;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        gallery.appendChild(img);
+      }
+
+      // show modal
+      document.getElementById('animal-modal-overlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+
+      // wire buttons
+      document.getElementById('animal-modal-close').onclick = () => { document.getElementById('animal-modal-overlay').style.display = 'none'; document.body.style.overflow = ''; };
+
+      document.getElementById('animal-save').onclick = async () => {
+        const payload = {
+          name: document.getElementById('animal-name').value.trim() || undefined,
+          dateArrived: document.getElementById('animal-dateArrived').value || undefined,
+          age: document.getElementById('animal-age').value.trim() || undefined,
+          otherInfo: document.getElementById('animal-otherInfo').value || undefined,
+          adoptable: getSegmentedValue('seg-animal-adoptable')
+        };
+        const newNote = document.getElementById('animal-newMedicalNote').value.trim();
+        if (newNote) payload.medicalNote = newNote;
+        try {
+          const upr = await fetch(`http://localhost:3000/api/animals/${encodeURIComponent(animalId)}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!upr.ok) throw new Error((await upr.json().catch(()=>({}))).message || 'Errore salvataggio');
+          document.getElementById('animal-modal-overlay').style.display = 'none';
+          document.body.style.overflow = '';
+          // refresh animals list
+          await loadMyAnimals();
+        } catch (err) {
+          alert(err.message || 'Errore salvataggio');
+        }
+      };
+
+    } catch (err) {
+      alert(err.message || 'Errore apertura scheda animale');
+    }
+  }
+
+
+
+
   async function openAnnouncementModal(announcementId) {
     const data = await fetchAnnouncementById(announcementId);
     if (!data) {
@@ -1283,6 +1466,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         distinctiveFeatures,
         microchipId: currentUser?.role === 'shelter' ? microchipId : undefined
       };
+      // adoption status from modal
+      const adoptionStatus = document.getElementById('modal-adoptionStatus')?.value || 'none';
+      animalPayload.adoptable = adoptionStatus === 'adoptable';
 
       const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
       const customDate = document.getElementById('modal-lastSeenDate').value;
@@ -1551,6 +1737,9 @@ function openModalForCreate() {
   document.getElementById('modal-lastSeenDate').style.display = 'none';
   document.getElementById('modal-animalBehaviour').value = 'indifferente';
   document.getElementById('modal-healthCondition').value = 'in salute';
+  // default adoption status
+  const adoptionSelect = document.getElementById('modal-adoptionStatus');
+  if (adoptionSelect) adoptionSelect.value = 'none';
   showModal(true);
 }
 
@@ -1601,6 +1790,12 @@ function openModalForEdit(ann) {
   }
   document.getElementById('modal-animalBehaviour').value = ann.animalBehaviour || 'indifferente';
   document.getElementById('modal-healthCondition').value = ann.healthCondition || 'in salute';
+  // adoption status from associated animal
+  const adoptionSelectEdit = document.getElementById('modal-adoptionStatus');
+  if (adoptionSelectEdit) {
+    if (ann.animalId?.adoptable) adoptionSelectEdit.value = 'adoptable';
+    else adoptionSelectEdit.value = 'none';
+  }
   showModal(true);
 }
 

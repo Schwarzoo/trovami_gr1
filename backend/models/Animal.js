@@ -8,8 +8,15 @@ const animalSchema = new mongoose.Schema({
     color:              { type: String, required: true },
     lunghezzaPelo:      { type: String, enum: ['Corto', 'Lungo', 'Medio', 'Senza'] },
     distinctiveFeatures: { type: String }, // di segni particolari
+    age:                { type: String, default: null },
     microchipId:        { type: String, default: null }, 
-    shelterId:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null } // Se l'animale è in un rifugio[cite: 2]
+    shelterId:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Se l'animale è in un rifugio[cite: 2]
+    // Stato disponibilità per adozione
+    adoptable:          { type: Boolean, default: false },
+    photos:             [{ type: String }],
+    dateArrived:        { type: Date, default: null },
+    medicalNotes:       [{ text: String, createdAt: { type: Date, default: Date.now } }],
+    otherInfo:          { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Animal', animalSchema);

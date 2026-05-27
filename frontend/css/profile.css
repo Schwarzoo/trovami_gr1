@@ -1,4 +1,3 @@
-/* Profile page styles - complements announcements.css variables */
 
 #profile-section {
   max-width: 420px;
@@ -201,6 +200,78 @@
 
 #announcements-grid .card {
   margin-bottom: 10px;
+}
+
+#my-animals {
+  --animal-card-image-height: 110px;
+}
+
+#my-animals .section-badge {
+  float: right;
+  margin-top: -36px;
+}
+
+#my-animals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+#my-animals-grid .card {
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+#my-animals-grid .card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.08); }
+
+#my-animals-grid .card-image { height: var(--animal-card-image-height); }
+#my-animals-grid .card-image-placeholder { font-size: 2rem; }
+
+#my-animals-grid .card-body { padding: 0.6rem 0.7rem; }
+#my-animals-grid .card-meta { margin-bottom: 0.25rem; }
+#my-animals-grid .card-species { font-size: 0.72rem; }
+#my-animals-grid .card-breed { font-size: 1rem; margin-bottom: 0.35rem; }
+#my-animals-grid .card-description { font-size: 0.78rem; -webkit-line-clamp: 3; }
+
+#my-animals-grid .card .card-image img { object-fit: cover; }
+
+#my-animals-grid .empty-state { padding: 1rem; text-align: center; color: var(--text-muted); }
+
+#animal-modal-overlay .modal-card { max-width: 640px; width: 100%; }
+#animal-modal-gallery { display:flex; gap:0.5rem; justify-content:center; align-items:center; margin-bottom:12px; }
+#animal-modal-gallery img { max-width:100%; max-height:320px; width:auto; height:auto; border-radius:8px; object-fit:cover; display:block; margin:0 auto; }
+
+#animal-modal-form .field label { font-size:0.9rem; color:var(--text-muted); font-weight:600; }
+#animal-modal-form input, #animal-modal-form textarea { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); }
+#animal-modal-form textarea { resize:vertical; min-height:56px; }
+
+#animal-medicalNotes > div { background: var(--surface); padding:8px; border-radius:8px; margin-bottom:8px; border:1px solid var(--border); }
+#animal-medicalNotes .muted { color:var(--text-muted); }
+
+#animal-modal-overlay .modal-header { padding:12px 16px; }
+#animal-modal-overlay .modal-body { padding:12px 16px; }
+
+/* Buttons alignment */
+#animal-modal-overlay .btn { min-width:110px; }
+
+@media (max-width: 560px) {
+  #animal-modal-gallery img { max-height:220px; }
+  #my-animals-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+#animal-modal-form .form-grid { display:flex; gap:12px; align-items:start; }
+#animal-modal-form .form-grid .field { flex:1; min-width:0; }
+
+.segmented { display:inline-flex; gap:4px; border-radius:8px; overflow:hidden; border:1px solid var(--border); background:var(--bg); width: auto; align-self: flex-start; }
+.segmented .segmented-btn { padding:6px 8px; border:0; background:transparent; cursor:pointer; font-size:0.92rem; color:var(--text); min-width:0; flex:0 0 auto; }
+.segmented .segmented-btn.is-active { background:var(--accent); color:#fff; }
+.segmented .segmented-btn:focus { outline:2px solid rgba(0,0,0,0.08); }
+
+#animal-modal-form .form-grid + .form-grid { margin-top:6px; }
+
+@media (max-width:420px) {
+  #animal-modal-form .form-grid { flex-direction:column; }
 }
 
 @media (max-width: 900px) {

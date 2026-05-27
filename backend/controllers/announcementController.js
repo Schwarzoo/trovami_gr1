@@ -329,6 +329,17 @@ exports.createAnnouncement = async (req,res)=>{
 
         await announcement.save();
 
+            // If announcement has a photo, add/update animal.photos with a URL to this announcement photo
+            try {
+                if (announcement.photo && announcement._id) {
+                    const base = req.protocol + '://' + req.get('host');
+                    const photoUrl = `${base}/api/announcements/${announcement._id}/photo`;
+                    await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
+                }
+            } catch (err) {
+                console.warn('Impossibile aggiornare foto animale:', err.message || err);
+            }
+
         if (announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
             const matches = await smartMatchingEngine.findMatches(announcement, animal.species);
             if (matches.length > 0) {
@@ -418,6 +429,16 @@ exports.createQuickAnnouncement = async (req, res) => {
         }
 
         await announcement.save();
+        // if quick announcement has photo, update animal.photos
+        try {
+            if (announcement.photo && announcement._id) {
+                const base = req.protocol + '://' + req.get('host');
+                const photoUrl = `${base}/api/announcements/${announcement._id}/photo`;
+                await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
+            }
+        } catch (err) {
+            console.warn('Impossibile aggiornare foto animale (quick):', err.message || err);
+        }
         res.status(201).json(announcement);
     } catch (err) {
         res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
@@ -596,6 +617,17 @@ exports.updateAnnouncement = async (req, res) => {
         }
 
         await ann.save();
+
+        // If updated announcement has a new photo, update animal.photos
+        try {
+            if (ann.photo && ann._id) {
+                const base = req.protocol + '://' + req.get('host');
+                const photoUrl = `${base}/api/announcements/${ann._id}/photo`;
+                await Animal.findByIdAndUpdate(ann.animalId, { $set: { photos: [photoUrl] } });
+            }
+        } catch (err) {
+            console.warn('Impossibile aggiornare foto animale:', err.message || err);
+        }
 
         if (embeddingRegenerated && ann.imageEmbedding && ann.imageEmbedding.length > 0) {
             const matches = await smartMatchingEngine.findMatches(ann, animal.species);

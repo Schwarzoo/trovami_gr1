@@ -1,5 +1,6 @@
 const API_RIFUGI = 'http://localhost:3000/api/users/rifugi/public';
 const API_ANNOUNCEMENTS = 'http://localhost:3000/api/announcements';
+const API_ANIMALS = 'http://localhost:3000/api/animals';
 
 function escapeHtml(input) {
   return String(input ?? '')
@@ -30,6 +31,10 @@ function getRifugioId() {
   return new URLSearchParams(window.location.search).get('rifugioId');
 }
 
+function getAnimalId() {
+  return new URLSearchParams(window.location.search).get('animalId');
+}
+
 async function fetchJson(url) {
   const res = await fetch(url);
   if (!res.ok) {
@@ -39,45 +44,38 @@ async function fetchJson(url) {
   return await res.json();
 }
 
-function getShelterAnnouncements(announcements, rifugioId) {
-  return announcements.filter((announcement) => {
-    const publisherId = announcement?.publisherId?._id || announcement?.publisherId;
-    return publisherId === rifugioId && announcement?.publisherId?.role === 'shelter';
-  });
-}
+// announcements removed from shelter page; no helper needed
 
 function getAllContacts(rifugio) {
   return [rifugio?.phoneNumber, rifugio?.email].filter(Boolean).join(' · ');
 }
 
-function renderStats(rifugio, announcements) {
+function summarizeAnimals(animals) {
+  const list = Array.isArray(animals) ? animals : [];
+  return {
+    total: list.length,
+    available: list.filter(a => !!a?.adoptable).length
+  };
+}
+
+function renderStats(rifugio, animals) {
   const stats = document.getElementById('shelter-stats');
-  const shelterAnnouncements = getShelterAnnouncements(announcements, rifugio._id);
-  const coords = getCoordinates(rifugio);
-  const totalSlots = rifugio?.rifugioData?.totalSlots ?? rifugio?.shelterData?.totalSlots;
-  const availableSlots = rifugio?.rifugioData?.availableSlots ?? rifugio?.shelterData?.availableSlots;
+  const { total, available } = summarizeAnimals(animals);
 
   stats.innerHTML = `
     <div class="stat-card">
-      <span>Posti disponibili</span>
-      <strong>${escapeHtml(availableSlots ?? 'n/d')}</strong>
-      <span>su ${escapeHtml(totalSlots ?? 'n/d')} posti totali</span>
+      <span>Animali disponibili</span>
+      <strong>${escapeHtml(available)}</strong>
+      <span>su ${escapeHtml(total)} animali registrati</span>
     </div>
-    <div class="stat-card">
-      <span>Adozioni pubblicate</span>
-      <strong>${escapeHtml(shelterAnnouncements.length)}</strong>
-      <span>annunci collegati a questo rifugio</span>
-    </div>
-    
   `;
 }
 
-function renderInfo(rifugio) {
+function renderInfo(rifugio, animals) {
   const container = document.getElementById('shelter-info-grid');
   const coords = getCoordinates(rifugio);
   const address = [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
-  const totalSlots = rifugio?.rifugioData?.totalSlots ?? rifugio?.shelterData?.totalSlots;
-  const availableSlots = rifugio?.rifugioData?.availableSlots ?? rifugio?.shelterData?.availableSlots;
+  const { total, available } = summarizeAnimals(animals);
   const contacts = getAllContacts(rifugio) || 'Contatti non pubblici';
   const websiteLink = `/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}`;
 
@@ -87,9 +85,9 @@ function renderInfo(rifugio) {
       <strong>${escapeHtml(address || 'Non disponibile')}</strong>
     </div>
     <div class="info-tile">
-      <span>Disponibilità</span>
-      <strong>${escapeHtml(availableSlots ?? 'n/d')} / ${escapeHtml(totalSlots ?? 'n/d')}</strong>
-      <p>Capienza attuale dichiarata dal rifugio.</p>
+      <span>Animali disponibili</span>
+      <strong>${escapeHtml(available)} / ${escapeHtml(total)}</strong>
+      <p>Animali adottabili rispetto al totale registrato.</p>
     </div>
     <div class="info-tile">
       <span>Contatti</span>
@@ -111,67 +109,142 @@ function renderInfo(rifugio) {
   `;
 }
 
-function renderAnnouncements(announcements, rifugio) {
-  const grid = document.getElementById('shelter-announcements-grid');
-  const counter = document.getElementById('shelter-announcements-count');
-  const shelterAnnouncements = getShelterAnnouncements(announcements, rifugio._id).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  counter.textContent = `${shelterAnnouncements.length} annunci`;
+// Announcements section removed from shelter page
 
-  if (shelterAnnouncements.length === 0) {
-    grid.innerHTML = '<div class="empty-state">Nessun annuncio pubblicato da questo rifugio.</div>';
-    return;
-  }
-
-  grid.innerHTML = shelterAnnouncements.map((announcement) => {
-    const animal = announcement.animalId || {};
-    const title = animal.name || animal.breed || animal.species || 'Animale in rifugio';
-    const date = announcement.date ? new Date(announcement.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Data non disponibile';
-    return `
-      <article class="card" data-id="${escapeHtml(announcement._id)}">
-        <div class="card-image">
-          <div class="card-image-placeholder"><span>${escapeHtml(animal?.species?.[0] || '…')}</span></div>
-          
-        </div>
-        <div class="card-body">
-          <div class="card-meta">
-            <span class="card-species">${escapeHtml(animal?.species || 'Specie sconosciuta')}</span>
-            <span class="card-date">${escapeHtml(date)}</span>
+async function renderAnimalsForShelter(rifugioId) {
+  const grid = document.getElementById('shelter-animals-grid');
+  const counter = document.getElementById('shelter-animals-count');
+  if (!grid || !counter) return;
+  try {
+    const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugioId)}`);
+    if (!res.ok) throw new Error('Errore recupero animali');
+    const list = await res.json();
+    counter.textContent = `${(list && list.length) || 0} animali`;
+    if (!list || list.length === 0) {
+      grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
+      return;
+    }
+    grid.innerHTML = list.map(a => {
+      const name = a.name || a.breed || a.species || 'Animale';
+      const status = a.adoptable ? 'Adottabile' : 'Non disponibile';
+      return `
+        <article class="card" data-id="${escapeHtml(a._id)}">
+          <div class="card-image"><div class="card-image-placeholder"><span>${escapeHtml((a.species||'A')[0])}</span></div></div>
+          <div class="card-body">
+            <div class="card-meta"><span class="card-species">${escapeHtml(a.species || '')}</span></div>
+            <h3 class="card-breed">${escapeHtml(name)}</h3>
+            <p class="card-description">${escapeHtml(a.distinctiveFeatures || '')}</p>
+            <div style="margin-top:8px;font-size:0.9rem;color:var(--text-muted)">${escapeHtml(status)}</div>
           </div>
-          <h3 class="card-breed">${escapeHtml(title)}</h3>
-          <p class="card-description">${escapeHtml(announcement.description || 'Nessuna descrizione pubblica disponibile.')}</p>
-          <a class="text-link" href="/pages/announcements.html?highlight=${encodeURIComponent(announcement._id)}">Apri annuncio →</a>
-        </div>
-      </article>
-    `;
-  }).join('');
-
-  // try to load photos for each announcement and replace placeholders (use same selectors as announcements)
-  shelterAnnouncements.forEach((announcement) => {
-    const card = grid.querySelector(`.card[data-id="${announcement._id}"]`);
-    if (!card) return;
-    const container = card.querySelector('.card-image');
-    const placeholder = container.querySelector('.card-image-placeholder');
-    const animal = announcement.animalId || {};
-    const photoUrl = `http://localhost:3000/api/announcements/${announcement._id}/photo`;
-
-    (async () => {
-      try {
-        const res = await fetch(photoUrl, { method: 'GET' });
-        if (!res.ok) throw new Error('no image');
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.startsWith('image')) throw new Error('not image');
-        const blob = await res.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        img.alt = animal?.species || 'Animale';
-        img.loading = 'lazy';
-        img.onload = () => { URL.revokeObjectURL(img.src); };
-        if (placeholder) placeholder.replaceWith(img);
-      } catch (err) {
-        if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(animal?.species?.[0] || '?')}</span>`;
+        </article>
+      `;
+    }).join('');
+    // load photos for animals
+    list.forEach(a => {
+      const card = grid.querySelector(`.card[data-id="${a._id}"]`);
+      if (!card) return;
+      const container = card.querySelector('.card-image');
+      const placeholder = container.querySelector('.card-image-placeholder');
+      const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
+      if (!photo) {
+        if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(a.species?.[0] || '?')}</span>`;
+        return;
       }
-    })();
-  });
+      (async () => {
+        try {
+          const res = await fetch(photo, { method: 'GET' });
+          if (!res.ok) throw new Error('no image');
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.startsWith('image')) throw new Error('not image');
+          const blob = await res.blob();
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.alt = a.species || 'Animale';
+          img.loading = 'lazy';
+          img.onload = () => { URL.revokeObjectURL(img.src); };
+          if (placeholder) placeholder.replaceWith(img);
+        } catch (err) {
+          if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(a.species?.[0] || '?')}</span>`;
+        }
+      })();
+    });
+    // attach click handler to open animal detail modal (view-only)
+    grid.addEventListener('click', (e) => {
+      const clicked = e.target.closest('.card');
+      if (!clicked || !grid.contains(clicked)) return;
+      if (e.target.closest('button, a, input, textarea')) return;
+      const id = clicked.dataset.id;
+      if (id) openShelterAnimalModal(id);
+    });
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state">${escapeHtml(err.message || 'Errore')}</div>`;
+    counter.textContent = '0 animali';
+  }
+}
+
+async function openShelterAnimalModal(animalId) {
+  try {
+    const res = await fetch(`${API_ANIMALS}/${encodeURIComponent(animalId)}`);
+    if (!res.ok) throw new Error('Animale non trovato');
+    const a = await res.json();
+    const titleEl = document.getElementById('animal-modal-title');
+    const nameEl = document.getElementById('animal-name-display');
+    const speciesEl = document.getElementById('animal-species-display');
+    const breedEl = document.getElementById('animal-breed-display');
+    const dateEl = document.getElementById('animal-dateArrived-display');
+    const ageEl = document.getElementById('animal-age-display');
+    const otherEl = document.getElementById('animal-otherInfo-display');
+    const notesContainer = document.getElementById('animal-medicalNotes');
+    const gallery = document.getElementById('animal-modal-gallery');
+
+    if (titleEl) titleEl.textContent = a.name || (a.species || 'Animale');
+    if (nameEl) nameEl.textContent = a.name || '-';
+    if (speciesEl) speciesEl.textContent = a.species || '-';
+    if (breedEl) breedEl.textContent = a.breed || '-';
+    if (dateEl) dateEl.textContent = a.dateArrived ? new Date(a.dateArrived).toLocaleDateString('it-IT') : '-';
+    if (ageEl) ageEl.textContent = a.age || '-';
+    if (otherEl) otherEl.textContent = a.otherInfo || '-';
+
+    const adoptableText = a.adoptable ? 'Sì' : 'No';
+    const adoptableEl = document.getElementById('animal-adoptable-display');
+    if (adoptableEl) adoptableEl.textContent = adoptableText;
+
+    // notes
+    if (notesContainer) {
+      notesContainer.innerHTML = '';
+      const notes = Array.isArray(a.medicalNotes) ? a.medicalNotes.slice().reverse() : [];
+      if (notes.length === 0) notesContainer.innerHTML = '<div class="muted">Nessuna nota medica</div>';
+      notes.forEach(n => {
+        const el = document.createElement('div');
+        el.style.padding = '6px 0';
+        el.innerHTML = `<div style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(new Date(n.createdAt).toLocaleString())}</div><div>${escapeHtml(n.text)}</div>`;
+        notesContainer.appendChild(el);
+      });
+    }
+
+    // gallery
+    if (gallery) {
+      gallery.innerHTML = '';
+      const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
+      if (photo) {
+        const img = document.createElement('img');
+        img.src = photo;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        gallery.appendChild(img);
+      }
+    }
+
+    document.getElementById('animal-modal-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('animal-modal-close').onclick = () => {
+      document.getElementById('animal-modal-overlay').style.display = 'none';
+      document.body.style.overflow = '';
+    };
+  } catch (err) {
+    alert(err.message || 'Errore apertura scheda animale');
+  }
 }
 
 function renderMap(rifugio) {
@@ -201,37 +274,34 @@ function renderMap(rifugio) {
 
 async function loadPage() {
   const rifugioId = getRifugioId();
+  const animalId = getAnimalId();
   if (!rifugioId) {
     document.getElementById('shelter-name').textContent = 'Rifugio non specificato';
     document.getElementById('shelter-description').textContent = 'Aggiungi il parametro rifugioId all’URL.';
     document.getElementById('shelter-stats').innerHTML = '';
     document.getElementById('shelter-info-grid').innerHTML = '<div class="empty-state">Nessun rifugio selezionato.</div>';
-    document.getElementById('shelter-announcements-grid').innerHTML = '<div class="empty-state">Nessun annuncio disponibile.</div>';
     return;
   }
 
-  const [rifugi, announcements] = await Promise.all([
-    fetchJson(API_RIFUGI),
-    fetchJson(API_ANNOUNCEMENTS + `?rifugioId=${encodeURIComponent(rifugioId)}`)
-  ]);
+  const rifugi = await fetchJson(API_RIFUGI);
 
   const rifugio = Array.isArray(rifugi) ? rifugi.find((item) => item._id === rifugioId) : null;
   if (!rifugio) throw new Error('Rifugio non trovato o non pubblico');
 
   const name = getRifugioName(rifugio);
-  const announcementsCount = getShelterAnnouncements(announcements, rifugio._id).length;
-
   document.title = `${name} — Trovami`;
   document.getElementById('shelter-name').textContent = name;
   document.getElementById('shelter-description').textContent = rifugio?.rifugioData?.description || 'Nessuna descrizione pubblica disponibile.';
-  document.getElementById('shelter-announcements-link').href = `/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}`;
-  document.getElementById('shelter-announcements-link').textContent = `Vedi annunci (${announcementsCount})`;
   document.getElementById('shelter-map-link').href = '#scheda-rifugio';
-
-  renderStats(rifugio, announcements);
-  renderInfo(rifugio);
-  renderAnnouncements(announcements, rifugio);
+  const animals = await fetchJson(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugio._id)}`);
+  renderStats(rifugio, animals);
+  renderInfo(rifugio, animals);
   renderMap(rifugio);
+  // load animals for this shelter
+  await renderAnimalsForShelter(rifugio._id);
+  if (animalId) {
+    await openShelterAnimalModal(animalId).catch(() => {});
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -243,7 +313,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('shelter-description').textContent = error?.message || 'Impossibile caricare i dati del rifugio.';
     const infoGrid = document.getElementById('shelter-info-grid');
     if (infoGrid) infoGrid.innerHTML = `<div class="empty-state">${escapeHtml(error?.message || 'Errore caricamento dati')}</div>`;
-    const annGrid = document.getElementById('shelter-announcements-grid');
-    if (annGrid) annGrid.innerHTML = '<div class="empty-state">Impossibile caricare gli annunci.</div>';
   }
 });
