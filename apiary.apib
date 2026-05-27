@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: http://localhost:3000/api/v1
+HOST: http://localhost:3000
 
 # API Gestione Trovami!
 Questa è la documentazione ufficiale dell'applicazione Trovami!. Di seguito sono elencate tutte le API utilizzate all'interno del software.
@@ -12,7 +12,7 @@ Le rotte protette richiedono header:
 # Group Autenticazione
 Risorse dedicate alla registrazione, login e gestione credenziali degli utenti.
 
-## Utenti Auth [/auth/users]
+## Utenti Auth [/api/v1/auth/users]
 ### Registra Account [POST]
 Permette a un nuovo utente di registrarsi sulla piattaforma.
 
@@ -69,7 +69,7 @@ Per creare un account rifugio, usare `accountType = rifugio` e compilare `rifugi
             "rifugioStatus": "pending"
         }
 
-## Sessioni [/auth/sessions]
+## Sessioni [/api/v1/auth/sessions]
 ### Crea Sessione [POST]
 Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
 
@@ -109,7 +109,7 @@ Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
             "readmissionStatus": "pending"
         }
 
-## Sessione Corrente [/auth/sessions/current]
+## Sessione Corrente [/api/v1/auth/sessions/current]
 ### Elimina Sessione [DELETE]
 Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Bearer Token.
 
@@ -124,7 +124,7 @@ Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Beare
             "message": "Logout effettuato"
         }
 
-## Richieste Reset Password [/auth/password-reset-requests]
+## Richieste Reset Password [/api/v1/auth/password-reset-requests]
 ### Crea Richiesta [POST]
 Invia una email contenente un link per reimpostare la password.
 
@@ -146,7 +146,7 @@ Invia una email contenente un link per reimpostare la password.
             "message": "Email non trovata"
         }
 
-## Password [/auth/password]
+## Password [/api/v1/auth/password]
 ### Reimposta Password [PATCH]
 Reimposta la password tramite token ricevuto via email.
 
@@ -169,7 +169,7 @@ Reimposta la password tramite token ricevuto via email.
             "message": "Token non valido o scaduto"
         }
 
-## Verifiche Email [/auth/email-verifications{?token}]
+## Verifiche Email [/api/v1/auth/email-verifications{?token}]
 ### Verifica [GET]
 Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON oppure fare redirect a una pagina frontend.
 
@@ -188,7 +188,7 @@ Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON o
             "message": "Token non valido o scaduto"
         }
 
-## Verifiche Email [/auth/email-verifications]
+## Verifiche Email [/api/v1/auth/email-verifications]
 ### Crea Nuovo Invio [POST]
 Reinvia la mail di verifica, se non ancora verificata.
 
@@ -204,7 +204,7 @@ Reinvia la mail di verifica, se non ancora verificata.
             "message": "Email di verifica reinviata"
         }
 
-## Richieste Riammissione [/auth/readmission-requests]
+## Richieste Riammissione [/api/v1/auth/readmission-requests]
 ### Richiedi Riammissione [POST]
 Invia una richiesta di riammissione per un account bloccato.
 
@@ -224,7 +224,7 @@ Invia una richiesta di riammissione per un account bloccato.
 # Group Profilo Utente
 Operazioni sul profilo dell'utente loggato.
 
-## Gestione Profilo [/users/me]
+## Gestione Profilo [/api/v1/users/me]
 ### Recupera Profilo [GET]
 Restituisce i dati dell'utente attualmente autenticato.
 
@@ -305,7 +305,7 @@ Elimina l'account autenticato e cascata sugli annunci pubblicati.
 # Group Utenti Pubblici
 Risorse pubbliche/mascherate per contatti e rifugi.
 
-## Rifugi Pubblici [/users/rifugi/public]
+## Rifugi Pubblici [/api/v1/users/rifugi/public]
 ### Elenco Rifugi [GET]
 Restituisce rifugi approvati con coordinate, rispettando le preferenze di visibilità contatti.
 
@@ -328,7 +328,7 @@ Restituisce rifugi approvati con coordinate, rispettando le preferenze di visibi
             }
         ]
 
-## Utente Pubblico [/users/{id}/public]
+## Utente Pubblico [/api/v1/users/{id}/public]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -352,7 +352,28 @@ Restituisce contatti mascherati in base alle preferenze dell'utente. Richiede au
 # Group Animali
 Risorse per la gestione delle anagrafiche degli animali legati agli annunci.
 
-## Creazione Animale [/animals]
+## Lista e Creazione Animali [/api/v1/animals{?shelterId}]
+### Elenco Animali [GET]
+Restituisce gli animali di un rifugio. Se `shelterId` non e' presente e la richiesta non e' autenticata, restituisce una lista vuota.
+
++ Parameters
+    + shelterId: `645a1b2c3d4e5f6g7h8i9j0k` (string, optional) - ID rifugio.
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                "name": "Rex",
+                "species": "Cane",
+                "breed": "Pastore Tedesco",
+                "gender": "Maschio",
+                "color": "Nero e Focato",
+                "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
+                "adoptable": true
+            }
+        ]
+
 ### Registra Animale [POST]
 Crea la scheda di un animale che sarà successivamente associato a un annuncio.
 
@@ -386,9 +407,25 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio.
             "createdAt": "2026-05-15T09:00:00.000Z"
         }
 
-## Modifica / Eliminazione Animale [/animals/{id}]
+## Modifica / Eliminazione Animale [/api/v1/animals/{id}]
 + Parameters
     + id: `645b2c3d4e5f6g7h8i9j0k1l` (string, required) - ID animale.
+
+### Recupera Animale [GET]
+Restituisce il dettaglio dell'animale.
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+            "name": "Rex",
+            "species": "Cane",
+            "breed": "Pastore Tedesco",
+            "gender": "Maschio",
+            "color": "Nero e Focato",
+            "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
+            "adoptable": true
+        }
 
 ### Aggiorna Animale [PUT]
 Aggiorna campi dell'animale. Richiede autenticazione.
@@ -431,7 +468,7 @@ Elimina l'animale. Richiede autenticazione.
 # Group Annunci
 Risorse per creare, visualizzare, modificare o eliminare annunci di smarrimento o avvistamento.
 
-## Lista e Creazione Annunci [/announcements{?type,species,status,rifugioId,userId}]
+## Lista e Creazione Annunci [/api/v1/announcements{?type,species,status,rifugioId,userId}]
 ### Elenco Annunci [GET]
 Recupera gli annunci inseriti sulla piattaforma. Permette il filtraggio tramite Query Parameters. Di default mostra solo quelli `ACTIVE`.
 
@@ -515,7 +552,7 @@ Crea un nuovo annuncio. Richiede autenticazione. Se vuoi caricare una foto, usa 
             "createdAt": "2026-05-15T08:15:00.000Z"
         }
 
-## Dettaglio Annuncio [/announcements/{id}]
+## Dettaglio Annuncio [/api/v1/announcements/{id}]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID univoco dell'annuncio.
 
@@ -594,7 +631,7 @@ Consente all'autore di rimuovere l'annuncio. Richiede token.
             "success": true
         }
 
-## Stato Annuncio [/announcements/{id}/status]
+## Stato Annuncio [/api/v1/announcements/{id}/status]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID dell'annuncio.
 
@@ -619,7 +656,7 @@ Permette all'autore di variare rapidamente lo stato dell'annuncio (Es: portarlo 
             "status": "RESOLVED"
         }
 
-## Annuncio Veloce [/announcements/quick]
+## Annuncio Veloce [/api/v1/announcements/quick]
 ### Crea Annuncio Veloce [POST]
 Crea un annuncio veloce anonimo (publisherId = null). Se presente, la foto va in `photo` (file).
 
@@ -653,7 +690,7 @@ Crea un annuncio veloce anonimo (publisherId = null). Se presente, la foto va in
             "status": "ACTIVE"
         }
 
-## Foto Annuncio [/announcements/{id}/photo]
+## Foto Annuncio [/api/v1/announcements/{id}/photo]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -662,7 +699,21 @@ Restituisce il contenuto binario della foto dell'annuncio.
 
 + Response 200 (image/jpeg)
 
-## Smart Match [/announcements/{id}/similar{?limit}]
+## Volantino Annuncio [/api/v1/announcements/{id}/flyer]
++ Parameters
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
+
+### Genera Volantino [GET]
+Genera un PDF dell'annuncio. Richiede autenticazione e proprieta' dell'annuncio.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/pdf)
+
+## Smart Match [/api/v1/announcements/{id}/similar{?limit}]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
     + limit (number, optional) - Numero massimo risultati (max 20, default 6).
@@ -685,7 +736,7 @@ Restituisce i match visivi basati su embedding immagine.
             ]
         }
 
-## Commenti [/announcements/{id}/comments]
+## Commenti [/api/v1/announcements/{id}/comments]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -714,7 +765,7 @@ Aggiunge un commento all'annuncio. Richiede autenticazione.
             "comments": []
         }
 
-## Segnalazioni [/announcements/{id}/reports]
+## Segnalazioni [/api/v1/announcements/{id}/reports]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -743,10 +794,115 @@ Invia una segnalazione agli admin. Richiede autenticazione.
             }
         }
 
+# Group Richieste Adozione
+Gestione richieste di contatto tra utenti e rifugi. Tutte le rotte richiedono autenticazione.
+
+## Richieste Adozione [/api/v1/contact-requests]
+### Elenco Richieste [GET]
+Restituisce le richieste ricevute dal rifugio o inviate dall'utente corrente.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "665c3d4e5f6g7h8i9j0k1l2b",
+                "requesterId": {
+                    "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                    "username": "mario_rossi"
+                },
+                "shelterId": {
+                    "_id": "645a1b2c3d4e5f6g7h8i9j0s",
+                    "username": "rifugio_amico"
+                },
+                "animalId": {
+                    "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                    "name": "Rex",
+                    "species": "Cane"
+                },
+                "message": "Vorrei avere informazioni per adottare Rex.",
+                "status": "pending"
+            }
+        ]
+
+### Crea Richiesta [POST]
+Invia una richiesta di adozione a un rifugio per un animale.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
+                "message": "Vorrei avere informazioni per adottare Rex."
+            }
+
++ Response 201 (application/json)
+
+        {
+            "_id": "665c3d4e5f6g7h8i9j0k1l2b",
+            "animalId": {
+                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                "name": "Rex",
+                "species": "Cane"
+            },
+            "message": "Vorrei avere informazioni per adottare Rex.",
+            "status": "pending"
+        }
+
+### Nascondi Richieste Risposte [PATCH]
+Nasconde dall'elenco dell'utente corrente le richieste gia' risposte.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "success": true,
+            "hidden": 2
+        }
+
+## Risposta Richiesta Adozione [/api/v1/contact-requests/{id}/replies]
++ Parameters
+    + id: `665c3d4e5f6g7h8i9j0k1l2b` (string, required) - ID richiesta adozione.
+
+### Rispondi [POST]
+Permette a un rifugio approvato di rispondere a una richiesta.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "replyMessage": "Certo, passa in rifugio sabato mattina."
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "665c3d4e5f6g7h8i9j0k1l2b",
+            "replyMessage": "Certo, passa in rifugio sabato mattina.",
+            "status": "replied",
+            "repliedAt": "2026-05-15T10:30:00.000Z"
+        }
+
 # Group Notifiche
 Gestione notifiche utente (commenti, smart match, azioni admin).
 
-## Lista Notifiche [/notifications{?unread}]
+## Lista Notifiche [/api/v1/notifications{?unread}]
 ### Elenco Notifiche [GET]
 Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richiede autenticazione.
 
@@ -770,7 +926,7 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             }
         ]
 
-## Notifica [/notifications/{id}]
+## Notifica [/api/v1/notifications/{id}]
 + Parameters
     + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID notifica.
 
@@ -788,7 +944,7 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             "isRead": true
         }
 
-## Notifiche [/notifications]
+## Notifiche [/api/v1/notifications]
 ### Aggiorna Tutte [PATCH]
 
 + Request
@@ -806,7 +962,7 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
 # Group Admin
 Rotte amministrative. Richiedono autenticazione e ruolo `admin`.
 
-## Report [/admin/reports{?status}]
+## Report [/api/v1/admin/reports{?status}]
 ### Elenco Segnalazioni [GET]
 Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
 
@@ -827,7 +983,7 @@ Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
             }
         ]
 
-## Aggiorna Report [/admin/reports/{id}/status]
+## Aggiorna Report [/api/v1/admin/reports/{id}/status]
 + Parameters
     + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID report.
 
@@ -851,7 +1007,7 @@ Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
             "status": "REVIEWED"
         }
 
-## Audit Log [/admin/audit-logs{?search,sortBy,sortDir,limit}]
+## Audit Log [/api/v1/admin/audit-logs{?search,sortBy,sortDir,limit}]
 ### Elenco Audit Log [GET]
 Ricerca e ordinamento audit log.
 
@@ -877,7 +1033,7 @@ Ricerca e ordinamento audit log.
             }
         ]
 
-## Utente Admin [/admin/users/{id}]
+## Utente Admin [/api/v1/admin/users/{id}]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -897,7 +1053,7 @@ Restituisce dati utente (include `publishedAnnouncementsCount`).
             "publishedAnnouncementsCount": 2
         }
 
-## Conteggio Annunci [/admin/users/{id}/announcement-count]
+## Conteggio Annunci [/api/v1/admin/users/{id}/announcement-count]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -914,7 +1070,7 @@ Restituisce dati utente (include `publishedAnnouncementsCount`).
             "publishedAnnouncementsCount": 2
         }
 
-## Elimina Annuncio (Admin) [/admin/announcements/{id}]
+## Elimina Annuncio (Admin) [/api/v1/admin/announcements/{id}]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -939,7 +1095,7 @@ Elimina annuncio e (se presente publisher) invia notifica. Richiede admin.
             "warnedUser": true
         }
 
-## Stato Account [/admin/users/{id}/status]
+## Stato Account [/api/v1/admin/users/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -967,7 +1123,7 @@ Blocca utente e rimuove annunci collegati.
             "reviewedReportsCount": 0
         }
 
-## Ammonimenti Utente [/admin/users/{id}/warnings]
+## Ammonimenti Utente [/api/v1/admin/users/{id}/warnings]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -991,7 +1147,7 @@ Blocca utente e rimuove annunci collegati.
             "conductWarnings": []
         }
 
-## Stato Account [/admin/users/{id}/status]
+## Stato Account [/api/v1/admin/users/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -1015,7 +1171,7 @@ Blocca utente e rimuove annunci collegati.
             "isActive": true
         }
 
-## Riammissioni [/admin/readmissions]
+## Riammissioni [/api/v1/admin/readmissions]
 ### Elenco Richieste [GET]
 Restituisce richieste riammissione pendenti.
 
@@ -1036,7 +1192,7 @@ Restituisce richieste riammissione pendenti.
             }
         ]
 
-## Valutazione Riammissione [/admin/readmissions/{id}]
+## Valutazione Riammissione [/api/v1/admin/readmissions/{id}]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -1062,7 +1218,7 @@ Restituisce richieste riammissione pendenti.
             }
         }
 
-## Rifugi Pending [/admin/rifugi/pending]
+## Rifugi Pending [/api/v1/admin/rifugi/pending]
 ### Elenco Pending [GET]
 Restituisce rifugi in attesa approvazione.
 
@@ -1080,7 +1236,7 @@ Restituisce rifugi in attesa approvazione.
             }
         ]
 
-## Stato Rifugio [/admin/rifugi/{id}/status]
+## Stato Rifugio [/api/v1/admin/rifugi/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
 
@@ -1104,7 +1260,7 @@ Restituisce rifugi in attesa approvazione.
             "rifugioStatus": "approved"
         }
 
-## Stato Rifugio [/admin/rifugi/{id}/status]
+## Stato Rifugio [/api/v1/admin/rifugi/{id}/status]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
 
