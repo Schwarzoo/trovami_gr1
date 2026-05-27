@@ -1,6 +1,7 @@
 const API_RIFUGI = 'http://localhost:3000/api/users/rifugi/public';
 const API_ANNOUNCEMENTS = 'http://localhost:3000/api/announcements';
 const API_ANIMALS = 'http://localhost:3000/api/animals';
+const API_CONTACT_REQUESTS = 'http://localhost:3000/api/contact-requests';
 
 function escapeHtml(input) {
   return String(input ?? '')
@@ -33,6 +34,14 @@ function getRifugioId() {
 
 function getAnimalId() {
   return new URLSearchParams(window.location.search).get('animalId');
+}
+
+function decodeJwt(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch (e) {
+    return null;
+  }
 }
 
 async function fetchJson(url) {
@@ -182,6 +191,71 @@ async function renderAnimalsForShelter(rifugioId) {
   }
 }
 
+function renderContactRequestPanel(animal) {
+  const panel = document.getElementById('animal-contact-request');
+  if (!panel) return;
+
+  const token = localStorage.getItem('token');
+  const payload = token ? decodeJwt(token) : null;
+  const role = payload?.role || localStorage.getItem('role');
+
+  if (!token) {
+    panel.innerHTML = `
+      <div class="contact-request-box">
+        <strong>Ti interessa questo animale?</strong>
+        <p>Accedi come utente registrato per inviare una richiesta al rifugio.</p>
+        <a class="button" href="/pages/login.html">Accedi</a>
+      </div>
+    `;
+    return;
+  }
+
+  if (role !== 'user') {
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.innerHTML = `
+    <form id="contact-request-form" class="contact-request-box">
+      <strong>Richiedi informazioni al rifugio</strong>
+      <textarea id="contact-request-message" maxlength="1000" placeholder="Scrivi cosa vuoi chiedere o quando vorresti vedere l'animale"></textarea>
+      <div class="contact-request-actions">
+        <button type="submit" class="button primary">Invia richiesta</button>
+        <span id="contact-request-status"></span>
+      </div>
+    </form>
+  `;
+
+  panel.querySelector('#contact-request-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = panel.querySelector('#contact-request-status');
+    const textarea = panel.querySelector('#contact-request-message');
+    const message = textarea.value.trim();
+    if (!message) {
+      status.textContent = 'Scrivi un messaggio.';
+      return;
+    }
+
+    status.textContent = 'Invio...';
+    const res = await fetch(API_CONTACT_REQUESTS, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ animalId: animal._id, message })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      status.textContent = data.message || 'Errore invio richiesta';
+      return;
+    }
+
+    textarea.value = '';
+    status.textContent = 'Richiesta inviata.';
+  });
+}
+
 async function openShelterAnimalModal(animalId) {
   try {
     const res = await fetch(`${API_ANIMALS}/${encodeURIComponent(animalId)}`);
@@ -234,6 +308,8 @@ async function openShelterAnimalModal(animalId) {
         gallery.appendChild(img);
       }
     }
+
+    renderContactRequestPanel(a);
 
     document.getElementById('animal-modal-overlay').style.display = 'flex';
     document.body.style.overflow = 'hidden';

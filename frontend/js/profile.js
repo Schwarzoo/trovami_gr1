@@ -16,6 +16,7 @@ let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
 const API_ANIMALS = 'http://localhost:3000/api/animals';
+const API_CONTACT_REQUESTS = 'http://localhost:3000/api/contact-requests';
 
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
@@ -150,6 +151,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  async function fetchContactRequests() {
+    const res = await fetch(API_CONTACT_REQUESTS, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
   async function fetchAnnouncementById(id) {
     const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(id)}`);
     if (!res.ok) return null;
@@ -278,6 +286,89 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       container.appendChild(item);
     });
+  }
+
+  function formatContactRequestStatus(status) {
+    const labels = {
+      pending: 'Da rispondere',
+      replied: 'Risposta inviata',
+      closed: 'Chiusa'
+    };
+    return labels[status] || status || 'Da rispondere';
+  }
+
+  function renderContactRequests(list) {
+    const section = document.getElementById('contact-requests-section');
+    const title = document.getElementById('contact-requests-title');
+    const empty = document.getElementById('contact-requests-empty');
+    const container = document.getElementById('contact-requests-list');
+    if (!section || !empty || !container) return;
+
+    if (!['shelter', 'user'].includes(currentUser?.role)) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    if (title) title.textContent = currentUser.role === 'shelter' ? 'Richieste contatto' : 'Le mie richieste';
+    container.innerHTML = '';
+    if (!list || list.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    list.forEach((request) => {
+      const animal = request.animalId || {};
+      const requester = request.requesterId || {};
+      const shelter = request.shelterId || {};
+      const when = request.createdAt ? new Date(request.createdAt).toLocaleString('it-IT') : '';
+      const isShelter = currentUser.role === 'shelter';
+      const isPending = isShelter && request.status === 'pending';
+      const shelterName = shelter.rifugioData?.rifugioName || shelter.shelterData?.shelterName || shelter.username || 'Rifugio';
+      const item = document.createElement('div');
+      item.className = 'comment-item contact-request-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(isShelter ? (requester.username || 'utente') : shelterName)}</span>
+          <span class="comment-date">${escapeHtml(when)} - ${escapeHtml(formatContactRequestStatus(request.status))}</span>
+        </div>
+        <div class="comment-text">
+          <strong>${escapeHtml(animal.name || animal.species || 'Animale')}</strong>
+          ${animal.breed ? ` - ${escapeHtml(animal.breed)}` : ''}
+          <br>${escapeHtml(request.message || '')}
+          ${isShelter && requester.email ? `<br>Email: ${escapeHtml(requester.email)}` : ''}
+          ${isShelter && requester.phoneNumber ? `<br>Telefono: ${escapeHtml(requester.phoneNumber)}` : ''}
+          ${request.replyMessage ? `<br><strong>Risposta:</strong> ${escapeHtml(request.replyMessage)}` : ''}
+        </div>
+        ${isPending ? `
+          <form class="contact-request-reply" data-request-id="${escapeHtml(request._id)}">
+            <textarea maxlength="1000" placeholder="Scrivi la risposta per l'utente"></textarea>
+            <div class="form-actions">
+              <button type="submit" class="btn btn--primary">Rispondi</button>
+              <span class="form-hint"></span>
+            </div>
+          </form>
+        ` : ''}
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  async function loadContactRequests() {
+    if (!['shelter', 'user'].includes(currentUser?.role)) return;
+    renderContactRequests(await fetchContactRequests());
+  }
+
+  async function replyToContactRequest(requestId, replyMessage) {
+    const res = await fetch(`${API_CONTACT_REQUESTS}/${encodeURIComponent(requestId)}/reply`, {
+      method: 'PATCH',
+      headers: authHeader,
+      body: JSON.stringify({ replyMessage })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Errore risposta richiesta');
+    return data;
   }
 
   function renderRifugioStatus(me) {
@@ -832,6 +923,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMyAnnouncements();
     // if user is a shelter, load their animals
     await loadMyAnimals();
+    await loadContactRequests();
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
@@ -868,6 +960,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     await markAllNotificationsRead();
     const notifications = await fetchNotifications();
     renderNotifications(notifications);
+  });
+
+  document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
+  document.getElementById('contact-requests-list')?.addEventListener('submit', async (e) => {
+    const form = e.target?.closest?.('.contact-request-reply');
+    if (!form) return;
+    e.preventDefault();
+    const textarea = form.querySelector('textarea');
+    const hint = form.querySelector('.form-hint');
+    const replyMessage = textarea.value.trim();
+    if (!replyMessage) {
+      if (hint) hint.textContent = 'Scrivi una risposta.';
+      return;
+    }
+    if (hint) hint.textContent = 'Invio...';
+    try {
+      await replyToContactRequest(form.dataset.requestId, replyMessage);
+      await loadContactRequests();
+    } catch (err) {
+      if (hint) hint.textContent = err.message || 'Errore invio risposta';
+    }
   });
 
   document.getElementById('adminRefresh')?.addEventListener('click', loadAdminData);

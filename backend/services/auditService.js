@@ -15,16 +15,28 @@ function normalizeName(value, fallback) {
   return text || fallback;
 }
 
+function getRifugioAuditName(target) {
+  if (!target || target.role !== 'shelter') return null;
+  const rifugioName = normalizeName(
+    target.rifugioData?.rifugioName || target.shelterData?.shelterName,
+    null
+  );
+  return rifugioName ? `rifugio ${rifugioName}` : null;
+}
+
 function buildAuditEntry({ actor, action, target }) {
   const actorId = toObjectId(actor);
   const targetId = toObjectId(target);
+  const targetName = getRifugioAuditName(target)
+    || target?.username
+    || target?.targetUsername;
 
   return {
     actorId,
     actorName: normalizeName(actor?.username || actor?.actorName, 'anonimo'),
     action: normalizeName(action, 'azione'),
     targetId,
-    targetUsername: targetId ? normalizeName(target?.username || target?.targetUsername, null) : null
+    targetUsername: targetId ? normalizeName(targetName, null) : null
   };
 }
 
