@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: http://localhost:3000
+HOST: http://localhost:3000/api
 
 # API Gestione Trovami!
 Questa è la documentazione ufficiale dell'applicazione Trovami!. Di seguito sono elencate tutte le API utilizzate all'interno del software.
@@ -12,7 +12,7 @@ Le rotte protette richiedono header:
 # Group Autenticazione
 Risorse dedicate alla registrazione, login e gestione credenziali degli utenti.
 
-## Utenti Auth [/api/v1/auth/users]
+## Registrazione Utente [/auth/register]
 ### Registra Account [POST]
 Permette a un nuovo utente di registrarsi sulla piattaforma.
 
@@ -69,8 +69,8 @@ Per creare un account rifugio, usare `accountType = rifugio` e compilare `rifugi
             "rifugioStatus": "pending"
         }
 
-## Sessioni [/api/v1/auth/sessions]
-### Crea Sessione [POST]
+## Login [/auth/login]
+### Effettua Login [POST]
 Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
 
 + Request (application/json)
@@ -109,8 +109,8 @@ Autentica l'utente e restituisce il token JWT da usare nelle rotte protette.
             "readmissionStatus": "pending"
         }
 
-## Sessione Corrente [/api/v1/auth/sessions/current]
-### Elimina Sessione [DELETE]
+## Logout [/auth/logout]
+### Effettua Logout [POST]
 Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Bearer Token.
 
 + Request
@@ -124,8 +124,8 @@ Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Beare
             "message": "Logout effettuato"
         }
 
-## Richieste Reset Password [/api/v1/auth/password-reset-requests]
-### Crea Richiesta [POST]
+## Recupero Password [/auth/forgot-password]
+### Richiedi Recupero [POST]
 Invia una email contenente un link per reimpostare la password.
 
 + Request (application/json)
@@ -146,8 +146,8 @@ Invia una email contenente un link per reimpostare la password.
             "message": "Email non trovata"
         }
 
-## Password [/api/v1/auth/password]
-### Reimposta Password [PATCH]
+## Reset Password [/auth/reset-password]
+### Reimposta Password [POST]
 Reimposta la password tramite token ricevuto via email.
 
 + Request (application/json)
@@ -169,7 +169,7 @@ Reimposta la password tramite token ricevuto via email.
             "message": "Token non valido o scaduto"
         }
 
-## Verifiche Email [/api/v1/auth/email-verifications{?token}]
+## Verifica Email [/auth/verify-email{?token}]
 ### Verifica [GET]
 Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON oppure fare redirect a una pagina frontend.
 
@@ -188,8 +188,8 @@ Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON o
             "message": "Token non valido o scaduto"
         }
 
-## Verifiche Email [/api/v1/auth/email-verifications]
-### Crea Nuovo Invio [POST]
+## Reinvia Verifica Email [/auth/resend-verification]
+### Reinvia [POST]
 Reinvia la mail di verifica, se non ancora verificata.
 
 + Request (application/json)
@@ -204,9 +204,9 @@ Reinvia la mail di verifica, se non ancora verificata.
             "message": "Email di verifica reinviata"
         }
 
-## Richieste Riammissione [/api/v1/auth/readmission-requests]
+## Richiesta Riammissione [/auth/readmission-request]
 ### Richiedi Riammissione [POST]
-Invia una richiesta di riammissione per un account bloccato.
+Invia una richiesta di riammissione per un account bloccato. Si può identificare l'account tramite `userId` oppure `email` (almeno uno dei due è obbligatorio). Il testo è obbligatorio e non può superare i 1000 caratteri.
 
 + Request (application/json)
 
@@ -221,10 +221,22 @@ Invia una richiesta di riammissione per un account bloccato.
             "message": "Richiesta di riammissione inviata"
         }
 
++ Response 400 (application/json)
+
+        {
+            "message": "Account gia attivo"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Account non trovato"
+        }
+
 # Group Profilo Utente
 Operazioni sul profilo dell'utente loggato.
 
-## Gestione Profilo [/api/v1/users/me]
+## Gestione Profilo [/users/me]
 ### Recupera Profilo [GET]
 Restituisce i dati dell'utente attualmente autenticato.
 
@@ -255,7 +267,7 @@ Restituisce i dati dell'utente attualmente autenticato.
         }
 
 ### Aggiorna Profilo [PUT]
-Permette di modificare campi profilo e preferenze.
+Permette di modificare campi profilo e preferenze. I rifugi approvati possono anche aggiornare `rifugioData.location` (coordinate GeoJSON).
 
 + Request (application/json)
     + Headers
@@ -274,6 +286,11 @@ Permette di modificare campi profilo e preferenze.
                 "notificationPrefs": {
                     "emailOnComment": true,
                     "soundOnSite": true
+                },
+                "rifugioData": {
+                    "location": {
+                        "coordinates": [11.12108, 46.06787]
+                    }
                 }
             }
 
@@ -285,7 +302,27 @@ Permette di modificare campi profilo e preferenze.
             "email": "mario@example.com",
             "phoneNumber": "+393339876543",
             "isActive": true,
-            "role": "user"
+            "role": "user",
+            "contactVisibility": {
+                "showEmail": true,
+                "showPhone": false
+            },
+            "notificationPrefs": {
+                "emailOnComment": true,
+                "soundOnSite": true
+            }
+        }
+
++ Response 403 (application/json)
+
+        {
+            "message": "Solo un rifugio approvato puo salvare la posizione"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "message": "Coordinate rifugio non valide"
         }
 
 ### Elimina Profilo [DELETE]
@@ -305,7 +342,7 @@ Elimina l'account autenticato e cascata sugli annunci pubblicati.
 # Group Utenti Pubblici
 Risorse pubbliche/mascherate per contatti e rifugi.
 
-## Rifugi Pubblici [/api/v1/users/rifugi/public]
+## Rifugi Pubblici [/users/rifugi/public]
 ### Elenco Rifugi [GET]
 Restituisce rifugi approvati con coordinate, rispettando le preferenze di visibilità contatti.
 
@@ -328,7 +365,7 @@ Restituisce rifugi approvati con coordinate, rispettando le preferenze di visibi
             }
         ]
 
-## Utente Pubblico [/api/v1/users/{id}/public]
+## Utente Pubblico [/users/{id}/public]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -352,44 +389,30 @@ Restituisce contatti mascherati in base alle preferenze dell'utente. Richiede au
 # Group Animali
 Risorse per la gestione delle anagrafiche degli animali legati agli annunci.
 
-## Lista e Creazione Animali [/api/v1/animals{?shelterId}]
-### Elenco Animali [GET]
-Restituisce gli animali di un rifugio. Se `shelterId` non e' presente e la richiesta non e' autenticata, restituisce una lista vuota.
+## Creazione e Lista Animali [/animals]
+### Registra Animale [POST]
+Crea la scheda di un animale che sarà successivamente associato a un annuncio. Richiede autenticazione.
 
-+ Parameters
-    + shelterId: `645a1b2c3d4e5f6g7h8i9j0k` (string, optional) - ID rifugio.
++ Request (application/json)
+    + Headers
 
-+ Response 200 (application/json)
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
 
-        [
+    + Body
+
             {
-                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
                 "name": "Rex",
                 "species": "Cane",
                 "breed": "Pastore Tedesco",
                 "gender": "Maschio",
                 "color": "Nero e Focato",
-                "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
-                "adoptable": true
+                "lunghezzaPelo": "Medio",
+                "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
+                "age": "3 anni",
+                "microchipId": "380260000123456",
+                "shelterId": null,
+                "adoptable": false
             }
-        ]
-
-### Registra Animale [POST]
-Crea la scheda di un animale che sarà successivamente associato a un annuncio.
-
-+ Request (application/json)
-
-        {
-            "name": "Rex",
-            "species": "Cane",
-            "breed": "Pastore Tedesco",
-            "gender": "Maschio",
-            "color": "Nero e Focato",
-            "lunghezzaPelo": "Medio",
-            "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
-            "microchipId": "380260000123456",
-            "shelterId": null
-        }
 
 + Response 201 (application/json)
 
@@ -402,17 +425,59 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio.
             "color": "Nero e Focato",
             "lunghezzaPelo": "Medio",
             "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
+            "age": "3 anni",
             "microchipId": "380260000123456",
             "shelterId": null,
+            "adoptable": false,
             "createdAt": "2026-05-15T09:00:00.000Z"
         }
 
-## Modifica / Eliminazione Animale [/api/v1/animals/{id}]
+### Lista Animali [GET]
+Restituisce gli animali del rifugio autenticato. Opzionalmente filtrabile per `shelterId`. Per i rifugi, se non si passa `shelterId`, vengono restituiti gli animali dell'utente corrente. Le foto possono essere URL derivati dall'annuncio correlato come fallback. Richiede autenticazione.
+
++ Parameters
+    + shelterId (string, optional) - ID del rifugio di cui elencare gli animali.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                "name": "Rex",
+                "species": "Cane",
+                "breed": "Pastore Tedesco",
+                "gender": "Maschio",
+                "color": "Nero e Focato",
+                "age": "3 anni",
+                "adoptable": false,
+                "photos": [],
+                "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
+                "createdAt": "2026-05-15T09:00:00.000Z"
+            }
+        ]
+
++ Response 400 (application/json)
+
+        {
+            "message": "ID rifugio non valido"
+        }
+
+## Dettaglio / Modifica / Eliminazione Animale [/animals/{id}]
 + Parameters
     + id: `645b2c3d4e5f6g7h8i9j0k1l` (string, required) - ID animale.
 
 ### Recupera Animale [GET]
-Restituisce il dettaglio dell'animale.
+Restituisce i dati di un singolo animale tramite ID. Richiede autenticazione.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
 
 + Response 200 (application/json)
 
@@ -423,12 +488,31 @@ Restituisce il dettaglio dell'animale.
             "breed": "Pastore Tedesco",
             "gender": "Maschio",
             "color": "Nero e Focato",
+            "lunghezzaPelo": "Medio",
+            "distinctiveFeatures": "Macchia bianca sulla zampa posteriore destra",
+            "age": "3 anni",
+            "microchipId": "380260000123456",
+            "adoptable": false,
             "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
-            "adoptable": true
+            "medicalNotes": [],
+            "photos": [],
+            "createdAt": "2026-05-15T09:00:00.000Z"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "message": "ID animale non valido"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Animal non trovato"
         }
 
 ### Aggiorna Animale [PUT]
-Aggiorna campi dell'animale. Richiede autenticazione.
+Aggiorna campi dell'animale. Campi supportati: `name`/`animalName`, `species`, `breed`, `gender`, `color`, `lunghezzaPelo`, `distinctiveFeatures`, `age`, `microchipId`, `shelterId`, `adoptable`, `otherInfo`, `dateArrived`. Opzionalmente aggiunge una nota medica tramite `medicalNote`. Richiede autenticazione.
 
 + Request (application/json)
     + Headers
@@ -439,7 +523,12 @@ Aggiorna campi dell'animale. Richiede autenticazione.
 
             {
                 "name": "Rex",
-                "color": "Nero"
+                "color": "Nero",
+                "age": "4 anni",
+                "adoptable": true,
+                "dateArrived": "2026-01-10T00:00:00.000Z",
+                "otherInfo": "Socievole con altri cani",
+                "medicalNote": "Vaccinazione antirabbica effettuata"
             }
 
 + Response 200 (application/json)
@@ -447,7 +536,23 @@ Aggiorna campi dell'animale. Richiede autenticazione.
         {
             "_id": "645b2c3d4e5f6g7h8i9j0k1l",
             "name": "Rex",
-            "color": "Nero"
+            "color": "Nero",
+            "age": "4 anni",
+            "adoptable": true,
+            "dateArrived": "2026-01-10T00:00:00.000Z",
+            "otherInfo": "Socievole con altri cani",
+            "medicalNotes": [
+                {
+                    "text": "Vaccinazione antirabbica effettuata",
+                    "createdAt": "2026-05-15T10:00:00.000Z"
+                }
+            ]
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Animal non trovato"
         }
 
 ### Elimina Animale [DELETE]
@@ -465,10 +570,22 @@ Elimina l'animale. Richiede autenticazione.
             "id": "645b2c3d4e5f6g7h8i9j0k1l"
         }
 
++ Response 400 (application/json)
+
+        {
+            "message": "ID animale non valido"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Animal non trovato"
+        }
+
 # Group Annunci
 Risorse per creare, visualizzare, modificare o eliminare annunci di smarrimento o avvistamento.
 
-## Lista e Creazione Annunci [/api/v1/announcements{?type,species,status,rifugioId,userId}]
+## Lista e Creazione Annunci [/announcements{?type,species,status,rifugioId,userId}]
 ### Elenco Annunci [GET]
 Recupera gli annunci inseriti sulla piattaforma. Permette il filtraggio tramite Query Parameters. Di default mostra solo quelli `ACTIVE`.
 
@@ -552,7 +669,7 @@ Crea un nuovo annuncio. Richiede autenticazione. Se vuoi caricare una foto, usa 
             "createdAt": "2026-05-15T08:15:00.000Z"
         }
 
-## Dettaglio Annuncio [/api/v1/announcements/{id}]
+## Dettaglio Annuncio [/announcements/{id}]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID univoco dell'annuncio.
 
@@ -631,7 +748,7 @@ Consente all'autore di rimuovere l'annuncio. Richiede token.
             "success": true
         }
 
-## Stato Annuncio [/api/v1/announcements/{id}/status]
+## Stato Annuncio [/announcements/{id}/status]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID dell'annuncio.
 
@@ -656,7 +773,7 @@ Permette all'autore di variare rapidamente lo stato dell'annuncio (Es: portarlo 
             "status": "RESOLVED"
         }
 
-## Annuncio Veloce [/api/v1/announcements/quick]
+## Annuncio Veloce [/announcements/quick]
 ### Crea Annuncio Veloce [POST]
 Crea un annuncio veloce anonimo (publisherId = null). Se presente, la foto va in `photo` (file).
 
@@ -690,7 +807,7 @@ Crea un annuncio veloce anonimo (publisherId = null). Se presente, la foto va in
             "status": "ACTIVE"
         }
 
-## Foto Annuncio [/api/v1/announcements/{id}/photo]
+## Foto Annuncio [/announcements/{id}/photo]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -699,21 +816,7 @@ Restituisce il contenuto binario della foto dell'annuncio.
 
 + Response 200 (image/jpeg)
 
-## Volantino Annuncio [/api/v1/announcements/{id}/flyer]
-+ Parameters
-    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
-
-### Genera Volantino [GET]
-Genera un PDF dell'annuncio. Richiede autenticazione e proprieta' dell'annuncio.
-
-+ Request
-    + Headers
-
-            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-+ Response 200 (application/pdf)
-
-## Smart Match [/api/v1/announcements/{id}/similar{?limit}]
+## Smart Match [/announcements/{id}/similar{?limit}]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
     + limit (number, optional) - Numero massimo risultati (max 20, default 6).
@@ -736,7 +839,7 @@ Restituisce i match visivi basati su embedding immagine.
             ]
         }
 
-## Commenti [/api/v1/announcements/{id}/comments]
+## Commenti [/announcements/{id}/comments]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -765,12 +868,12 @@ Aggiunge un commento all'annuncio. Richiede autenticazione.
             "comments": []
         }
 
-## Segnalazioni [/api/v1/announcements/{id}/reports]
+## Segnalazioni [/announcements/{id}/reports]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
 ### Segnala Annuncio [POST]
-Invia una segnalazione agli admin. Richiede autenticazione.
+Invia una segnalazione agli admin. Richiede autenticazione. Valori validi per `reason`: `troll`, `offensivo`, `falso`, `altro`.
 
 + Request (application/json)
     + Headers
@@ -794,115 +897,44 @@ Invia una segnalazione agli admin. Richiede autenticazione.
             }
         }
 
-# Group Richieste Adozione
-Gestione richieste di contatto tra utenti e rifugi. Tutte le rotte richiedono autenticazione.
-
-## Richieste Adozione [/api/v1/contact-requests]
-### Elenco Richieste [GET]
-Restituisce le richieste ricevute dal rifugio o inviate dall'utente corrente.
-
-+ Request
-    + Headers
-
-            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-+ Response 200 (application/json)
-
-        [
-            {
-                "_id": "665c3d4e5f6g7h8i9j0k1l2b",
-                "requesterId": {
-                    "_id": "645a1b2c3d4e5f6g7h8i9j0k",
-                    "username": "mario_rossi"
-                },
-                "shelterId": {
-                    "_id": "645a1b2c3d4e5f6g7h8i9j0s",
-                    "username": "rifugio_amico"
-                },
-                "animalId": {
-                    "_id": "645b2c3d4e5f6g7h8i9j0k1l",
-                    "name": "Rex",
-                    "species": "Cane"
-                },
-                "message": "Vorrei avere informazioni per adottare Rex.",
-                "status": "pending"
-            }
-        ]
-
-### Crea Richiesta [POST]
-Invia una richiesta di adozione a un rifugio per un animale.
-
-+ Request (application/json)
-    + Headers
-
-            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-    + Body
-
-            {
-                "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
-                "message": "Vorrei avere informazioni per adottare Rex."
-            }
-
-+ Response 201 (application/json)
++ Response 400 (application/json)
 
         {
-            "_id": "665c3d4e5f6g7h8i9j0k1l2b",
-            "animalId": {
-                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
-                "name": "Rex",
-                "species": "Cane"
-            },
-            "message": "Vorrei avere informazioni per adottare Rex.",
-            "status": "pending"
+            "message": "Motivo segnalazione non valido"
         }
 
-### Nascondi Richieste Risposte [PATCH]
-Nasconde dall'elenco dell'utente corrente le richieste gia' risposte.
-
-+ Request
-    + Headers
-
-            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-+ Response 200 (application/json)
-
-        {
-            "success": true,
-            "hidden": 2
-        }
-
-## Risposta Richiesta Adozione [/api/v1/contact-requests/{id}/replies]
+## Volantino Annuncio [/announcements/{id}/flyer]
 + Parameters
-    + id: `665c3d4e5f6g7h8i9j0k1l2b` (string, required) - ID richiesta adozione.
+    + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
-### Rispondi [POST]
-Permette a un rifugio approvato di rispondere a una richiesta.
+### Genera Volantino PDF [GET]
+Genera e scarica un volantino PDF per l'annuncio. Include foto (se presente), dati dell'animale, descrizione, contatti del proprietario e QR code che punta all'annuncio online. Solo il proprietario dell'annuncio può generare il volantino. Richiede autenticazione.
 
-+ Request (application/json)
++ Request
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
 
-    + Body
++ Response 200 (application/pdf)
 
-            {
-                "replyMessage": "Certo, passa in rifugio sabato mattina."
-            }
+        (binario PDF scaricabile)
 
-+ Response 200 (application/json)
++ Response 403 (application/json)
 
         {
-            "_id": "665c3d4e5f6g7h8i9j0k1l2b",
-            "replyMessage": "Certo, passa in rifugio sabato mattina.",
-            "status": "replied",
-            "repliedAt": "2026-05-15T10:30:00.000Z"
+            "message": "Non autorizzato"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Annuncio non trovato"
         }
 
 # Group Notifiche
 Gestione notifiche utente (commenti, smart match, azioni admin).
 
-## Lista Notifiche [/api/v1/notifications{?unread}]
+## Lista Notifiche [/notifications{?unread}]
 ### Elenco Notifiche [GET]
 Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richiede autenticazione.
 
@@ -926,11 +958,11 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             }
         ]
 
-## Notifica [/api/v1/notifications/{id}]
+## Lettura Notifica [/notifications/{id}/read]
 + Parameters
     + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID notifica.
 
-### Aggiorna Lettura [PATCH]
+### Segna Come Letta [PATCH]
 
 + Request
     + Headers
@@ -944,8 +976,8 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             "isRead": true
         }
 
-## Notifiche [/api/v1/notifications]
-### Aggiorna Tutte [PATCH]
+## Lettura Tutte [/notifications/read-all]
+### Segna Tutte Come Lette [PATCH]
 
 + Request
     + Headers
@@ -959,10 +991,173 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             "modified": 3
         }
 
+# Group Richieste di Adozione
+Gestione delle richieste di contatto/adozione tra utenti registrati e rifugi.
+
+## Lista e Creazione Richieste [/contact-requests]
+### Crea Richiesta di Adozione [POST]
+Invia una richiesta di adozione a un rifugio per un animale specifico. Solo utenti con ruolo `user` possono inviare richieste. Il rifugio deve essere approvato. Richiede autenticazione.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
+                "message": "Sono interessato ad adottare Rex. Ho un giardino e molta esperienza con i cani."
+            }
+
++ Response 201 (application/json)
+
+        {
+            "_id": "665d4e5f6g7h8i9j0k1l2m3n",
+            "requesterId": {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "mario_rossi",
+                "email": "mario@example.com",
+                "phoneNumber": "+393331234567"
+            },
+            "shelterId": {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "rifugio_arco",
+                "role": "shelter",
+                "rifugioData": {
+                    "rifugioName": "Rifugio Arco"
+                }
+            },
+            "animalId": {
+                "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                "name": "Rex",
+                "species": "Cane",
+                "breed": "Pastore Tedesco",
+                "adoptable": true
+            },
+            "message": "Sono interessato ad adottare Rex. Ho un giardino e molta esperienza con i cani.",
+            "status": "pending",
+            "createdAt": "2026-05-15T10:00:00.000Z"
+        }
+
++ Response 400 (application/json)
+
+        {
+            "message": "ID animale non valido"
+        }
+
++ Response 403 (application/json)
+
+        {
+            "message": "Solo un utente registrato normale puo inviare richieste al rifugio"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Animale non trovato"
+        }
+
+### Elenco Richieste [GET]
+Restituisce le richieste di adozione relative all'utente autenticato. I rifugi vedono le richieste ricevute; gli utenti normali vedono le proprie richieste inviate. Le richieste nascoste (`hidden`) non vengono restituite. Richiede autenticazione.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "665d4e5f6g7h8i9j0k1l2m3n",
+                "requesterId": {
+                    "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                    "username": "mario_rossi",
+                    "email": "mario@example.com",
+                    "phoneNumber": "+393331234567"
+                },
+                "shelterId": {
+                    "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                    "username": "rifugio_arco",
+                    "role": "shelter"
+                },
+                "animalId": {
+                    "_id": "645b2c3d4e5f6g7h8i9j0k1l",
+                    "name": "Rex",
+                    "species": "Cane"
+                },
+                "message": "Sono interessato ad adottare Rex.",
+                "status": "pending",
+                "createdAt": "2026-05-15T10:00:00.000Z"
+            }
+        ]
+
+## Risposta a Richiesta [/contact-requests/{id}/reply]
++ Parameters
+    + id: `665d4e5f6g7h8i9j0k1l2m3n` (string, required) - ID richiesta di adozione.
+
+### Rispondi alla Richiesta [PATCH]
+Permette a un rifugio approvato di rispondere a una richiesta di adozione. Lo stato viene impostato a `replied`. Richiede autenticazione con ruolo `shelter`.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "replyMessage": "Grazie per l'interesse! Puoi venire a conoscere Rex sabato mattina tra le 10 e le 12."
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "665d4e5f6g7h8i9j0k1l2m3n",
+            "status": "replied",
+            "replyMessage": "Grazie per l'interesse! Puoi venire a conoscere Rex sabato mattina tra le 10 e le 12.",
+            "repliedAt": "2026-05-15T11:30:00.000Z"
+        }
+
++ Response 403 (application/json)
+
+        {
+            "message": "Solo un rifugio approvato puo rispondere alle richieste"
+        }
+
++ Response 404 (application/json)
+
+        {
+            "message": "Richiesta non trovata"
+        }
+
+## Nascondi Richieste Risposte [/contact-requests/replied]
+### Nascondi Richieste Risposte [DELETE]
+Nasconde (soft-delete) tutte le richieste con stato `replied` per l'utente autenticato. I rifugi nascondono le richieste ricevute, gli utenti nascondono le proprie richieste inviate. Richiede autenticazione.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "success": true,
+            "hidden": 3
+        }
+
++ Response 403 (application/json)
+
+        {
+            "message": "Permesso negato"
+        }
+
 # Group Admin
 Rotte amministrative. Richiedono autenticazione e ruolo `admin`.
 
-## Report [/api/v1/admin/reports{?status}]
+## Report [/admin/reports{?status}]
 ### Elenco Segnalazioni [GET]
 Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
 
@@ -983,7 +1178,7 @@ Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
             }
         ]
 
-## Aggiorna Report [/api/v1/admin/reports/{id}/status]
+## Aggiorna Report [/admin/reports/{id}/status]
 + Parameters
     + id: `665c3d4e5f6g7h8i9j0k1l2a` (string, required) - ID report.
 
@@ -1007,7 +1202,7 @@ Restituisce lista report. Default `status=OPEN`. Valore `status=all` per tutti.
             "status": "REVIEWED"
         }
 
-## Audit Log [/api/v1/admin/audit-logs{?search,sortBy,sortDir,limit}]
+## Audit Log [/admin/audit-logs{?search,sortBy,sortDir,limit}]
 ### Elenco Audit Log [GET]
 Ricerca e ordinamento audit log.
 
@@ -1033,7 +1228,7 @@ Ricerca e ordinamento audit log.
             }
         ]
 
-## Utente Admin [/api/v1/admin/users/{id}]
+## Utente Admin [/admin/users/{id}]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -1053,7 +1248,7 @@ Restituisce dati utente (include `publishedAnnouncementsCount`).
             "publishedAnnouncementsCount": 2
         }
 
-## Conteggio Annunci [/api/v1/admin/users/{id}/announcement-count]
+## Conteggio Annunci [/admin/users/{id}/announcement-count]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -1070,7 +1265,7 @@ Restituisce dati utente (include `publishedAnnouncementsCount`).
             "publishedAnnouncementsCount": 2
         }
 
-## Elimina Annuncio (Admin) [/api/v1/admin/announcements/{id}]
+## Elimina Annuncio (Admin) [/admin/announcements/{id}]
 + Parameters
     + id: `645c3d4e5f6g7h8i9j0k1l2m` (string, required) - ID annuncio.
 
@@ -1095,7 +1290,7 @@ Elimina annuncio e (se presente publisher) invia notifica. Richiede admin.
             "warnedUser": true
         }
 
-## Stato Account [/api/v1/admin/users/{id}/status]
+## Gestione Account [/admin/users/{id}/block]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -1110,7 +1305,6 @@ Blocca utente e rimuove annunci collegati.
     + Body
 
             {
-                "status": "blocked",
                 "reason": "Spam ripetuto"
             }
 
@@ -1123,11 +1317,11 @@ Blocca utente e rimuove annunci collegati.
             "reviewedReportsCount": 0
         }
 
-## Ammonimenti Utente [/api/v1/admin/users/{id}/warnings]
+## Ammonisci Utente [/admin/users/{id}/warn]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
-### Crea Ammonimento [POST]
+### Ammonisci [PATCH]
 
 + Request (application/json)
     + Headers
@@ -1144,25 +1338,25 @@ Blocca utente e rimuove annunci collegati.
 
         {
             "_id": "645a1b2c3d4e5f6g7h8i9j0k",
-            "conductWarnings": []
+            "conductWarnings": [
+                {
+                    "reason": "Contenuti offensivi",
+                    "createdAt": "2026-05-15T08:15:00.000Z"
+                }
+            ],
+            "publishedAnnouncementsCount": 2
         }
 
-## Stato Account [/api/v1/admin/users/{id}/status]
+## Sblocca Utente [/admin/users/{id}/unblock]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
 ### Sblocca [PATCH]
 
-+ Request (application/json)
++ Request
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-    + Body
-
-            {
-                "status": "active"
-            }
 
 + Response 200 (application/json)
 
@@ -1171,7 +1365,7 @@ Blocca utente e rimuove annunci collegati.
             "isActive": true
         }
 
-## Riammissioni [/api/v1/admin/readmissions]
+## Riammissioni [/admin/readmission-requests]
 ### Elenco Richieste [GET]
 Restituisce richieste riammissione pendenti.
 
@@ -1192,22 +1386,17 @@ Restituisce richieste riammissione pendenti.
             }
         ]
 
-## Valutazione Riammissione [/api/v1/admin/readmissions/{id}]
+## Valuta Riammissione [/admin/users/{id}/readmission/{action}]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+    + action: `approve` (string, required) - `approve` o `reject`.
 
 ### Approva/Rifiuta [PATCH]
 
-+ Request (application/json)
++ Request
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-    + Body
-
-            {
-                "status": "approved"
-            }
 
 + Response 200 (application/json)
 
@@ -1218,7 +1407,7 @@ Restituisce richieste riammissione pendenti.
             }
         }
 
-## Rifugi Pending [/api/v1/admin/rifugi/pending]
+## Rifugi Pending [/admin/rifugi/pending]
 ### Elenco Pending [GET]
 Restituisce rifugi in attesa approvazione.
 
@@ -1236,22 +1425,16 @@ Restituisce rifugi in attesa approvazione.
             }
         ]
 
-## Stato Rifugio [/api/v1/admin/rifugi/{id}/status]
+## Approva Rifugio [/admin/rifugi/{id}/approve]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
 
 ### Approva [PATCH]
 
-+ Request (application/json)
++ Request
     + Headers
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-    + Body
-
-            {
-                "rifugioStatus": "approved"
-            }
 
 + Response 200 (application/json)
 
@@ -1260,7 +1443,7 @@ Restituisce rifugi in attesa approvazione.
             "rifugioStatus": "approved"
         }
 
-## Stato Rifugio [/api/v1/admin/rifugi/{id}/status]
+## Rifiuta Rifugio [/admin/rifugi/{id}/reject]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID rifugio.
 
@@ -1274,7 +1457,6 @@ Restituisce rifugi in attesa approvazione.
     + Body
 
             {
-                "rifugioStatus": "rejected",
                 "reason": "Documentazione incompleta"
             }
 
