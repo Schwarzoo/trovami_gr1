@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAnnouncements, getAnnouncementById, getSimilarAnnouncements, createAnnouncement, createQuickAnnouncement, updateAnnouncement, changeStatus, deleteAnnouncement, getAnnouncementPhoto, addAnnouncementComment, reportAnnouncement } = require('../controllers/announcementController');
+const { getAnnouncements, getAnnouncementById, getSimilarAnnouncements, createAnnouncement, createQuickAnnouncement, updateAnnouncement, changeStatus, deleteAnnouncement, getAnnouncementPhoto, addAnnouncementComment, reportAnnouncement, generateFlyer } = require('../controllers/announcementController');
 const { authMiddleware } = require('../middleware/auth');
 const multer = require('multer');
 
@@ -20,5 +20,7 @@ router.patch('/:id/status', authMiddleware, changeStatus);
 router.delete('/:id', authMiddleware, deleteAnnouncement);
 // serve announcement photo
 router.get('/:id/photo', getAnnouncementPhoto);
+// generate PDF flyer for announcement (owner only)
+router.get('/:id/flyer', authMiddleware, generateFlyer);
 
 module.exports = router;

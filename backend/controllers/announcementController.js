@@ -1,6 +1,9 @@
 const Announcement = require('../models/Announcement');
 const Animal = require('../models/Animal');
-
+const path = require('path');
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
 
 
 const smartMatchingEngine = require('../services/SmartMatchingEngine');
@@ -10,6 +13,7 @@ const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
 const nodemailer = require('nodemailer');
+const PDFDocument = require('pdfkit');
 const { writeAuditLog } = require('../services/auditService');
 
 function maskPublisherContacts(publisher) {
@@ -89,6 +93,28 @@ function normalizeOptionalName(value) {
     if (value === null) return null;
     const text = typeof value === 'string' ? value.trim() : String(value).trim();
     return text || null;
+}
+
+function capitalizeFirst(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return '';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+async function fetchUrlBuffer(url) {
+    return new Promise((resolve, reject) => {
+        try {
+            const lib = url.startsWith('https') ? https : http;
+            lib.get(url, (res) => {
+                const chunks = [];
+                res.on('data', (c) => chunks.push(c));
+                res.on('end', () => resolve(Buffer.concat(chunks)));
+                res.on('error', (err) => reject(err));
+            }).on('error', (err) => reject(err));
+        } catch (err) {
+            reject(err);
+        }
+    });
 }
 
 // Helper interno per gestire il salvataggio dei match
@@ -522,6 +548,146 @@ exports.getAnnouncementPhoto = async (req, res) => {
         res.send(announcement.photo.data);
     } catch (err) {
         res.status(500).json({ message: 'Errore recupero foto', error: err.message });
+    }
+};
+
+exports.generateFlyer = async (req, res) => {
+    try {
+        const announcementId = req.params.id;
+        if (!mongoose.Types.ObjectId.isValid(announcementId)) {
+            return res.status(400).json({ message: 'ID annuncio non valido' });
+        }
+
+        const announcement = await Announcement.findById(announcementId).populate('animalId').populate('publisherId');
+        if (!announcement) return res.status(404).json({ message: 'Annuncio non trovato' });
+
+        const publisherId = (announcement.publisherId && announcement.publisherId._id) ? announcement.publisherId._id.toString() : (announcement.publisherId ? announcement.publisherId.toString() : null);
+        if (!publisherId || publisherId !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="volantino-${announcement._id}.pdf"`);
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        doc.pipe(res);
+
+        // Add background image
+        try {
+            const bgPath = path.join(__dirname, '../assests/sfondo volantino.png');
+            if (fs.existsSync(bgPath)) {
+                doc.image(bgPath, 0, 0, { width: 595, height: 842 });
+            }
+        } catch (err) {
+            console.warn('Errore caricamento sfondo:', err);
+        }
+
+        // Add semi-transparent white overlay
+        doc.opacity(0.75);
+        doc.fillColor('#ffffff').rect(0, 0, 595, 842).fill();
+        doc.opacity(1);
+
+        const animal = announcement.animalId || {};
+        const species = (animal.species || '').toLowerCase();
+        const breed = (animal.breed || '').toLowerCase();
+        const color = (animal.color || '').toLowerCase();
+        const animalName = capitalizeFirst(animal.name);
+
+       
+        doc.fontSize(44).fillColor('#b42318').font('Helvetica-Bold').text('SMARRITO', { align: 'center' });
+        doc.moveDown(0.8);
+
+        if (announcement.photo && announcement.photo.data) {
+            try {
+                const imageTop = doc.y;
+                // Draw rounded border (image slightly less tall)
+                const imgWidth = 450;
+                const imgHeight = 260;
+                const imgX = 75;
+                const imgY = imageTop;
+                const borderRadius = 15;
+                
+                
+                
+                doc.image(announcement.photo.data, imgX + 2, imgY + 2, { fit: [imgWidth - 4, imgHeight - 4], align: 'center', valign: 'center' });
+                doc.y = imageTop + imgHeight + 18;
+            } catch (err) {
+                console.warn('Errore embed immagine:', err);
+            }
+        } else {
+            doc.moveDown(0.5);
+        }
+
+        const descriptionParts = [];
+        if (species) descriptionParts.push(species);
+        if (breed) descriptionParts.push(`(${breed})`);
+        if (color) descriptionParts.push(color);
+        const descriptionLine = descriptionParts.join(' ');
+
+        doc.fontSize(20).fillColor('#111827').font('Helvetica-Bold').text(`Smarrito ${descriptionLine}${animalName ? ` che risponde al nome di ${animalName}` : ''}.`, { align: 'center' });
+        doc.moveDown(1);
+ 
+        const when = announcement.date ? new Date(announcement.date).toLocaleString('it-IT') : (announcement.lastSeenDate ? new Date(announcement.lastSeenDate).toLocaleString('it-IT') : 'Non disponibile');
+
+        doc.fontSize(13).fillColor('#111827').font('Helvetica').text(`Data: ${when}`, { align: 'center' });
+        doc.moveDown(1);
+        doc.fontSize(14).fillColor('#111827').font('Helvetica-Bold').text('Descrizione:', { align: 'center' });
+        doc.font('Helvetica').fontSize(12).text(announcement.description || 'Nessuna descrizione', { align: 'center' });
+        doc.moveDown(0.8);
+
+        // Contact info (owner)
+        const publisher = announcement.publisherId || {};
+        doc.fontSize(14).fillColor('#111827').font('Helvetica-Bold').text('In caso di ritrovamento contattare:', { align: 'center' });
+        doc.font('Helvetica').fontSize(13);
+        if (publisher.rifugioData && publisher.rifugioData.rifugioName) {
+            doc.text(`${publisher.rifugioData.rifugioName}`, { align: 'center' });
+        } else if (publisher.username) {
+            doc.text(`${publisher.username}`, { align: 'center' });
+        }
+        if (publisher.email) doc.text(`Mail: ${publisher.email}`, { align: 'center' });
+        if (publisher.phoneNumber) doc.text(`Numero: ${publisher.phoneNumber}`, { align: 'center' });
+
+        try {
+            const announcementUrl = buildAnnouncementUrl(announcement._id);
+            const qrApi = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(announcementUrl)}`;
+            const qrBuf = await fetchUrlBuffer(qrApi);
+            const qrSize = 100;
+
+            const captionFontSize = 11;
+            const genFontSize = 10;
+            const gap = 6;
+            const pageWidth = doc.page.width;
+            const pageHeight = doc.page.height;
+            const leftMargin = doc.page.margins.left;
+            const rightMargin = doc.page.margins.right;
+            const bottom = pageHeight - doc.page.margins.bottom;
+
+            const captionHeight = captionFontSize + 2;
+            const genHeight = genFontSize + 2;
+            const totalHeight = captionHeight + gap + qrSize + gap + genHeight;
+            const topY = bottom - totalHeight;
+
+            // Didascalia (sopra il QR)
+            doc.fontSize(captionFontSize).font('Helvetica-Bold').fillColor('#111827');
+            doc.text("Scansiona per vedere l'annuncio completo", leftMargin, topY, { width: pageWidth - leftMargin - rightMargin, align: 'center' });
+
+            // QR centrato
+            const qrX = (pageWidth - qrSize) / 2;
+            const qrY = topY + captionHeight + gap;
+            doc.image(qrBuf, qrX, qrY, { width: qrSize });
+
+            // Testo generato (sotto il QR), allineato al centro, ma partendo dal fondo
+            const genY = qrY + qrSize + gap;
+            doc.fontSize(genFontSize).fillColor('gray').font('Helvetica');
+            doc.text('Generato da Trovami', leftMargin, genY, { width: pageWidth - leftMargin - rightMargin, align: 'center' });
+        } catch (err) {
+            console.warn('Errore generazione QR:', err);
+        }
+
+        await writeAuditLog({ actor: req.user.userId, action: 'generato volantino', target: announcement._id });
+
+        doc.end();
+    } catch (err) {
+        console.error('Errore generazione volantino:', err);
+        if (!res.headersSent) res.status(500).json({ message: 'Errore generazione volantino', error: err.message });
     }
 };
 
