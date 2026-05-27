@@ -1,7 +1,7 @@
-const API_RIFUGI = 'http://localhost:3000/api/users/rifugi/public';
-const API_ANNOUNCEMENTS = 'http://localhost:3000/api/announcements';
-const API_ANIMALS = 'http://localhost:3000/api/animals';
-const API_CONTACT_REQUESTS = 'http://localhost:3000/api/contact-requests';
+const API_RIFUGI = 'http://localhost:3000/api/v1/users/rifugi/public';
+const API_ANNOUNCEMENTS = 'http://localhost:3000/api/v1/announcements';
+const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
+const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
 
 function escapeHtml(input) {
   return String(input ?? '')

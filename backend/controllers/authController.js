@@ -20,7 +20,7 @@ function createTransporter() {
 
 async function sendVerificationEmail(user, rawToken) {
   const transporter = createTransporter();
-  const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${rawToken}`;
+  const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/auth/email-verifications?token=${rawToken}`;
 
   const mailOptions = {
     from: process.env.SMTP_FROM || process.env.SMTP_USER,

@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api/announcements';
+const API_BASE = 'http://localhost:3000/api/v1/announcements';
 
 let allAnnouncements = [];
 let currentLocation = null;
@@ -88,7 +88,7 @@ async function postAnnouncementReport(id, reason, details) {
 async function fetchPublicUser(userId) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
-    const res = await fetch(`http://localhost:3000/api/users/${encodeURIComponent(userId)}/public`, {
+    const res = await fetch(`http://localhost:3000/api/v1/users/${encodeURIComponent(userId)}/public`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const json = await res.json().catch(() => ({}));
@@ -132,7 +132,7 @@ function buildCard(ann) {
         : '';
 
     // try announcement photo endpoint first
-    const photoUrl = `http://localhost:3000/api/announcements/${ann._id}/photo`;
+    const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
     const date = new Date(ann.date).toLocaleDateString('it-IT', {
         day: '2-digit', month: 'short', year: 'numeric'
     });
@@ -249,7 +249,7 @@ async function openModal(ann) {
         // try to load announcement photo from backend endpoint and fallback to text if missing
         gallery.innerHTML = '<div class="modal-spinner">…</div>';
         (async () => {
-            const photoUrl = `http://localhost:3000/api/announcements/${ann._id}/photo`;
+            const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
             try {
                 const res = await fetch(photoUrl, { method: 'GET' });
                 if (!res.ok) throw new Error('no image');

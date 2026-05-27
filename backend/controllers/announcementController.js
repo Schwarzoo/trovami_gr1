@@ -227,7 +227,7 @@ exports.getAnnouncements = async (req, res) => {
 };
 
 
-// POST /api/announcements/:id/comments  (auth) - add comment
+// POST /api/v1/announcements/:id/comments  (auth) - add comment
 exports.addAnnouncementComment = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -296,7 +296,7 @@ exports.addAnnouncementComment = async (req, res) => {
     }
 };
 
-// POST /api/announcements
+// POST /api/v1/announcements
 exports.createAnnouncement = async (req,res)=>{
         
     try {
@@ -361,7 +361,7 @@ exports.createAnnouncement = async (req,res)=>{
             try {
                 if (announcement.photo && announcement._id) {
                     const base = req.protocol + '://' + req.get('host');
-                    const photoUrl = `${base}/api/announcements/${announcement._id}/photo`;
+                    const photoUrl = `${base}/api/v1/announcements/${announcement._id}/photo`;
                     await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
                 }
             } catch (err) {
@@ -381,7 +381,7 @@ exports.createAnnouncement = async (req,res)=>{
     }
 };
 
-// POST /api/announcements/quick
+// POST /api/v1/announcements/quick
 exports.createQuickAnnouncement = async (req, res) => {
     try {
         const {
@@ -460,7 +460,7 @@ exports.createQuickAnnouncement = async (req, res) => {
         try {
             if (announcement.photo && announcement._id) {
                 const base = req.protocol + '://' + req.get('host');
-                const photoUrl = `${base}/api/announcements/${announcement._id}/photo`;
+                const photoUrl = `${base}/api/v1/announcements/${announcement._id}/photo`;
                 await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
             }
         } catch (err) {
@@ -473,7 +473,7 @@ exports.createQuickAnnouncement = async (req, res) => {
     }
 };
 
-// POST /api/announcements/:id/reports
+// POST /api/v1/announcements/:id/reports
 exports.reportAnnouncement = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -520,7 +520,7 @@ exports.reportAnnouncement = async (req, res) => {
     }
 };
 
-// GET /api/announcements/:id
+// GET /api/v1/announcements/:id
 	exports.getAnnouncementById = async (req, res) => {
 	    try {
 	        const announcement = await Announcement.findById(req.params.id)
@@ -691,7 +691,7 @@ exports.generateFlyer = async (req, res) => {
     }
 };
 
-// GET /api/announcements/:id/similar
+// GET /api/v1/announcements/:id/similar
 exports.getSimilarAnnouncements = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -796,7 +796,7 @@ exports.updateAnnouncement = async (req, res) => {
         try {
             if (ann.photo && ann._id) {
                 const base = req.protocol + '://' + req.get('host');
-                const photoUrl = `${base}/api/announcements/${ann._id}/photo`;
+                const photoUrl = `${base}/api/v1/announcements/${ann._id}/photo`;
                 await Animal.findByIdAndUpdate(ann.animalId, { $set: { photos: [photoUrl] } });
             }
         } catch (err) {

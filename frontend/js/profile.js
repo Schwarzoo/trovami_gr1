@@ -16,8 +16,8 @@ let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
 let selectedAdoptionRequest = null;
-const API_ANIMALS = 'http://localhost:3000/api/animals';
-const API_CONTACT_REQUESTS = 'http://localhost:3000/api/contact-requests';
+const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
+const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
 
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
@@ -126,8 +126,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function handleLogout() {
     try {
-      await fetch('http://localhost:3000/api/auth/logout', {
-        method: 'POST',
+      await fetch('http://localhost:3000/api/v1/auth/sessions/current', {
+        method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + token }
       });
     } catch (e) {
@@ -140,13 +140,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function fetchMe() {
-    const res = await fetch('http://localhost:3000/api/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('http://localhost:3000/api/v1/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return null;
     return await res.json();
   }
 
   async function fetchNotifications() {
-    const res = await fetch('http://localhost:3000/api/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('http://localhost:3000/api/v1/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
@@ -160,10 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function clearRepliedAdoptionRequests() {
-    const endpoint = currentUser?.role === 'user'
-      ? `${API_CONTACT_REQUESTS}/clear-replied/requester`
-      : `${API_CONTACT_REQUESTS}/clear-replied`;
-    const res = await fetch(endpoint, {
+    const res = await fetch(`${API_CONTACT_REQUESTS}?status=replied`, {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -173,29 +170,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function fetchAnnouncementById(id) {
-    const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(id)}`);
+    const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(id)}`);
     if (!res.ok) return null;
     return await res.json();
   }
 
   async function fetchSimilarAnnouncements(id, limit = 6) {
-    const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(id)}/similar?limit=${limit}`);
+    const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(id)}/similar?limit=${limit}`);
     if (!res.ok) return [];
     const json = await res.json().catch(() => ({}));
     return Array.isArray(json?.matches) ? json.matches : [];
   }
 
   async function markNotificationRead(id) {
-    await fetch(`http://localhost:3000/api/notifications/${encodeURIComponent(id)}/read`, {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
+    await fetch(`http://localhost:3000/api/v1/notifications/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: authHeader,
+      body: JSON.stringify({ isRead: true })
     });
   }
 
   async function markAllNotificationsRead() {
-    await fetch('http://localhost:3000/api/notifications/read-all', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
+    await fetch('http://localhost:3000/api/v1/notifications', {
+      method: 'PATCH',
+      headers: authHeader,
+      body: JSON.stringify({ isRead: true })
     });
   }
 
@@ -383,8 +382,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function replyToContactRequest(requestId, replyMessage) {
-    const res = await fetch(`${API_CONTACT_REQUESTS}/${encodeURIComponent(requestId)}/reply`, {
-      method: 'PATCH',
+    const res = await fetch(`${API_CONTACT_REQUESTS}/${encodeURIComponent(requestId)}/replies`, {
+      method: 'POST',
       headers: authHeader,
       body: JSON.stringify({ replyMessage })
     });
@@ -527,7 +526,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const [lng, lat] = pendingRifugioLocation;
-    const res = await fetch('http://localhost:3000/api/users/me', {
+    const res = await fetch('http://localhost:3000/api/v1/users/me', {
       method: 'PUT',
       headers: authHeader,
       body: JSON.stringify({
@@ -557,28 +556,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function fetchAdminReports() {
-    const res = await fetch('http://localhost:3000/api/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('http://localhost:3000/api/v1/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
   async function fetchPendingRifugi() {
-    const res = await fetch('http://localhost:3000/api/admin/rifugi/pending', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('http://localhost:3000/api/v1/admin/rifugi/pending', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
   async function fetchPendingReadmissions() {
-    const res = await fetch('http://localhost:3000/api/admin/readmission-requests', { headers: authHeader });
+    const res = await fetch('http://localhost:3000/api/v1/admin/readmissions', { headers: authHeader });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
   async function fetchAuditLogs(limit = 3) {
-    const res = await fetch(`http://localhost:3000/api/admin/audit-logs?limit=${limit}`, { headers: authHeader });
+    const res = await fetch(`http://localhost:3000/api/v1/admin/audit-logs?limit=${limit}`, { headers: authHeader });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
@@ -594,14 +593,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function fetchAdminUserAnnouncementCount(userId) {
-    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/announcement-count`, { headers: authHeader });
+    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/announcement-count`, { headers: authHeader });
     if (!res.ok) throw new Error(await readResponseError(res, 'Errore conteggio annunci'));
     const json = await res.json().catch(() => ({}));
     return Number(json?.publishedAnnouncementsCount || 0);
   }
 
   async function fetchAdminUser(userId) {
-    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}`, { headers: authHeader });
+    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}`, { headers: authHeader });
     if (!res.ok) throw new Error(await readResponseError(res, 'Errore recupero account'));
     const user = await res.json();
     try {
@@ -676,8 +675,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function warnAdminUser(userId) {
-    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/warn`, {
-      method: 'PATCH',
+    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/warnings`, {
+      method: 'POST',
       headers: authHeader,
       body: JSON.stringify({ reason: 'Ammonimento da moderazione report' })
     });
@@ -693,10 +692,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
     if (reason === null) return;
     const blockReason = reason.trim() || 'Account bloccato da admin';
-    const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/block`, {
+    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/status`, {
       method: 'PATCH',
       headers: authHeader,
-      body: JSON.stringify({ reason: blockReason })
+      body: JSON.stringify({ status: 'blocked', reason: blockReason })
     });
     if (!res.ok) throw new Error(await readResponseError(res, 'Errore blocco'));
     const blockedUser = await res.json().catch(() => null);
@@ -723,7 +722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateLabel = ann?.date
       ? new Date(ann.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : (ann?.lastSeenDate ? new Date(ann.lastSeenDate).toLocaleDateString('it-IT') : 'Non disponibile');
-    const photoUrl = ann?._id ? `http://localhost:3000/api/announcements/${encodeURIComponent(ann._id)}/photo` : '';
+    const photoUrl = ann?._id ? `http://localhost:3000/api/v1/announcements/${encodeURIComponent(ann._id)}/photo` : '';
     const comments = Array.isArray(ann?.comments) ? ann.comments : [];
     const coords = ann?.location?.coordinates;
     const locationInfo = coords?.length === 2
@@ -802,7 +801,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function openAdminAnnouncementModal(annId) {
     if (!annId) return;
-    const res = await fetch(`http://localhost:3000/api/announcements/${encodeURIComponent(annId)}`);
+    const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(annId)}`);
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Errore caricamento annuncio');
     renderAdminAnnouncementModal(await res.json());
   }
@@ -1001,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         soundOnSite: !!document.getElementById('soundOnSite').checked
       }
     };
-    const res = await fetch('http://localhost:3000/api/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
+    const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
     const data = await res.json();
     document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.message || 'Errore');
     if (res.ok) setProfileEditing(false);
@@ -1107,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const reason = prompt('Motivo rimozione annuncio:', 'annuncio falso/offensivo');
         if (reason === null) return;
         const deleteReason = reason.trim() || 'violazione delle regole';
-        const res = await fetch(`http://localhost:3000/api/admin/announcements/${encodeURIComponent(annId)}`, {
+        const res = await fetch(`http://localhost:3000/api/v1/admin/announcements/${encodeURIComponent(annId)}`, {
           method: 'DELETE',
           headers: authHeader,
           body: JSON.stringify({ reason: deleteReason })
@@ -1125,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (action === 'dismiss-report') {
         const reportId = button.dataset.reportId;
-        const res = await fetch(`http://localhost:3000/api/admin/reports/${encodeURIComponent(reportId)}/status`, {
+        const res = await fetch(`http://localhost:3000/api/v1/admin/reports/${encodeURIComponent(reportId)}/status`, {
           method: 'PATCH',
           headers: authHeader,
           body: JSON.stringify({ status: 'DISMISSED', details: 'Archiviato da admin' })
@@ -1136,9 +1135,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (action === 'approve-readmission' || action === 'reject-readmission') {
         const userId = button.dataset.userId;
         const verb = action === 'approve-readmission' ? 'approve' : 'reject';
-        const res = await fetch(`http://localhost:3000/api/admin/users/${encodeURIComponent(userId)}/readmission/${verb}`, {
+        const res = await fetch(`http://localhost:3000/api/v1/admin/readmissions/${encodeURIComponent(userId)}`, {
           method: 'PATCH',
-          headers: authHeader
+          headers: authHeader,
+          body: JSON.stringify({ status: verb === 'approve' ? 'approved' : 'rejected' })
         });
         if (!res.ok) throw new Error(await readResponseError(res, 'Errore riammissione'));
       }
@@ -1147,12 +1147,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const userId = button.dataset.userId;
         const verb = action === 'approve-rifugio' ? 'approve' : 'reject';
         const body = action === 'reject-rifugio'
-          ? JSON.stringify({ reason: prompt('Motivo rifiuto:', 'Dati insufficienti') || 'Dati insufficienti' })
-          : '{}';
-        const res = await fetch(`http://localhost:3000/api/admin/rifugi/${encodeURIComponent(userId)}/${verb}`, {
+          ? { rifugioStatus: 'rejected', reason: prompt('Motivo rifiuto:', 'Dati insufficienti') || 'Dati insufficienti' }
+          : { rifugioStatus: 'approved' };
+        const res = await fetch(`http://localhost:3000/api/v1/admin/rifugi/${encodeURIComponent(userId)}/status`, {
           method: 'PATCH',
           headers: authHeader,
-          body
+          body: JSON.stringify(body)
         });
         if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore richiesta rifugio');
       }
@@ -1181,7 +1181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('deleteAccount')?.addEventListener('click', async () => {
     if (!confirm('Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non è reversibile.')) return;
-    const res = await fetch('http://localhost:3000/api/users/me', { method: 'DELETE', headers: authHeader });
+    const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'DELETE', headers: authHeader });
     if (!res.ok) {
       const d = await res.json().catch(()=>({}));
       alert(d.message || 'Errore eliminazione account');
@@ -1194,7 +1194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/';
   });
   async function loadMyAnnouncements() {
-  const res = await fetch('http://localhost:3000/api/announcements');
+  const res = await fetch('http://localhost:3000/api/v1/announcements');
   if (!res.ok) return;
   const all = await res.json();
   const mine = all.filter(a => a.publisherId && ((a.publisherId._id || a.publisherId) == myUserId || (a.publisherId._id && a.publisherId._id == myUserId)));
@@ -1204,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   mine.forEach(a => {
     const div = document.createElement('div'); div.className = 'card';
     div.dataset.id = a._id;
-    const photoUrl = `http://localhost:3000/api/announcements/${a._id}/photo`;
+    const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
       <div class="card-body">
@@ -1256,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('button.close').forEach(b => b.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
     if (!confirm('Segni l\'annuncio come risolto?')) return;
-    const res = await fetch(`http://localhost:3000/api/announcements/${id}/status`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
+    const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/status`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
     if (res.ok) loadMyAnnouncements(); else alert('Errore chiusura');
   }));
 
@@ -1266,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const id = e.target.dataset.id;
     if (!confirm('Eliminare annuncio?')) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/announcements/${id}`, { method: 'DELETE', headers: authHeader });
+      const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
       if (res.ok) {
         loadMyAnnouncements();
       } else {
@@ -1361,7 +1361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function openAnimalModal(animalId) {
     try {
-      const res = await fetch(`http://localhost:3000/api/animals/${encodeURIComponent(animalId)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+      const res = await fetch(`http://localhost:3000/api/v1/animals/${encodeURIComponent(animalId)}`, { headers: { 'Authorization': 'Bearer ' + token } });
       if (!res.ok) throw new Error('Animale non trovato');
       const a = await res.json();
       // populate modal
@@ -1438,7 +1438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newNote = document.getElementById('animal-newMedicalNote').value.trim();
         if (newNote) payload.medicalNote = newNote;
         try {
-          const upr = await fetch(`http://localhost:3000/api/animals/${encodeURIComponent(animalId)}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const upr = await fetch(`http://localhost:3000/api/v1/animals/${encodeURIComponent(animalId)}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           if (!upr.ok) throw new Error((await upr.json().catch(()=>({}))).message || 'Errore salvataggio');
           document.getElementById('animal-modal-overlay').style.display = 'none';
           document.body.style.overflow = '';
@@ -1481,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gallery = document.getElementById('view-modal-gallery');
     gallery.innerHTML = '<div class="view-modal-no-photo">Caricamento...</div>';
     (async () => {
-      const photoUrl = `http://localhost:3000/api/announcements/${data._id}/photo`;
+      const photoUrl = `http://localhost:3000/api/v1/announcements/${data._id}/photo`;
       try {
         const res = await fetch(photoUrl, { method: 'GET' });
         if (!res.ok) throw new Error('no image');
@@ -1536,7 +1536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.addEventListener('click', async (e) => {
           const id = e.target.dataset.id;
           try {
-            const res = await fetch(`http://localhost:3000/api/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
+            const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
             if (!res.ok) {
               const d = await res.json().catch(()=>({}));
               alert(d.message || ('Errore generazione volantino (' + res.status + ')'));
@@ -1612,7 +1612,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       (async () => {
         const container = card.querySelector('.card-image');
         try {
-          const res = await fetch(`http://localhost:3000/api/announcements/${ann._id}/photo`, { method: 'GET' });
+          const res = await fetch(`http://localhost:3000/api/v1/announcements/${ann._id}/photo`, { method: 'GET' });
           if (!res.ok) throw new Error('no image');
           const ct = res.headers.get('content-type') || '';
           if (!ct.startsWith('image')) throw new Error('not image');
@@ -1762,7 +1762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (editingId) {
         if (animalIdToUse) {
-          const aRes = await fetch(`http://localhost:3000/api/animals/${animalIdToUse}`, {
+          const aRes = await fetch(`http://localhost:3000/api/v1/animals/${animalIdToUse}`, {
             method: 'PUT',
             headers: animalHeaders,
             body: JSON.stringify(animalPayload)
@@ -1771,7 +1771,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const aData = await aRes.json();
           animalIdToUse = aData._id;
         } else {
-          const animalRes = await fetch('http://localhost:3000/api/animals', {
+          const animalRes = await fetch('http://localhost:3000/api/v1/animals', {
             method: 'POST',
             headers: animalHeaders,
             body: JSON.stringify(animalPayload)
@@ -1781,7 +1781,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           animalIdToUse = animal._id;
         }
       } else {
-        const animalRes = await fetch('http://localhost:3000/api/animals', {
+        const animalRes = await fetch('http://localhost:3000/api/v1/animals', {
           method: 'POST',
           headers: animalHeaders,
           body: JSON.stringify(animalPayload)
@@ -1817,13 +1817,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (healthCondition) fd.append('healthCondition', healthCondition);
           fd.append('status', status);
           fd.append('photo', photoFile);
-          res = await fetch('http://localhost:3000/api/announcements', {
+          res = await fetch('http://localhost:3000/api/v1/announcements', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + token },
             body: fd
           });
         } else {
-          res = await fetch('http://localhost:3000/api/announcements', {
+          res = await fetch('http://localhost:3000/api/v1/announcements', {
             method: 'POST',
             headers: authHeader,
             body: JSON.stringify({ ...body, coordinates: loc.coordinates })
@@ -1841,14 +1841,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (healthCondition) fd.append('healthCondition', healthCondition);
         fd.append('status', status);
         fd.append('photo', photoFile);
-        res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, {
+        res = await fetch(`http://localhost:3000/api/v1/announcements/${editingId}`, {
           method: 'PUT',
           headers: { 'Authorization': 'Bearer ' + token },
           body: fd
         });
         if (!res.ok) throw new Error('Errore aggiornamento annuncio');
       } else {
-        res = await fetch(`http://localhost:3000/api/announcements/${editingId}`, {
+        res = await fetch(`http://localhost:3000/api/v1/announcements/${editingId}`, {
           method: 'PUT',
           headers: authHeader,
           body: JSON.stringify({
@@ -1876,7 +1876,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const el = e.target;
     if (el.classList.contains('edit')) {
       const id = el.dataset.id;
-      const res = await fetch(`http://localhost:3000/api/announcements/${id}`);
+      const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}`);
       if (!res.ok) { alert('Errore caricamento annuncio'); return; }
       const ann = await res.json();
       openModalForEdit(ann);

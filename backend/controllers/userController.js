@@ -66,7 +66,7 @@ exports.updateMe = async (req, res) => {
   }
 };
 
-// GET /api/users/:id/public  (auth) - masked contacts by user prefs
+// GET /api/v1/users/:id/public  (auth) - masked contacts by user prefs
 exports.getPublicUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('username email phoneNumber contactVisibility');

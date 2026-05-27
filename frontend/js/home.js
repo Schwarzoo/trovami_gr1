@@ -1,4 +1,4 @@
-const HOME_API = 'http://localhost:3000/api/announcements';
+const HOME_API = 'http://localhost:3000/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
 
@@ -63,7 +63,7 @@ async function fetchHomePublicUser(userId) {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('not logged in');
 
-  const res = await fetch(`http://localhost:3000/api/users/${encodeURIComponent(userId)}/public`, {
+  const res = await fetch(`http://localhost:3000/api/v1/users/${encodeURIComponent(userId)}/public`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const json = await res.json().catch(() => ({}));
@@ -75,7 +75,7 @@ function buildHomeCard(ann) {
   const animal = ann.animalId;
   const isLost = ann.type === 'LostAnimal';
   // try to use announcement-specific photo endpoint, fallback to placeholder
-  const photoUrl = `http://localhost:3000/api/announcements/${ann._id}/photo`;
+  const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
   const date = new Date(ann.date).toLocaleDateString('it-IT', {
     day: '2-digit',
     month: 'short',

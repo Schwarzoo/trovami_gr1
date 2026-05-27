@@ -1,5 +1,5 @@
-const API_BASE = 'http://localhost:3000/api/announcements';
-const ADMIN_BASE = 'http://localhost:3000/api/admin';
+const API_BASE = 'http://localhost:3000/api/v1/announcements';
+const ADMIN_BASE = 'http://localhost:3000/api/v1/admin';
 
 function escapeHtml(input) {
   return String(input ?? '')
@@ -49,8 +49,8 @@ async function warnUser(userId) {
   const reason = prompt('Motivo avvertimento:', 'Ammonimento da moderazione account');
   if (reason === null) return;
   const warnReason = reason.trim() || 'Ammonimento da moderazione account';
-  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/warn`, {
-    method: 'PATCH',
+  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/warnings`, {
+    method: 'POST',
     headers: authHeader(),
     body: JSON.stringify({ reason: warnReason })
   });
@@ -62,10 +62,10 @@ async function blockUser(userId) {
   const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
   if (reason === null) return;
   const blockReason = reason.trim() || 'Account bloccato da admin';
-  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/block`, {
+  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/status`, {
     method: 'PATCH',
     headers: authHeader(),
-    body: JSON.stringify({ reason: blockReason })
+    body: JSON.stringify({ status: 'blocked', reason: blockReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore blocco'));
   alert('Account bloccato');

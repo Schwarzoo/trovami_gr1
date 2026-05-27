@@ -1,7 +1,7 @@
 const Animal = require('../models/Animal');
 const mongoose = require('mongoose');
 
-// POST /api/animals
+// POST /api/v1/animals
 exports.createAnimal = async (req, res) => {
   try {
     const {
@@ -44,7 +44,7 @@ exports.createAnimal = async (req, res) => {
   }
 };
 
-// PUT /api/animals/:id
+// PUT /api/v1/animals/:id
 exports.updateAnimal = async (req, res) => {
   try {
     const updates = {};
@@ -80,7 +80,7 @@ exports.updateAnimal = async (req, res) => {
   }
 };
 
-// GET /api/animals/:id
+// GET /api/v1/animals/:id
 exports.getAnimalById = async (req, res) => {
   try {
     const id = req.params.id;
@@ -93,7 +93,7 @@ exports.getAnimalById = async (req, res) => {
   }
 };
 
-// DELETE /api/animals/:id
+// DELETE /api/v1/animals/:id
 exports.deleteAnimal = async (req, res) => {
   try {
     const animalId = req.params.id;
@@ -116,7 +116,7 @@ exports.deleteAnimal = async (req, res) => {
   }
 };
 
-// GET /api/animals?shelterId=...
+// GET /api/v1/animals?shelterId=...
 exports.listAnimals = async (req, res) => {
   try {
     const { shelterId } = req.query;
@@ -142,7 +142,7 @@ exports.listAnimals = async (req, res) => {
         try {
           const ann = await Announcement.findOne({ animalId: obj._id, 'photo.data': { $exists: true } }).sort({ createdAt: -1 }).select('_id');
           if (ann && ann._id) {
-            obj.photos = [`${hostBase}/api/announcements/${ann._id}/photo`];
+            obj.photos = [`${hostBase}/api/v1/announcements/${ann._id}/photo`];
           }
         } catch (e) {
           // ignore fallback error
