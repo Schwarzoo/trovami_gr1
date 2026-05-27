@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate:remove-inStallo": "node scripts/remove_inStallo_migration.js"
+    "migrate:remove-inStallo": "node scripts/remove_inStallo_migration.js",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -24,5 +25,9 @@
     "nodemailer": "^6.10.1",
     "sharp": "^0.32.0",
     "pdfkit": "^0.13.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
   }
 }
