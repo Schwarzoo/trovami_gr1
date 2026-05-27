@@ -427,6 +427,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  async function fetchAuditLogs(limit = 3) {
+    const res = await fetch(`http://localhost:3000/api/admin/audit-logs?limit=${limit}`, { headers: authHeader });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  }
+
   async function readResponseError(res, fallback) {
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
@@ -758,14 +765,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function renderAuditLogs(list) {
+    const section = document.getElementById('admin-audit-section');
+    const empty = document.getElementById('admin-audit-empty');
+    const container = document.getElementById('admin-audit-list');
+    if (!section || !empty || !container) return;
+
+    section.style.display = 'block';
+    container.innerHTML = '';
+    if (!list || list.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    list.forEach((log) => {
+      const when = log?.createdAt ? new Date(log.createdAt).toLocaleString('it-IT') : '';
+      const target = log?.targetUsername ? ` verso ${log.targetUsername}` : '';
+      const item = document.createElement('div');
+      item.className = 'comment-item audit-log-item';
+      item.innerHTML = `
+        <div class="comment-meta">
+          <span class="comment-user">${escapeHtml(log?.actorName || 'anonimo')}</span>
+          <span class="comment-date">${escapeHtml(when)}</span>
+        </div>
+        <div class="comment-text">${escapeHtml(log?.action || '')}${escapeHtml(target)}</div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
   async function loadAdminData() {
     if (currentUser?.role !== 'admin') return;
     const section = document.getElementById('admin-section');
     if (section) section.style.display = 'block';
-    const [reports, rifugi, readmissions] = await Promise.all([fetchAdminReports(), fetchPendingRifugi(), fetchPendingReadmissions()]);
+    const [reports, rifugi, readmissions, auditLogs] = await Promise.all([fetchAdminReports(), fetchPendingRifugi(), fetchPendingReadmissions(), fetchAuditLogs(3)]);
     renderAdminReports(reports);
     renderPendingRifugi(rifugi);
     renderPendingReadmissions(readmissions);
+    renderAuditLogs(auditLogs);
   }
 
   async function load() {

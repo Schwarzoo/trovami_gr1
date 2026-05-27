@@ -10,6 +10,7 @@ const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
 const nodemailer = require('nodemailer');
+const { writeAuditLog } = require('../services/auditService');
 
 function maskPublisherContacts(publisher) {
     if (!publisher) return publisher;
@@ -285,7 +286,7 @@ exports.createAnnouncement = async (req,res)=>{
             await animal.save();
         }
 
-        const publisher = await User.findById(req.user.userId).select('role rifugioStatus rifugioData.location');
+        const publisher = await User.findById(req.user.userId).select('username role rifugioStatus rifugioData.location');
         if (!publisher) return res.status(401).json({ message: 'Utente non valido' });
         if (publisher.role === 'shelter' && publisher.rifugioStatus !== 'approved') {
             return res.status(403).json({ message: 'Il rifugio deve essere approvato da un admin prima di pubblicare annunci' });
@@ -328,6 +329,7 @@ exports.createAnnouncement = async (req,res)=>{
         }
 
         await announcement.save();
+        await writeAuditLog({ actor: publisher, action: 'creato annuncio', target: null });
 
             // If announcement has a photo, add/update animal.photos with a URL to this announcement photo
             try {
@@ -381,8 +383,7 @@ exports.createQuickAnnouncement = async (req, res) => {
             return res.status(400).json({ message: 'Specie e colore sono obbligatori' });
         }
 
-        const fallbackRifugioLocation = publisher.role === 'shelter' ? publisher.rifugioData?.location : null;
-        const coords = normalizeCoordinates(coordinates || location || fallbackRifugioLocation);
+        const coords = normalizeCoordinates(coordinates || location);
         if (!coords) return res.status(400).json({ message: 'Coordinate non valide' });
 
         const animal = await Animal.create({
@@ -439,6 +440,7 @@ exports.createQuickAnnouncement = async (req, res) => {
         } catch (err) {
             console.warn('Impossibile aggiornare foto animale (quick):', err.message || err);
         }
+        await writeAuditLog({ actor: null, action: 'creato annuncio', target: null });
         res.status(201).json(announcement);
     } catch (err) {
         res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
@@ -479,6 +481,11 @@ exports.reportAnnouncement = async (req, res) => {
             reportId: report._id,
             targetUserId: announcement.publisherId?._id || null,
             message: `Nuova segnalazione (${reason}) su ${ownerLabel}`
+        });
+        await writeAuditLog({
+            actor: req.user.userId,
+            action: 'segnalato annuncio',
+            target: announcement.publisherId || null
         });
 
         res.status(201).json({ message: 'Segnalazione inviata', report });
@@ -617,6 +624,7 @@ exports.updateAnnouncement = async (req, res) => {
         }
 
         await ann.save();
+        await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
 
         // If updated announcement has a new photo, update animal.photos
         try {
@@ -655,6 +663,7 @@ exports.changeStatus = async (req, res) => {
 
         ann.status = status;
         await ann.save();
+        await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
         res.json(ann);
     } catch (err) {
         res.status(500).json({ message: 'Errore cambio status', error: err.message });
@@ -678,6 +687,7 @@ exports.deleteAnnouncement = async (req, res) => {
         if (!announcement) return res.status(404).json({ message: 'Annuncio non trovato' });
         if (!announcement.publisherId || announcement.publisherId.toString() !== req.user.userId) return res.status(403).json({ message: 'Non autorizzato' });
         await removeAnnouncementCascade(req.params.id);
+        await writeAuditLog({ actor: req.user.userId, action: 'eliminato annuncio', target: null });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ message: err.message });
