@@ -8,6 +8,7 @@ const contactRequestSchema = new mongoose.Schema({
   replyMessage: { type: String, default: '', trim: true, maxlength: 1000 },
   repliedAt: { type: Date, default: null },
   hiddenForShelter: { type: Boolean, default: false },
+  hiddenForRequester: { type: Boolean, default: false },
   status: {
     type: String,
     enum: ['pending', 'replied', 'closed'],

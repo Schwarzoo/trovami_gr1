@@ -5,11 +5,13 @@ const {
   createContactRequest,
   getContactRequests,
   replyToContactRequest,
-  clearRepliedContactRequests
+  clearRepliedContactRequests,
+  clearRequesterRepliedContactRequests
 } = require('../controllers/contactRequestController');
 
 router.get('/', authMiddleware, getContactRequests);
 router.post('/', authMiddleware, createContactRequest);
+router.patch('/clear-replied/requester', authMiddleware, clearRequesterRepliedContactRequests);
 router.patch('/clear-replied', authMiddleware, clearRepliedContactRequests);
 router.patch('/:id/reply', authMiddleware, replyToContactRequest);
 

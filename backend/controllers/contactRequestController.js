@@ -75,7 +75,7 @@ exports.getContactRequests = async (req, res) => {
 
     const filter = user.role === 'shelter'
       ? { shelterId: user._id, hiddenForShelter: { $ne: true } }
-      : { requesterId: user._id };
+      : { requesterId: user._id, hiddenForRequester: { $ne: true } };
 
     const list = await populateRequest(ContactRequest.find(filter))
       .sort({ createdAt: -1 })
@@ -88,20 +88,48 @@ exports.getContactRequests = async (req, res) => {
 
 exports.clearRepliedContactRequests = async (req, res) => {
   try {
-    const shelter = await User.findById(req.user.userId).select('role rifugioStatus');
-    if (!shelter) return res.status(401).json({ message: 'Utente non valido' });
-    if (shelter.role !== 'shelter' || shelter.rifugioStatus !== 'approved') {
-      return res.status(403).json({ message: 'Solo un rifugio approvato puo svuotare le richieste risposte' });
+    const user = await User.findById(req.user.userId).select('role rifugioStatus');
+    if (!user) return res.status(401).json({ message: 'Utente non valido' });
+
+    let filter;
+    let update;
+    if (user.role === 'shelter') {
+      if (user.rifugioStatus !== 'approved') {
+        return res.status(403).json({ message: 'Solo un rifugio approvato puo svuotare le richieste risposte' });
+      }
+      filter = { shelterId: user._id, status: 'replied', hiddenForShelter: { $ne: true } };
+      update = { $set: { hiddenForShelter: true } };
+    } else if (user.role === 'user') {
+      filter = { requesterId: user._id, status: 'replied', hiddenForRequester: { $ne: true } };
+      update = { $set: { hiddenForRequester: true } };
+    } else {
+      return res.status(403).json({ message: 'Permesso negato' });
     }
 
-    const result = await ContactRequest.updateMany(
-      { shelterId: shelter._id, status: 'replied', hiddenForShelter: { $ne: true } },
-      { $set: { hiddenForShelter: true } }
-    );
+    const result = await ContactRequest.updateMany(filter, update);
 
     res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
   } catch (err) {
     res.status(500).json({ message: 'Errore svuotamento richieste risposte', error: err.message });
+  }
+};
+
+exports.clearRequesterRepliedContactRequests = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select('role');
+    if (!user) return res.status(401).json({ message: 'Utente non valido' });
+    if (user.role !== 'user') {
+      return res.status(403).json({ message: 'Solo un utente normale puo eliminare le proprie richieste risposte' });
+    }
+
+    const result = await ContactRequest.updateMany(
+      { requesterId: user._id, status: 'replied', hiddenForRequester: { $ne: true } },
+      { $set: { hiddenForRequester: true } }
+    );
+
+    res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
+  } catch (err) {
+    res.status(500).json({ message: 'Errore eliminazione richieste risposte', error: err.message });
   }
 };
 

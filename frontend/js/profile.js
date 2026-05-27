@@ -160,7 +160,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function clearRepliedAdoptionRequests() {
-    const res = await fetch(`${API_CONTACT_REQUESTS}/clear-replied`, {
+    const endpoint = currentUser?.role === 'user'
+      ? `${API_CONTACT_REQUESTS}/clear-replied/requester`
+      : `${API_CONTACT_REQUESTS}/clear-replied`;
+    const res = await fetch(endpoint, {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token }
     });
@@ -301,7 +304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function formatContactRequestStatus(status) {
     const labels = {
-      pending: 'Da rispondere',
+      pending: currentUser?.role === 'user' ? 'In attesa di risposta' : 'Da rispondere',
       replied: 'Risposta inviata',
       closed: 'Chiusa'
     };
@@ -324,7 +327,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     section.style.display = 'block';
     if (title) title.textContent = currentUser.role === 'shelter' ? 'Richieste adozione' : 'Le mie richieste adozione';
     if (clearButton) {
-      const hasReplied = currentUser.role === 'shelter' && Array.isArray(list) && list.some(request => request.status === 'replied');
+      const hasReplied = ['shelter', 'user'].includes(currentUser.role)
+        && Array.isArray(list)
+        && list.some(request => request.status === 'replied');
       clearButton.style.display = hasReplied ? 'inline-block' : 'none';
     }
     container.innerHTML = '';
