@@ -258,6 +258,27 @@ button#nearby-button:disabled {
 .badge--sighting { background: var(--sighting); color: #fff; }
 .badge--rifugio  { background: var(--accent-2); color: #fff; }
 
+/* Modal gallery and overlay button */
+#modal-gallery { position: relative; min-height: 220px; display:flex; align-items:center; justify-content:center; }
+.modal-gallery-wrapper { position: relative; width: 100%; max-height: 520px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.modal-gallery-wrapper img { width: 100%; height: auto; object-fit: cover; display: block; }
+.modal-no-photo { width: 100%; padding: 3rem 1rem; text-align: center; color: var(--text-muted); background: #f5f1ee; }
+.modal-open-animal-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ffffffee;
+    color: var(--text);
+    border-radius: 999px;
+    padding: .45rem .75rem;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+    font-weight: 700;
+    text-decoration: none;
+    z-index: 20;
+}
+.modal-open-animal-btn:hover { transform: translateY(-2px); }
+
 .card-body { padding: 1rem 1.1rem 1.2rem; }
 .card-meta {
     display: flex;

@@ -1,9 +1,11 @@
 const API_RIFUGI = 'http://localhost:3000/api/users/rifugi/public';
 const API_ANNOUNCEMENTS = 'http://localhost:3000/api/announcements';
+const API_ANIMALS = 'http://localhost:3000/api/animals';
 
 const state = {
   rifugi: [],
   announcements: [],
+  animals: [],
   map: null,
   markers: [],
 };
@@ -62,11 +64,28 @@ function getShelterAnnouncements() {
   return state.announcements.filter((announcement) => announcement?.publisherId?.role === 'shelter');
 }
 
+function normalizeId(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value._id) return String(value._id);
+  return String(value);
+}
+
 function countAnnouncementsForRifugio(rifugioId) {
   return getShelterAnnouncements().filter((announcement) => {
     const publisherId = announcement?.publisherId?._id || announcement?.publisherId;
-    return publisherId === rifugioId;
+    return normalizeId(publisherId) === normalizeId(rifugioId);
   }).length;
+}
+
+function countAvailableAnimalsForRifugio(rifugioId) {
+  const fromAnimalsApi = state.animals.filter((animal) => {
+    const shelterId = animal?.shelterId?._id || animal?.shelterId;
+    return normalizeId(shelterId) === normalizeId(rifugioId);
+  }).length;
+
+  if (fromAnimalsApi > 0) return fromAnimalsApi;
+  return countAnnouncementsForRifugio(rifugioId);
 }
 
 function getHighlightId() {
@@ -75,11 +94,13 @@ function getHighlightId() {
 
 function updateCounters() {
   const rifugiCount = state.rifugi.length;
-  const totalSlots = state.rifugi.reduce((sum, rifugio) => sum + (Number(rifugio?.rifugioData?.totalSlots || rifugio?.shelterData?.totalSlots || 0) || 0), 0);
-  const adoptionsCount = getShelterAnnouncements().length;
+  const totalAvailableAnimals = state.animals.length > 0
+    ? state.animals.length
+    : getShelterAnnouncements().length;
+  const adoptionsCount = getShelterAnnouncements().filter(a => !!a?.animalId?.adoptable).length;
 
   document.getElementById('stat-rifugi').textContent = formatNumber(rifugiCount);
-  document.getElementById('stat-posti').textContent = formatNumber(totalSlots);
+  document.getElementById('stat-animali').textContent = formatNumber(totalAvailableAnimals);
   document.getElementById('stat-adozioni').textContent = formatNumber(adoptionsCount);
   document.getElementById('rifugi-count').textContent = `${formatNumber(rifugiCount)} rifugi trovati`;
   document.getElementById('adoptions-count').textContent = `${formatNumber(adoptionsCount)} annunci`;
@@ -116,8 +137,7 @@ function renderRifugiGrid() {
     const name = getRifugioName(rifugio);
     const address = getRifugioAddress(rifugio);
     const description = rifugio?.rifugioData?.description || 'Descrizione non disponibile.';
-    const totalSlots = rifugio?.rifugioData?.totalSlots ?? rifugio?.shelterData?.totalSlots;
-    const availableSlots = rifugio?.rifugioData?.availableSlots ?? rifugio?.shelterData?.availableSlots;
+    const availableAnimals = countAvailableAnimalsForRifugio(id);
     const announcementCount = countAnnouncementsForRifugio(id);
     const rifugioLink = `/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}`;
     const announcementsLink = `/pages/announcements.html?rifugioId=${encodeURIComponent(id)}`;
@@ -130,13 +150,13 @@ function renderRifugiGrid() {
             <p class="rifugio-city">${escapeHtml(address || 'Indirizzo non disponibile')}</p>
           </div>
           <div class="rifugio-chip-stack">
-            <span class="rifugio-chip">${escapeHtml(availableSlots ?? 'n/d')} posti liberi</span>
+            <span class="rifugio-chip">${escapeHtml(availableAnimals)} animali disponibili</span>
             <span class="rifugio-chip rifugio-chip--soft">${escapeHtml(announcementCount)} adozioni</span>
           </div>
         </div>
         <p class="rifugio-description">${escapeHtml(description)}</p>
         <div class="rifugio-meta">
-          <div class="meta-row"><strong>Capienza</strong><span>${escapeHtml(availableSlots ?? 'n/d')} / ${escapeHtml(totalSlots ?? 'n/d')}</span></div>
+          <div class="meta-row"><strong>Animali disponibili</strong><span>${escapeHtml(availableAnimals)}</span></div>
           <div class="meta-row"><strong>Contatti</strong><span>${escapeHtml(rifugio?.phoneNumber || rifugio?.email || 'Non pubblici')}</span></div>
         </div>
         <div class="card-actions">
@@ -166,7 +186,11 @@ function renderAdoptions() {
   const grid = document.getElementById('adoptions-grid');
   if (!grid) return;
 
-  const adoptions = getShelterAnnouncements().slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 6);
+  const adoptions = getShelterAnnouncements()
+    .filter(a => !!a?.animalId?.adoptable)
+    .slice()
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, 6);
   if (adoptions.length === 0) {
     setEmptyState(grid, 'Nessun annuncio di rifugio disponibile al momento.');
     return;
@@ -179,7 +203,7 @@ function renderAdoptions() {
     const title = animal.name || animal.species || 'Animale in rifugio';
     const details = [animal.species, animal.breed, animal.color].filter(Boolean).join(' · ');
     const date = announcement.date ? new Date(announcement.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Data non disponibile';
-    const link = `/pages/announcements.html?rifugioId=${encodeURIComponent(publisher._id || publisher)}&highlight=${encodeURIComponent(announcement._id)}`;
+    const rifugioLink = `/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher._id || publisher)}${animal?._id ? `&animalId=${encodeURIComponent(animal._id)}` : ''}`;
 
     return `
       <article class="adoption-card" data-announcement-id="${escapeHtml(announcement._id)}" tabindex="0" role="button" aria-label="Apri annuncio di ${escapeHtml(title)}">
@@ -196,7 +220,7 @@ function renderAdoptions() {
           <p>${escapeHtml(announcement.description || 'Nessuna descrizione pubblica disponibile.')}</p>
           ${details ? `<div class="adoption-details">${escapeHtml(details)}</div>` : ''}
           ${rifugioName ? `<div class="adoption-kicker">${escapeHtml(rifugioName)}</div>` : ''}
-          <a class="text-link" href="${link}">Apri annuncio →</a>
+          <a class="text-link" href="${rifugioLink}">Apri scheda animale →</a>
         </div>
       </article>
     `;
@@ -229,14 +253,17 @@ function renderAdoptions() {
       }
     })();
 
+    const publisher = announcement.publisherId || {};
+    const rifugioLink = `/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher._id || publisher)}${animal?._id ? `&animalId=${encodeURIComponent(animal._id)}` : ''}`;
+
     card.addEventListener('click', () => {
-      window.location.href = link;
+      window.location.href = rifugioLink;
     });
 
     card.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        window.location.href = link;
+        window.location.href = rifugioLink;
       }
     });
   });
@@ -273,13 +300,12 @@ function renderMap() {
     const [lng, lat] = coords;
     const name = getRifugioName(rifugio);
     const address = getRifugioAddress(rifugio);
-    const availableSlots = rifugio?.rifugioData?.availableSlots ?? rifugio?.shelterData?.availableSlots;
-    const totalSlots = rifugio?.rifugioData?.totalSlots ?? rifugio?.shelterData?.totalSlots;
+    const availableAnimals = countAvailableAnimalsForRifugio(rifugio._id);
     const popupHtml = `
       <div style="width:280px;padding:2px 2px 4px;font-family:sans-serif;">
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:#111;">${escapeHtml(name)}</div>
         ${address ? `<div style="font-size:13px;color:#555;line-height:1.45;margin-bottom:8px;">${escapeHtml(address)}</div>` : ''}
-        <div style="font-size:13px;color:#666;margin-bottom:10px;">Posti: ${escapeHtml(availableSlots ?? 'n/d')} disponibili su ${escapeHtml(totalSlots ?? 'n/d')}</div>
+        <div style="font-size:13px;color:#666;margin-bottom:10px;">Animali disponibili: ${escapeHtml(availableAnimals)}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <a href="/pages/rifugio.html?rifugioId=${encodeURIComponent(rifugio._id)}" style="font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">Apri pagina rifugio</a>
           <a href="/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}" style="font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">Vedi annunci</a>
@@ -330,9 +356,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       fetchJson(API_RIFUGI),
       fetchJson(API_ANNOUNCEMENTS)
     ]);
+    const animals = await fetchJson(API_ANIMALS).catch(() => []);
 
     state.rifugi = Array.isArray(rifugi) ? rifugi : [];
     state.announcements = Array.isArray(announcements) ? announcements : [];
+    state.animals = Array.isArray(animals) ? animals : [];
 
     updateCounters();
     renderRifugiGrid();

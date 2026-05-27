@@ -115,12 +115,20 @@
 					<div id="admin-readmissions-list" style="display:flex;flex-direction:column;gap:10px;"></div>
 				</section>
 
+
+
 				<section id="my-announcements" class="section-card">
 					<h2>I miei annunci</h2>
 					<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
 					<div id="announcements-grid" style="margin-top:16px;"></div>
 				</section>
 
+				<section id="my-animals" class="section-card" style="display:none;">
+					<h2>I miei animali</h2>
+					<span class="section-badge" id="my-animals-count">0 animali</span>
+					<div id="my-animals-grid" style="margin-top:16px;"></div>
+         </section>
+        
 				<section id="admin-audit-section" class="section-card" style="display:none;">
 					<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
 						<h2 style="margin:0;">Audit logs</h2>
@@ -210,6 +218,14 @@
 								<div id="modal-microchip-row" class="field" style="display:none;">
 									<label>Microchip</label>
 									<input id="modal-microchipId" placeholder="Codice microchip" />
+								</div>
+
+								<div class="field">
+									<label>Disponibilità</label>
+									<select id="modal-adoptionStatus">
+											<option value="none">Non disponibile</option>
+											<option value="adoptable">Adottabile</option>
+										</select>
 								</div>
 								<div class="form-grid">
 									<div class="field">
@@ -303,8 +319,73 @@
 			</div>
 		</div>
 	</div>
+
+
 	<script src="/js/includes.js"></script>
 	<div data-include="footer"></div>
+
+	<!-- Animal detail modal -->
+	<div id="animal-modal-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+		<div class="modal-card">
+			<div class="modal-header">
+				<h3 id="animal-modal-title">Scheda animale</h3>
+				<button id="animal-modal-close">✕</button>
+			</div>
+			<div class="modal-body">
+				<div id="animal-modal-gallery" style="margin-bottom:8px;"></div>
+				<form id="animal-modal-form">
+					<div class="form-grid">
+						<div class="field">
+							<label>Nome</label>
+							<input id="animal-name" />
+						</div>
+						<div class="field">
+							<label>Specie</label>
+							<input id="animal-species" readonly />
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="field">
+							<label>Razza</label>
+							<input id="animal-breed" readonly />
+						</div>
+						<div class="field">
+							<label>Data arrivo</label>
+							<input id="animal-dateArrived" type="date" />
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="field">
+							<label>Età</label>
+							<input id="animal-age" type="text" placeholder="Es. 3 anni" />
+							<span class="form-hint">Campo opzionale.</span>
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="field">
+							<label>Adottabile</label>
+							<div class="segmented" id="seg-animal-adoptable" data-name="animal-adoptable">
+								<button type="button" data-value="true" class="segmented-btn">Sì</button>
+								<button type="button" data-value="false" class="segmented-btn">No</button>
+							</div>
+						</div>
+					</div>
+					<div class="field">
+						<label>Informazioni aggiuntive</label>
+						<textarea id="animal-otherInfo" rows="3"></textarea>
+					</div>
+					<div class="field">
+						<label>Note mediche</label>
+						<div id="animal-medicalNotes" style="margin-bottom:8px;color:var(--text-muted)"></div>
+						<textarea id="animal-newMedicalNote" rows="2" placeholder="Aggiungi una nota medica..."></textarea>
+						<div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;">
+							<button id="animal-save" type="button" class="btn btn--primary">Salva</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 </body>
 
 </html>
