@@ -2,6 +2,9 @@ const API_RIFUGI = 'http://localhost:3000/api/v1/users/rifugi/public';
 const API_ANNOUNCEMENTS = 'http://localhost:3000/api/v1/announcements';
 const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
 const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
+const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-shelters';
+let currentRifugio = null;
+let isFollowingCurrentRifugio = false;
 
 function escapeHtml(input) {
   return String(input ?? '')
@@ -53,7 +56,125 @@ async function fetchJson(url) {
   return await res.json();
 }
 
+async function fetchAuthJson(url, options = {}) {
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...(options.headers || {}),
+    'Authorization': `Bearer ${token}`
+  };
+  if (options.body && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const res = await fetch(url, { ...options, headers });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
+  return json;
+}
+
 // announcements removed from shelter page; no helper needed
+
+function getLoggedRole() {
+  const token = localStorage.getItem('token');
+  const payload = token ? decodeJwt(token) : null;
+  return payload?.role || localStorage.getItem('role') || null;
+}
+
+function closeFollowModal() {
+  const overlay = document.getElementById('follow-shelter-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+  const status = document.getElementById('follow-shelter-status');
+  if (status) status.textContent = '';
+}
+
+function openFollowModal() {
+  const overlay = document.getElementById('follow-shelter-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function setFollowButtonState(isFollowing) {
+  isFollowingCurrentRifugio = isFollowing;
+  const button = document.getElementById('follow-shelter-button');
+  if (!button) return;
+  const role = getLoggedRole();
+  button.style.display = role === 'user' || !localStorage.getItem('token') ? 'inline-flex' : 'none';
+  button.textContent = isFollowing ? 'Non seguire più' : 'Segui rifugio';
+  button.classList.toggle('primary', !isFollowing);
+}
+
+async function loadFollowState(rifugioId) {
+  const token = localStorage.getItem('token');
+  if (!token || getLoggedRole() !== 'user') {
+    setFollowButtonState(false);
+    return;
+  }
+
+  try {
+    const followed = await fetchAuthJson(API_FOLLOWED_SHELTERS);
+    const isFollowing = Array.isArray(followed) && followed.some(item => String(item._id) === String(rifugioId));
+    setFollowButtonState(isFollowing);
+  } catch (err) {
+    setFollowButtonState(false);
+  }
+}
+
+async function saveFollowPreference(emailEnabled) {
+  if (!currentRifugio?._id) return;
+  const status = document.getElementById('follow-shelter-status');
+  if (status) status.textContent = 'Salvataggio...';
+  try {
+    await fetchAuthJson(`${API_FOLLOWED_SHELTERS}/${encodeURIComponent(currentRifugio._id)}`, {
+      method: 'POST',
+      body: JSON.stringify({ emailEnabled })
+    });
+    setFollowButtonState(true);
+    closeFollowModal();
+  } catch (err) {
+    if (status) status.textContent = err.message || 'Errore salvataggio';
+  }
+}
+
+async function unfollowCurrentShelter() {
+  if (!currentRifugio?._id) return;
+  const button = document.getElementById('follow-shelter-button');
+  if (button) button.disabled = true;
+  try {
+    await fetchAuthJson(`${API_FOLLOWED_SHELTERS}/${encodeURIComponent(currentRifugio._id)}`, {
+      method: 'DELETE'
+    });
+    setFollowButtonState(false);
+  } catch (err) {
+    alert(err.message || 'Errore: impossibile smettere di seguire il rifugio');
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function initFollowControls() {
+  document.getElementById('follow-shelter-button')?.addEventListener('click', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      const next = window.location.pathname + window.location.search;
+      window.location.href = `/pages/login.html?next=${encodeURIComponent(next)}`;
+      return;
+    }
+    if (getLoggedRole() !== 'user') return;
+    if (isFollowingCurrentRifugio) {
+      unfollowCurrentShelter();
+      return;
+    }
+    openFollowModal();
+  });
+
+  document.getElementById('follow-shelter-close')?.addEventListener('click', closeFollowModal);
+  document.getElementById('follow-shelter-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeFollowModal();
+  });
+  document.getElementById('follow-site-only')?.addEventListener('click', () => saveFollowPreference(false));
+  document.getElementById('follow-site-email')?.addEventListener('click', () => saveFollowPreference(true));
+}
 
 function getAllContacts(rifugio) {
   return [rifugio?.phoneNumber, rifugio?.email].filter(Boolean).join(' · ');
@@ -367,6 +488,7 @@ async function loadPage() {
 
   const rifugio = Array.isArray(rifugi) ? rifugi.find((item) => item._id === rifugioId) : null;
   if (!rifugio) throw new Error('Rifugio non trovato o non pubblico');
+  currentRifugio = rifugio;
 
   const name = getRifugioName(rifugio);
   document.title = `${name} — Trovami`;
@@ -377,6 +499,7 @@ async function loadPage() {
   renderStats(rifugio, animals);
   renderInfo(rifugio, animals);
   renderMap(rifugio);
+  await loadFollowState(rifugio._id);
   // load animals for this shelter
   await renderAnimalsForShelter(rifugio._id);
   if (animalId) {
@@ -385,6 +508,7 @@ async function loadPage() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initFollowControls();
   try {
     await loadPage();
   } catch (error) {

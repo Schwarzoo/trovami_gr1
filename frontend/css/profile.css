@@ -192,6 +192,9 @@
   border: 1px solid var(--border);
   color: var(--text);
 }
+.followed-shelter-link {
+  text-decoration: none;
+}
 .btn--compact {
   padding: 6px 9px;
   border-radius: 8px;
