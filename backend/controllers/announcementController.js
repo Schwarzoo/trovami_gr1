@@ -79,7 +79,6 @@ async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
         if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
 
         const animalName = animal?.name || 'un nuovo animale';
-        const species = animal?.species || 'Non specificata';
         const breed = animal?.breed || 'Non specificata';
         const age = animal?.age || 'Non specificata';
         const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'un rifugio che segui';
@@ -94,11 +93,10 @@ async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
                 <p>${escapeHtml(shelterName)} ha pubblicato un nuovo annuncio.</p>
                 <ul>
                     <li><strong>Nome:</strong> ${escapeHtml(animalName)}</li>
-                    <li><strong>Eta:</strong> ${escapeHtml(age)}</li>
-                    <li><strong>Specie:</strong> ${escapeHtml(species)}</li>
+                    <li><strong>Età:</strong> ${escapeHtml(age)}</li>
                     <li><strong>Razza:</strong> ${escapeHtml(breed)}</li>
                 </ul>
-                <p><a href="${escapeHtml(url)}">Apri la scheda animale</a></p>
+                <p><a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#C85A2A;color:#ffffff;text-decoration:none;font-weight:700;">Apri scheda animale</a></p>
             `
         });
     } catch (err) {

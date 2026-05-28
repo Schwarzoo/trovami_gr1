@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <div class="comment-text">${escapeHtml(city || 'Rifugio seguito')}</div>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-          <a class="btn btn--ghost" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}">Apri pagina</a>
+          <a class="btn btn--ghost followed-shelter-link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}">Vai alla pagina rifugio</a>
           <button type="button" class="btn btn--ghost" data-follow-action="unfollow" data-shelter-id="${escapeHtml(id)}">Non seguire più</button>
         </div>
       `;
@@ -1103,7 +1103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
-  document.getElementById('followedSheltersRefresh')?.addEventListener('click', loadFollowedShelters);
   document.getElementById('followed-shelters-list')?.addEventListener('click', async (e) => {
     const button = e.target?.closest?.('[data-follow-action="unfollow"]');
     if (!button) return;
