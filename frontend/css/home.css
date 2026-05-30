@@ -14,6 +14,7 @@
   padding: 2.5rem 2.5rem 2.8rem;
   display: grid;
   gap: 1.2rem;
+  position: relative;
 }
 
 .hero h1 {
@@ -35,6 +36,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.8rem;
+  align-items: flex-start;
 }
 
 .resolved-counter {
@@ -218,13 +220,45 @@
   font-size: 1rem;
   font-weight: 700;
   min-width: 200px;
-  margin-left: auto;
 }
 
 .button-accent {
   background: var(--accent);
   color: #fff;
   border-color: transparent;
+}
+
+.quick-announce-button {
+  padding: 0;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  line-height: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 1.4rem;
+  z-index: 1;
+}
+
+.quick-announce-image {
+  display: block;
+  width: 22rem;
+  height: 20rem;
+  object-fit: contain;
+}
+
+.quick-announce-button:hover {
+  transform: translateY(-50%) scale(1.06);
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.quick-announce-button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 4px;
 }
 
 .button-primary {
