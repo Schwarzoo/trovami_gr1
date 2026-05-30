@@ -5,7 +5,7 @@ const { authMiddleware } = require('../middleware/auth');
 
 router.get('/', listAnimals);
 router.get('/:id', getAnimalById);
-router.post('/', createAnimal);
+router.post('/', authMiddleware, createAnimal);
 router.put('/:id', authMiddleware, updateAnimal);
 router.delete('/:id', authMiddleware, deleteAnimal);
 

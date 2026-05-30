@@ -38,17 +38,50 @@ describe('animal endpoints', () => {
   });
 
   test('POST /api/v1/animals creates animal', async () => {
+    mockUserModel.findById.mockResolvedValue({
+      _id: 'user1',
+      sessionToken: token,
+      isActive: true,
+      role: 'user'
+    });
+
     const res = await request(app)
       .post('/api/v1/animals')
+      .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Milo',
         species: 'Dog',
         breed: 'Maremmano',
-        color: 'White'
+        color: 'White',
+        adoptable: true
       });
 
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Milo');
+    expect(res.body.adoptable).toBe(false);
+  });
+
+  test('POST /api/v1/animals lets shelters set adoptable', async () => {
+    mockUserModel.findById.mockResolvedValue({
+      _id: 'shelter1',
+      sessionToken: token,
+      isActive: true,
+      role: 'shelter'
+    });
+
+    const res = await request(app)
+      .post('/api/v1/animals')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Luna',
+        species: 'Cat',
+        breed: 'Europeo',
+        color: 'Black',
+        adoptable: true
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.adoptable).toBe(true);
   });
 
   test('GET /api/v1/animals returns filtered list', async () => {

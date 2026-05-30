@@ -34,7 +34,7 @@ exports.createAnimal = async (req, res) => {
       age: typeof age === 'string' ? age.trim() : age,
       microchipId,
       shelterId: shelterId || (req.user && req.user.userId) || null,
-      adoptable: !!adoptable
+      adoptable: req.user?.role === 'shelter' ? !!adoptable : false
     });
 
     await animal.save();
@@ -54,8 +54,11 @@ exports.updateAnimal = async (req, res) => {
       updates.name = typeof incomingName === 'string' ? incomingName.trim() : incomingName;
     }
 
-    const allowed = ['species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','age','microchipId','shelterId','adoptable','otherInfo'];
+    const allowed = ['species','breed','gender','color','lunghezzaPelo','distinctiveFeatures','age','microchipId','shelterId','otherInfo'];
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+    if (req.body.adoptable !== undefined && req.user?.role === 'shelter') {
+      updates.adoptable = !!req.body.adoptable;
+    }
     // handle dateArrived specifically (expect ISO date or empty)
     if (req.body.dateArrived !== undefined) {
       updates.dateArrived = req.body.dateArrived ? new Date(req.body.dateArrived) : null;

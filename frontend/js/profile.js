@@ -65,11 +65,15 @@ function configureModalLabelsForAccount() {
   const positionHint = document.getElementById('modal-position-hint');
   const positionSection = document.getElementById('modal-position-section');
   const microchipRow = document.getElementById('modal-microchip-row');
+  const adoptionRow = document.getElementById('modal-adoption-row');
+  const adoptionSelect = document.getElementById('modal-adoptionStatus');
   const animalNameRow = document.getElementById('modal-animal-name-row');
 
   if (dateLabel) dateLabel.textContent = isRifugio ? 'Data' : 'Ultima data vista';
   if (positionSection) positionSection.style.display = isRifugio ? 'none' : '';
   if (microchipRow) microchipRow.style.display = isRifugio ? '' : 'none';
+  if (adoptionRow) adoptionRow.style.display = isRifugio ? '' : 'none';
+  if (adoptionSelect) adoptionSelect.disabled = !isRifugio;
   if (animalNameRow) animalNameRow.style.display = '';
   if (positionHint) {
     positionHint.textContent = isRifugio
@@ -1893,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
       // adoption status from modal
       const adoptionStatus = document.getElementById('modal-adoptionStatus')?.value || 'none';
-      animalPayload.adoptable = adoptionStatus === 'adoptable';
+      animalPayload.adoptable = currentUser?.role === 'shelter' && adoptionStatus === 'adoptable';
 
       const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
       const customDate = document.getElementById('modal-lastSeenDate').value;
@@ -2164,7 +2168,10 @@ function openModalForCreate() {
   document.getElementById('modal-healthCondition').value = 'in salute';
   // default adoption status
   const adoptionSelect = document.getElementById('modal-adoptionStatus');
-  if (adoptionSelect) adoptionSelect.value = 'none';
+  if (adoptionSelect) {
+    adoptionSelect.value = 'none';
+    adoptionSelect.disabled = currentUser?.role !== 'shelter';
+  }
   showModal(true);
 }
 
@@ -2218,8 +2225,8 @@ function openModalForEdit(ann) {
   // adoption status from associated animal
   const adoptionSelectEdit = document.getElementById('modal-adoptionStatus');
   if (adoptionSelectEdit) {
-    if (ann.animalId?.adoptable) adoptionSelectEdit.value = 'adoptable';
-    else adoptionSelectEdit.value = 'none';
+    adoptionSelectEdit.value = ann.animalId?.adoptable && currentUser?.role === 'shelter' ? 'adoptable' : 'none';
+    adoptionSelectEdit.disabled = currentUser?.role !== 'shelter';
   }
   showModal(true);
 }
