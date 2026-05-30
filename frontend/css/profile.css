@@ -357,6 +357,20 @@
   border: 1px solid var(--border);
 }
 
+.modal-card input:required:invalid:not(:disabled),
+.modal-card textarea:required:invalid:not(:disabled),
+.modal-card select:required:invalid:not(:disabled) {
+  border-color: #d94a4a;
+  box-shadow: 0 0 0 1px rgba(217, 74, 74, 0.12);
+}
+
+.modal-card input:required:valid:not(:disabled),
+.modal-card textarea:required:valid:not(:disabled),
+.modal-card select:required:valid:not(:disabled) {
+  border-color: #2e9f4f;
+  box-shadow: 0 0 0 1px rgba(46, 159, 79, 0.12);
+}
+
 .modal-card input[type="checkbox"] {
   width: auto;
   padding: 0;

@@ -84,6 +84,34 @@ function configureModalLabelsForAccount() {
   }
 }
 
+function configureModalFieldsForType(type) {
+  const isSighting = type === 'Sighting';
+  const animalNameRow = document.getElementById('modal-animal-name-row');
+  const animalNameLabel = document.getElementById('modal-animal-name-label');
+  const animalNameInput = document.getElementById('modal-animalName');
+  const animalNameHint = document.getElementById('modal-animal-name-hint');
+  const typeHint = document.getElementById('modal-type-hint');
+
+  if (animalNameRow) animalNameRow.style.display = '';
+  if (animalNameLabel) {
+    animalNameLabel.textContent = isSighting ? 'Nome animale (opzionale)' : 'Nome animale';
+  }
+  if (animalNameInput) {
+    animalNameInput.required = !isSighting;
+    animalNameInput.placeholder = isSighting ? 'Es. Luna, se lo sai' : 'Es. Luna';
+  }
+  if (animalNameHint) {
+    animalNameHint.textContent = isSighting
+      ? 'Se non conosci il nome puoi lasciarlo vuoto.'
+      : 'Se lo conosci, inseriscilo qui.';
+  }
+  if (typeHint) {
+    typeHint.textContent = isSighting
+      ? 'Avvistamento: compila solo i dati che conosci, il nome non è obbligatorio.'
+      : 'Smarrito: inserisci i dati dell animale che stai cercando.';
+  }
+}
+
 function setAnnouncementSavingState(isSaving) {
   isSavingAnnouncement = isSaving;
   const progress = document.getElementById('profile-modal-progress');
@@ -1858,6 +1886,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('modal-close').addEventListener('click', ()=> showModal(false));
   document.getElementById('modal-cancel').addEventListener('click', ()=> showModal(false));
+  document.getElementById('modal-type')?.addEventListener('change', (event) => {
+    configureModalFieldsForType(event.target.value);
+  });
 
   document.getElementById('view-modal-close')?.addEventListener('click', () => {
     document.getElementById('view-modal-overlay').style.display = 'none';
@@ -1889,6 +1920,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!type || !species || !color) {
       alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
+      return;
+    }
+
+    const modalForm = document.getElementById('modalForm');
+    if (modalForm && !modalForm.reportValidity()) {
+      return;
+    }
+
+    if (type === 'LostAnimal' && !animalName) {
+      alert('Per un annuncio di smarrimento il nome dell animale è obbligatorio se lo conosci.');
       return;
     }
 
@@ -2181,6 +2222,7 @@ function openModalForCreate() {
   document.getElementById('modal-lastSeenDate').style.display = 'none';
   document.getElementById('modal-animalBehaviour').value = 'indifferente';
   document.getElementById('modal-healthCondition').value = 'in salute';
+  configureModalFieldsForType(document.getElementById('modal-type')?.value || 'LostAnimal');
   // default adoption status
   const adoptionSelect = document.getElementById('modal-adoptionStatus');
   if (adoptionSelect) {
@@ -2237,6 +2279,7 @@ function openModalForEdit(ann) {
   }
   document.getElementById('modal-animalBehaviour').value = ann.animalBehaviour || 'indifferente';
   document.getElementById('modal-healthCondition').value = ann.healthCondition || 'in salute';
+  configureModalFieldsForType(ann.type || 'LostAnimal');
   // adoption status from associated animal
   const adoptionSelectEdit = document.getElementById('modal-adoptionStatus');
   if (adoptionSelectEdit) {
