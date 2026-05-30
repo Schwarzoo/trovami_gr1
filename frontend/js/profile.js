@@ -16,6 +16,8 @@ let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
 let selectedAdoptionRequest = null;
+let notificationsRefreshTimer = null;
+let isRefreshingNotifications = false;
 const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
 const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-shelters';
@@ -210,6 +212,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
+  }
+
+  async function refreshNotifications() {
+    if (isRefreshingNotifications) return;
+    isRefreshingNotifications = true;
+    try {
+      const notifications = await fetchNotifications();
+      renderNotifications(notifications);
+    } finally {
+      isRefreshingNotifications = false;
+    }
   }
 
   async function fetchContactRequests() {
@@ -1093,8 +1106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     
 
-    const notifications = await fetchNotifications();
-    renderNotifications(notifications);
+    await refreshNotifications();
     window.dispatchEvent(new Event('notifications:updated'));
     await loadAdminData();
 
@@ -1136,10 +1148,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('notificationsReadAll')?.addEventListener('click', async () => {
     await markAllNotificationsRead();
-    const notifications = await fetchNotifications();
-    renderNotifications(notifications);
     window.dispatchEvent(new Event('notifications:updated'));
   });
+
+  window.removeEventListener('notifications:updated', refreshNotifications);
+  window.addEventListener('notifications:updated', refreshNotifications);
+  if (notificationsRefreshTimer) clearInterval(notificationsRefreshTimer);
+  notificationsRefreshTimer = setInterval(refreshNotifications, 15000);
 
   document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
   document.getElementById('followed-shelters-list')?.addEventListener('click', async (e) => {
