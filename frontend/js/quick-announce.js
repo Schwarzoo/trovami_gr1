@@ -6,6 +6,7 @@ const QUICK_ANNOUNCE_CLOSE = document.getElementById('quick-announce-close');
 const QUICK_ANNOUNCE_CANCEL = document.getElementById('quick-announce-cancel');
 const QUICK_ANNOUNCE_PROGRESS = document.getElementById('qa-progress');
 const QUICK_ANNOUNCE_SUBMIT = document.querySelector('#quick-announce-form button[type="submit"]');
+const QUICK_ANNOUNCE_QUERY = 'quick-announce=1';
 
 let currentLocation = null;
 
@@ -16,6 +17,10 @@ function isUserLoggedIn() {
 
 // Modal Control Functions
 function openQuickAnnounceModal() {
+  if (!QUICK_ANNOUNCE_MODAL) {
+    window.location.href = '/?quick-announce=1';
+    return;
+  }
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   
@@ -223,4 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
       closeQuickAnnounceModal();
     }
   });
+
+  if (QUICK_ANNOUNCE_MODAL && new URLSearchParams(window.location.search).get('quick-announce') === '1') {
+    openQuickAnnounceModal();
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest?.('[data-quick-announce]');
+  if (!trigger) return;
+  event.preventDefault();
+  openQuickAnnounceModal();
 });

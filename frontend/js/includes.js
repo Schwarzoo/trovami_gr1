@@ -1,5 +1,22 @@
 let notificationBadgeTimer = null;
 
+function openProfileNewAnnouncementFlow() {
+  const target = '/pages/profile.html?newAnnouncement=1';
+  const token = localStorage.getItem('token');
+  if (token) {
+    window.location.href = target;
+  } else {
+    window.location.href = `/pages/login.html?next=${encodeURIComponent(target)}`;
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const trigger = event.target?.closest?.('[data-profile-new-announcement]');
+  if (!trigger) return;
+  event.preventDefault();
+  openProfileNewAnnouncementFlow();
+});
+
 async function loadPartials() {
   const targets = Array.from(document.querySelectorAll('[data-include]'));
   if (targets.length === 0) return;

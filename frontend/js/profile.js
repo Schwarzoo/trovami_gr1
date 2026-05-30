@@ -189,6 +189,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  const autoOpenNewAnnouncement = new URLSearchParams(window.location.search).get('newAnnouncement') === '1';
+
   const authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
   const mePayload = decodeJwt(token) || {};
   const myUserId = mePayload.userId;
@@ -1143,6 +1145,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMyAnimals();
     await loadContactRequests();
     await loadFollowedShelters();
+
+    if (autoOpenNewAnnouncement) {
+      openModalForCreate();
+    }
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {

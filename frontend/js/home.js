@@ -2,6 +2,7 @@ const HOME_API = 'http://localhost:3000/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
 const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/resolved/count';
+const HOME_PUBLIC_RIFUGI_API = 'http://localhost:3000/api/v1/users/rifugi/public';
 
 function homeDisplayValue(value) {
   if (value === null || value === undefined) return HOME_EMPTY_VALUE;
@@ -40,6 +41,18 @@ async function fetchHomeAnnouncementById(id) {
   }
 }
 
+async function fetchPublicRifugiCount() {
+  try {
+    const res = await fetch(HOME_PUBLIC_RIFUGI_API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return Array.isArray(json) ? json.length : 0;
+  } catch (err) {
+    console.error('Errore fetch rifugi pubblici', err);
+    return 0;
+  }
+}
+
 async function fetchResolvedAnnouncementsCount() {
   try {
     const res = await fetch(HOME_RESOLVED_API);
@@ -50,6 +63,25 @@ async function fetchResolvedAnnouncementsCount() {
     console.error('Errore fetch annunci risolti', err);
     return 0;
   }
+}
+
+function getHomeAnnouncementDate(announcement) {
+  const rawDate = announcement?.createdAt || announcement?.date || announcement?.updatedAt;
+  if (!rawDate) return null;
+  const date = new Date(rawDate);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isSameDay(left, right) {
+  if (!left || !right) return false;
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+function isWithinLast24Hours(date) {
+  if (!date) return false;
+  return Date.now() - date.getTime() <= 24 * 60 * 60 * 1000;
 }
 
 async function postHomeAnnouncementComment(id, text) {
@@ -367,11 +399,55 @@ function closeHomeModal() {
   document.body.style.overflow = '';
 }
 
-async function renderResolvedCounter() {
-  const counter = document.getElementById('resolved-announcements-count');
-  if (!counter) return;
-  const count = await fetchResolvedAnnouncementsCount();
-  counter.textContent = String(count);
+async function renderHeroStats() {
+  const resolvedCounter = document.getElementById('resolved-announcements-count');
+  const activeCounter = document.getElementById('active-announcements-count');
+  const rifugiCounter = document.getElementById('public-rifugi-count');
+  if (!resolvedCounter && !activeCounter && !rifugiCounter) return;
+
+  const [announcements, rifugiCount] = await Promise.all([
+    fetchHomeAnnouncements(),
+    fetchPublicRifugiCount()
+  ]);
+
+  const activeCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => announcement?.status === 'ACTIVE').length
+    : 0;
+  const resolvedCount = await fetchResolvedAnnouncementsCount();
+
+  if (resolvedCounter) resolvedCounter.textContent = String(resolvedCount);
+  if (activeCounter) activeCounter.textContent = String(activeCount);
+  if (rifugiCounter) rifugiCounter.textContent = String(rifugiCount);
+}
+
+async function renderHomeStatsStrip() {
+  const last24hCounter = document.getElementById('home-last-24h-count');
+  const resolvedTodayCounter = document.getElementById('home-resolved-today-count');
+  const resolvedTotalCounter = document.getElementById('home-resolved-total-count');
+  const resolvedTotalInline = document.getElementById('home-resolved-total-inline');
+  if (!last24hCounter && !resolvedTodayCounter && !resolvedTotalCounter && !resolvedTotalInline) return;
+
+  const [announcements, resolvedTotalCount] = await Promise.all([
+    fetchHomeAnnouncements(),
+    fetchResolvedAnnouncementsCount()
+  ]);
+  const now = new Date();
+
+  const last24hCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => isWithinLast24Hours(getHomeAnnouncementDate(announcement))).length
+    : 0;
+
+  const resolvedTodayCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => {
+        if (announcement?.status !== 'RESOLVED') return false;
+        return isSameDay(getHomeAnnouncementDate(announcement), now);
+      }).length
+    : 0;
+
+  if (last24hCounter) last24hCounter.textContent = String(last24hCount);
+  if (resolvedTodayCounter) resolvedTodayCounter.textContent = String(resolvedTodayCount);
+  if (resolvedTotalCounter) resolvedTotalCounter.textContent = String(resolvedTotalCount);
+  if (resolvedTotalInline) resolvedTotalInline.textContent = String(resolvedTotalCount);
 }
 
 async function initHomeAnnouncements() {
@@ -400,7 +476,7 @@ async function initHomeAnnouncements() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([initHomeAnnouncements(), renderResolvedCounter()]);
-  window.addEventListener('announcements:resolved-updated', renderResolvedCounter);
-  setInterval(renderResolvedCounter, 30000);
+  await Promise.all([initHomeAnnouncements(), renderHeroStats(), renderHomeStatsStrip()]);
+  window.addEventListener('announcements:resolved-updated', renderHeroStats);
+  setInterval(renderHeroStats, 30000);
 });

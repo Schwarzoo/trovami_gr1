@@ -15,36 +15,75 @@
   <div data-include="header"></div>
 
   <main class="home-page">
-    <section class="hero">
-      <h1>Trovami!</h1>
-      <p>
-        Trovami è la soluzione digitale per chi cerca o vuole segnalare animali smarriti a Trento. Unisciti alla comunità e aiuta a riportare a casa i nostri amici a quattro zampe.
-      </p>
-      <div class="hero-actions">
-        <a class="button primary" href="/pages/map.html">Apri la mappa</a>
-        <a class="button" href="/pages/announcements.html">Vedi tutti gli annunci</a>
-      </div>
-      <button id="quick-announce-btn" class="quick-announce-button" type="button" aria-label="Segnala ora">
-        <img src="/src/image/zampa.png" alt="" aria-hidden="true" class="quick-announce-image" />
-      </button>
-    </section>
-
-    <section class="resolved-counter">
-      <div class="resolved-counter__label">Animali ritrovati</div>
-      <div id="resolved-announcements-count" class="resolved-counter__value">0</div>
-      <p></p>
-    </section>
-
-    <section>
-      <div class="section-header">
-        <div>
-          <h2>Mappa live</h2>
-          <p>Visualizza avvistamenti e segnalazioni in tempo reale.</p>
+    <section class="hero hero-showcase">
+      <div class="hero-copy">
+        <div class="hero-kicker">• COMUNITÀ ATTIVA · TRENTO</div>
+        <h1>Ritrova il tuo <span>amico</span> a quattro zampe.</h1>
+        <p>
+          Trovami unisce cittadini, rifugi e autorità in un'unica piattaforma digitale per riportare a casa gli animali smarriti di Trento.
+        </p>
+        <div class="hero-actions">
+          <button id="quick-announce-btn" class="button button-primary button-announce" type="button">Segnalazione rapida</button>
+          <a class="button button-secondary button-map" href="/pages/map.html">Apri la mappa →</a>
         </div>
-        <a class="button" href="/pages/map.html">Vai alla mappa</a>
       </div>
-      <div class="map-shell">
-        <div id="map"></div>
+
+      <div class="hero-visual">
+        <div class="hero-map-card">
+          <div id="map" class="hero-map" aria-label="Mappa live degli annunci"></div>
+          <div class="hero-map-legend">
+            <span class="hero-legend-item hero-legend-item--lost">Smarriti</span>
+            <span class="hero-legend-item hero-legend-item--sighting">Avvistati</span>
+          </div>
+        </div>
+        <div class="hero-stats" aria-label="Statistiche rapide">
+          <div class="hero-stat">
+            <div class="hero-stat__label">RITROVATI</div>
+            <div class="hero-stat__value" id="home-found-count">142</div>
+            <div class="hero-stat__meta hero-stat__meta--success">↑ questo mese</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat__label">ATTIVI</div>
+            <div class="hero-stat__value" id="home-active-count">31</div>
+            <div class="hero-stat__meta hero-stat__meta--live">● live</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat__label">RIFUGI</div>
+            <div class="hero-stat__value" id="home-shelters-count">8</div>
+            <div class="hero-stat__meta">partner Trento</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="home-stats-strip" aria-label="Statistiche home">
+      <article class="home-stat-pill">
+        <span class="home-stat-pill__dot home-stat-pill__dot--amber"></span>
+        <span class="home-stat-pill__label"><strong id="home-last-24h-count">0</strong> segnalazioni nelle ultime 24 ore</span>
+      </article>
+      <article class="home-stat-pill">
+        <span class="home-stat-pill__dot home-stat-pill__dot--green"></span>
+        <span class="home-stat-pill__label"><strong id="home-resolved-today-count">0</strong> animali ritrovati oggi</span>
+      </article>
+      <article class="home-stat-pill">
+        <span class="home-stat-pill__dot home-stat-pill__dot--amber"></span>
+        <span class="home-stat-pill__label">Risposta media: 4 ore</span>
+      </article>
+    </section>
+
+    <section class="home-impact-card" aria-label="Animali ritornati a casa">
+      <div class="home-impact-card__count">
+        <strong id="home-resolved-total-count">0</strong>
+      </div>
+      <div class="home-impact-card__content">
+        <h2>Animali ritornati a casa</h2>
+        <p>
+          Grazie alla comunità di Trento, <span id="home-resolved-total-inline">0</span> animali hanno ritrovato la loro famiglia.
+          Ogni segnalazione fa la differenza.
+        </p>
+        <button type="button" class="button button-primary button-impact" data-profile-new-announcement>
+          Aggiungi la tua segnalazione
+        </button>
       </div>
     </section>
 
