@@ -1,7 +1,7 @@
 /**
  * Decodes a JWT payload without verifying the signature for client-side UI decisions.
- * @param {string} token - token used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} token - JWT string read from local storage.
+ * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
  */
 function decodeJwt(token) {
   try {
@@ -29,8 +29,8 @@ const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-sh
 
 /**
  * Sets last seen mode.
- * @param {string} mode - mode used by the function.
- * @returns {void} The result produced by the function.
+ * @param {string} mode - Selected last-seen mode, either `today` or `custom`.
+ * @returns {void}
  */
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
@@ -44,9 +44,9 @@ function setLastSeenMode(mode) {
 }
 
 /**
- * Runs the configure type field for account workflow.
- * @param {string} defaultType - default type used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Configures announcement type choices for normal users or shelter accounts.
+ * @param {string} defaultType - Type selected when the current account may choose between lost and sighting.
+ * @returns {void}
  */
 function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
   const typeSelect = document.getElementById('modal-type');
@@ -70,7 +70,7 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
 
 /**
  * Returns rifugio coordinates.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {number[]|null} Current shelter coordinates as `[longitude, latitude]`, or null when unavailable.
  */
 function getRifugioCoordinates() {
   const coords = currentUser?.rifugioData?.location?.coordinates || currentUser?.shelterData?.location?.coordinates;
@@ -81,8 +81,8 @@ function getRifugioCoordinates() {
 }
 
 /**
- * Runs the configure modal labels for account workflow.
- * @returns {string} The result produced by the function.
+ * Adapts announcement modal labels and fields for the current account role.
+ * @returns {void}
  */
 function configureModalLabelsForAccount() {
   const isRifugio = currentUser?.role === 'shelter';
@@ -108,9 +108,9 @@ function configureModalLabelsForAccount() {
 }
 
 /**
- * Runs the configure modal fields for type workflow.
- * @param {string} type - type used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Adapts animal-name requirements and helper text for the selected announcement type.
+ * @param {string} type - Announcement type selected in the modal.
+ * @returns {void}
  */
 function configureModalFieldsForType(type) {
   const isSighting = type === 'Sighting';
@@ -142,8 +142,8 @@ function configureModalFieldsForType(type) {
 
 /**
  * Sets announcement saving state.
- * @param {boolean} isSaving - is saving used by the function.
- * @returns {void} The result produced by the function.
+ * @param {boolean} isSaving - Whether the announcement form is currently being submitted.
+ * @returns {void}
  */
 function setAnnouncementSavingState(isSaving) {
   isSavingAnnouncement = isSaving;
@@ -160,8 +160,8 @@ function setAnnouncementSavingState(isSaving) {
   if (cancelButton) cancelButton.disabled = isSaving;
 }
 
-/**
- * Runs the show profile confirm workflow.
+  /**
+   * Shows a reusable confirmation modal and resolves with the user's choice.
  * @param {Object} options - Confirmation dialog options.
  * @param {string} options.title - Confirmation dialog title.
  * @param {string} options.message - Confirmation dialog message.
@@ -184,8 +184,8 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
     }
 
     /**
-     * Runs the cleanup workflow.
-     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     * Hides the confirmation dialog and removes temporary event listeners.
+     * @returns {void}
      */
     const cleanup = () => {
       overlay.style.display = 'none';
@@ -197,8 +197,8 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
     };
 
     /**
-     * Runs the on confirm workflow.
-     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     * Resolves the confirmation dialog as accepted.
+     * @returns {void}
      */
     const onConfirm = () => {
       cleanup();
@@ -206,8 +206,8 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
     };
 
     /**
-     * Runs the on cancel workflow.
-     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     * Resolves the confirmation dialog as cancelled.
+     * @returns {void}
      */
     const onCancel = () => {
       cleanup();
@@ -215,18 +215,18 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
     };
 
     /**
-     * Runs the on overlay click workflow.
+     * Cancels the confirmation when the user clicks outside the dialog.
      * @param {Event} event - Browser event object.
-     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     * @returns {void}
      */
     const onOverlayClick = (event) => {
       if (event.target === overlay) onCancel();
     };
 
     /**
-     * Runs the on escape workflow.
+     * Cancels the confirmation when Escape is pressed.
      * @param {Event} event - Browser event object.
-     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     * @returns {void}
      */
     const onEscape = (event) => {
       if (event.key === 'Escape') onCancel();
@@ -275,8 +275,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Sets profile editing.
-   * @param {boolean} enabled - enabled used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {boolean} enabled - Whether profile fields should be editable.
+   * @returns {void}
    */
   function setProfileEditing(enabled) {
     editableProfileFields.forEach((id) => {
@@ -290,8 +290,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the handle logout workflow.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Logs out the current user and redirects to the login page.
+   * @returns {Promise<void>} Promise resolving after local session data is cleared.
    */
   async function handleLogout() {
     try {
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches me data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Object|null>} Current user profile, or null when the session is invalid.
    */
   async function fetchMe() {
     const res = await fetch('http://localhost:3000/api/v1/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches notifications data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Array<Object>>} Notifications for the current user.
    */
   async function fetchNotifications() {
     const res = await fetch('http://localhost:3000/api/v1/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -330,8 +330,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the refresh notifications workflow.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Refreshes notifications while preventing overlapping refreshes.
+   * @returns {Promise<void>} Promise resolving after the notification list is rendered.
    */
   async function refreshNotifications() {
     if (isRefreshingNotifications) return;
@@ -346,7 +346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches contact requests data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Array<Object>>} Contact requests visible to the current profile.
    */
   async function fetchContactRequests() {
     const res = await fetch(API_CONTACT_REQUESTS, { headers: { 'Authorization': 'Bearer ' + token } });
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches followed shelters data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Array<Object>>} Shelters followed by the current user.
    */
   async function fetchFollowedShelters() {
     const res = await fetch(API_FOLLOWED_SHELTERS, { headers: { 'Authorization': 'Bearer ' + token } });
@@ -367,10 +367,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the unfollow shelter workflow.
-   * @param {string} shelterId - shelter id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * Removes a shelter from the current user's followed list.
+   * @param {string} shelterId - Shelter identifier to unfollow.
+   * @returns {Promise<Object>} API response for the unfollow request.
+   * @throws {Error} When the API rejects the unfollow request.
    */
   async function unfollowShelter(shelterId) {
     const res = await fetch(`${API_FOLLOWED_SHELTERS}/${encodeURIComponent(shelterId)}`, {
@@ -383,9 +383,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the clear replied adoption requests workflow.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * Hides replied adoption requests for the current user role.
+   * @returns {Promise<Object>} API response with the number of hidden requests.
+   * @throws {Error} When the API rejects the clear request.
    */
   async function clearRepliedAdoptionRequests() {
     const res = await fetch(`${API_CONTACT_REQUESTS}?status=replied`, {
@@ -399,8 +399,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches announcement by id data from the API.
-   * @param {string} id - id used by the function.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @param {string} id - Announcement identifier to load.
+   * @returns {Promise<Object|null>} Announcement payload, or null when it cannot be loaded.
    */
   async function fetchAnnouncementById(id) {
     const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(id)}`);
@@ -410,9 +410,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches similar announcements data from the API.
-   * @param {string} id - id used by the function.
-   * @param {number} limit - limit used by the function.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @param {string} id - Announcement identifier used as the smart-match source.
+   * @param {number} limit - Maximum number of similar announcements to request.
+   * @returns {Promise<Array<Object>>} Smart-match results for the announcement.
    */
   async function fetchSimilarAnnouncements(id, limit = 6) {
     const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(id)}/similar?limit=${limit}`);
@@ -422,9 +422,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the mark notification read workflow.
-   * @param {string} id - id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Marks a single notification as read and notifies shared navigation.
+   * @param {string} id - Notification identifier to update.
+   * @returns {Promise<void>} Promise resolving after the update request is sent.
    */
   async function markNotificationRead(id) {
     await fetch(`http://localhost:3000/api/v1/notifications/${encodeURIComponent(id)}`, {
@@ -436,8 +436,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the mark all notifications read workflow.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Marks every notification as read and refreshes profile/navigation notification UI.
+   * @returns {Promise<void>} Promise resolving after the update and refresh complete.
    */
   async function markAllNotificationsRead() {
     await fetch('http://localhost:3000/api/v1/notifications', {
@@ -450,8 +450,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Escapes HTML-sensitive characters before inserting text into markup.
-   * @param {Object} input - Value to normalize or format.
-   * @returns {string} The result produced by the function.
+   * @param {*} input - Value that will be interpolated into profile markup.
+   * @returns {string} HTML-safe string representation of the value.
    */
   function escapeHtml(input) {
     return String(input ?? '')
@@ -464,8 +464,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Formats a value for UI display, replacing empty values with a placeholder.
-   * @param {Object} value - Value to normalize or format.
-   * @returns {string} The result produced by the function.
+   * @param {*} value - Field value shown in profile, admin, or announcement details.
+   * @returns {string} Escaped display text or muted placeholder markup.
    */
   function displayValue(value) {
     const text = String(value ?? '').trim();
@@ -474,8 +474,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders admin comments html into the current page.
-   * @param {Array<Object>} comments - comments used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} comments - Comment records attached to an announcement.
+   * @returns {string} HTML markup for the admin comment list or empty state.
    */
   function renderAdminCommentsHtml(comments) {
     if (!Array.isArray(comments) || comments.length === 0) {
@@ -501,8 +501,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders notifications into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Notification records returned for the current user.
+   * @returns {void}
    */
   function renderNotifications(list) {
     const empty = document.getElementById('notifications-empty');
@@ -560,9 +560,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the format contact request status workflow.
-   * @param {string} status - status used by the function.
-   * @returns {Object|string|Array<Object>|null} The result produced by the function.
+   * Converts a contact-request status code into the label shown in the profile UI.
+   * @param {string} status - Contact-request status from the API.
+   * @returns {string} Localized status label.
    */
   function formatContactRequestStatus(status) {
     const labels = {
@@ -575,8 +575,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders contact requests into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Contact requests visible to the current user or shelter.
+   * @returns {void}
    */
   function renderContactRequests(list) {
     const section = document.getElementById('contact-requests-section');
@@ -646,8 +646,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Returns rifugio name.
-   * @param {Object} rifugio - rifugio used by the function.
-   * @returns {Object|string|Array<Object>|null} The result produced by the function.
+   * @param {Object} rifugio - Followed shelter payload.
+   * @returns {string} Best available shelter display name.
    */
   function getRifugioName(rifugio) {
     return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
@@ -655,8 +655,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders followed shelters into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Shelters followed by the current user.
+   * @returns {void}
    */
   function renderFollowedShelters(list) {
     const section = document.getElementById('followed-shelters-section');
@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Loads followed shelters data and updates the UI.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<void>} Promise resolving after followed shelters are rendered.
    */
   async function loadFollowedShelters() {
     if (currentUser?.role !== 'user') {
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Loads contact requests data and updates the UI.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<void>} Promise resolving after contact requests are rendered.
    */
   async function loadContactRequests() {
     if (!['shelter', 'user'].includes(currentUser?.role)) return;
@@ -722,11 +722,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the reply to contact request workflow.
-   * @param {string} requestId - request id used by the function.
-   * @param {string} replyMessage - reply message used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * Sends a shelter reply for an adoption contact request.
+   * @param {string} requestId - Contact-request identifier to reply to.
+   * @param {string} replyMessage - Reply text entered by the shelter.
+   * @returns {Promise<Object>} Updated contact-request payload.
+   * @throws {Error} When the API rejects the reply.
    */
   async function replyToContactRequest(requestId, replyMessage) {
     const res = await fetch(`${API_CONTACT_REQUESTS}/${encodeURIComponent(requestId)}/replies`, {
@@ -741,7 +741,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Closes the adoption reply modal UI.
-   * @returns {void} The result produced by the function.
+   * @returns {void}
    */
   function closeAdoptionReplyModal() {
     const overlay = document.getElementById('adoption-reply-overlay');
@@ -754,8 +754,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Opens the adoption reply modal UI.
-   * @param {Object} request - request used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Object} request - Contact request selected by the shelter for reply.
+   * @returns {void}
    */
   function openAdoptionReplyModal(request) {
     selectedAdoptionRequest = request;
@@ -787,8 +787,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders rifugio status into the current page.
-   * @param {Object} me - me used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
    */
   function renderRifugioStatus(me) {
     const box = document.getElementById('rifugio-status-box');
@@ -817,8 +817,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders rifugio position into the current page.
-   * @param {Object} me - me used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
    */
   function renderRifugioPosition(me) {
     const box = document.getElementById('rifugio-position-box');
@@ -842,8 +842,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the ensure rifugio map workflow.
-   * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+   * Ensures the shelter-position Leaflet map exists and is visible.
+   * @returns {Object|null} Leaflet map instance, or null when the map container is missing.
    */
   function ensureRifugioMap() {
     const mapEl = document.getElementById('rifugio-position-map');
@@ -864,9 +864,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Sets pending rifugio location.
-   * @param {number} lng - lng used by the function.
-   * @param {number} lat - lat used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {number} lng - Selected shelter longitude.
+   * @param {number} lat - Selected shelter latitude.
+   * @returns {void}
    */
   function setPendingRifugioLocation(lng, lat) {
     pendingRifugioLocation = [lng, lat];
@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Opens the rifugio position editor UI.
-   * @returns {void} The result produced by the function.
+   * @returns {void}
    */
   function openRifugioPositionEditor() {
     const map = ensureRifugioMap();
@@ -900,8 +900,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the save rifugio position workflow.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Saves the pending shelter map position to the current user profile.
+   * @returns {Promise<void>} Promise resolving after the profile UI is updated or an error is shown.
    */
   async function saveRifugioPosition() {
     if (!pendingRifugioLocation) {
@@ -941,7 +941,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches admin reports data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Array<Object>>} Report records visible to admins.
    */
   async function fetchAdminReports() {
     const res = await fetch('http://localhost:3000/api/v1/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches pending rifugi data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Array<Object>>} Shelter account requests waiting for approval.
    */
   async function fetchPendingRifugi() {
     const res = await fetch('http://localhost:3000/api/v1/admin/rifugi/pending', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -963,7 +963,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches pending readmissions data from the API.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @returns {Promise<Array<Object>>} Pending readmission requests for blocked users.
    */
   async function fetchPendingReadmissions() {
     const res = await fetch('http://localhost:3000/api/v1/admin/readmissions', { headers: authHeader });
@@ -974,8 +974,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches audit logs data from the API.
-   * @param {number} limit - limit used by the function.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * @param {number} limit - Maximum number of audit-log entries to load.
+   * @returns {Promise<Array<Object>>} Recent audit-log records.
    */
   async function fetchAuditLogs(limit = 3) {
     const res = await fetch(`http://localhost:3000/api/v1/admin/audit-logs?limit=${limit}`, { headers: authHeader });
@@ -985,10 +985,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the read response error workflow.
-   * @param {Object} res - Express response object.
-   * @param {string} fallback - fallback used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Reads a fetch error response and builds a displayable message.
+   * @param {Response} res - Failed fetch response.
+   * @param {string} fallback - Message prefix used when the response has no JSON message.
+   * @returns {Promise<string>} Error message for alerts or thrown errors.
    */
   async function readResponseError(res, fallback) {
     const contentType = res.headers.get('content-type') || '';
@@ -1001,9 +1001,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches admin user announcement count data from the API.
-   * @param {string} userId - user id used by the function.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {string} userId - User identifier whose publication count should be loaded.
+   * @returns {Promise<number>} Number of announcements published by the user.
+   * @throws {Error} When the admin API rejects the count request.
    */
   async function fetchAdminUserAnnouncementCount(userId) {
     const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/announcement-count`, { headers: authHeader });
@@ -1014,9 +1014,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Fetches admin user data from the API.
-   * @param {string} userId - user id used by the function.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {string} userId - User identifier to load for admin review.
+   * @returns {Promise<Object>} Admin user detail payload enriched with announcement count when available.
+   * @throws {Error} When the admin API rejects the user detail request.
    */
   async function fetchAdminUser(userId) {
     const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}`, { headers: authHeader });
@@ -1032,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Closes the admin announcement modal UI.
-   * @returns {void} The result produced by the function.
+   * @returns {void}
    */
   function closeAdminAnnouncementModal() {
     const overlay = document.getElementById('admin-announcement-overlay');
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Closes the admin user modal UI.
-   * @returns {void} The result produced by the function.
+   * @returns {void}
    */
   function closeAdminUserModal() {
     const overlay = document.getElementById('admin-user-overlay');
@@ -1052,8 +1052,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders admin user modal into the current page.
-   * @param {Object} user - user used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Object} user - User account details loaded for admin review.
+   * @returns {void}
    */
   function renderAdminUserModal(user) {
     const overlay = document.getElementById('admin-user-overlay');
@@ -1089,9 +1089,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Opens the admin user modal UI.
-   * @param {string} userId - user id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {string} userId - User identifier to load or retrieve from the admin cache.
+   * @returns {Promise<void>} Promise resolving after the modal is rendered or an alert is shown.
+   * @throws {Error} When no cached data exists and the user fetch fails.
    */
   async function openAdminUserModal(userId) {
     const key = String(userId || '');
@@ -1113,10 +1113,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the warn admin user workflow.
-   * @param {string} userId - user id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * Sends an admin warning from the report moderation modal.
+   * @param {string} userId - User identifier to warn.
+   * @returns {Promise<void>} Promise resolving after the warning is sent and cached user data is refreshed.
+   * @throws {Error} When the admin API rejects the warning.
    */
   async function warnAdminUser(userId) {
     const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/warnings`, {
@@ -1133,10 +1133,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Runs the block admin user workflow.
-   * @param {string} userId - user id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * Blocks a user account from the admin moderation UI.
+   * @param {string} userId - User identifier to block.
+   * @returns {Promise<Object|undefined>} Blocked user payload, or undefined when the prompt is cancelled.
+   * @throws {Error} When the admin API rejects the block request.
    */
   async function blockAdminUser(userId) {
     const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
@@ -1158,9 +1158,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders admin announcement modal into the current page.
-   * @param {Object} ann - ann used by the function.
-   * @returns {void} The result produced by the function.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {Object} ann - Announcement details loaded for admin moderation.
+   * @returns {void}
    */
   function renderAdminAnnouncementModal(ann) {
     const overlay = document.getElementById('admin-announcement-overlay');
@@ -1257,9 +1256,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Opens the admin announcement modal UI.
-   * @param {string} annId - ann id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {string} annId - Announcement identifier to load for admin review.
+   * @returns {Promise<void>} Promise resolving after the modal is rendered.
+   * @throws {Error} When the announcement cannot be loaded.
    */
   async function openAdminAnnouncementModal(annId) {
     if (!annId) return;
@@ -1270,8 +1269,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders admin reports into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Report records returned by the admin API.
+   * @returns {void}
    */
   function renderAdminReports(list) {
     const empty = document.getElementById('admin-reports-empty');
@@ -1318,8 +1317,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders pending rifugi into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Pending shelter accounts awaiting admin approval.
+   * @returns {void}
    */
   function renderPendingRifugi(list) {
     const empty = document.getElementById('admin-rifugi-empty');
@@ -1356,8 +1355,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders pending readmissions into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Blocked users with pending readmission requests.
+   * @returns {void}
    */
   function renderPendingReadmissions(list) {
     const empty = document.getElementById('admin-readmissions-empty');
@@ -1393,8 +1392,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders audit logs into the current page.
-   * @param {Array<Object>} list - list used by the function.
-   * @returns {void} The result produced by the function.
+   * @param {Array<Object>} list - Audit-log records returned by the admin API.
+   * @returns {void}
    */
   function renderAuditLogs(list) {
     const section = document.getElementById('admin-audit-section');
@@ -1427,8 +1426,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Loads admin data data and updates the UI.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Loads all admin dashboard panels and renders their current data.
+   * @returns {Promise<void>} Promise resolving after admin panels are updated.
    */
   async function loadAdminData() {
     if (currentUser?.role !== 'admin') return;
@@ -1442,8 +1441,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Loads load data and updates the UI.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+   * Loads the profile page data and renders role-specific sections.
+   * @returns {Promise<void>} Promise resolving after the profile view is initialized.
    */
   async function load() {
     const me = await fetchMe();
@@ -1709,8 +1708,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   /**
    * Loads my announcements data and updates the UI.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @returns {Promise<void>} Promise resolving after the current user's announcement grid is rendered.
    */
   async function loadMyAnnouncements() {
   const res = await fetch('http://localhost:3000/api/v1/announcements');
@@ -1813,8 +1811,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Loads my animals data and updates the UI.
-   * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @returns {Promise<void>} Promise resolving after the current shelter's animal grid is rendered.
    */
   async function loadMyAnimals() {
     const section = document.getElementById('my-animals');
@@ -1894,9 +1891,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Opens the animal modal UI.
-   * @param {string} animalId - animal id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {string} animalId - Animal identifier to load for editing.
+   * @returns {Promise<void>} Promise resolving after the animal modal is populated or an error is shown.
    */
   async function openAnimalModal(animalId) {
     try {
@@ -1912,9 +1908,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('animal-otherInfo').value = a.otherInfo || '';
       /**
        * Sets segmented value.
-       * @param {string} segId - seg id used by the function.
-       * @param {Object} boolVal - bool val used by the function.
-       * @returns {void} The result produced by the function.
+       * @param {string} segId - Id of the segmented control element.
+       * @param {boolean} boolVal - Boolean value to mark as active.
+       * @returns {void}
        */
       function setSegmentedValue(segId, boolVal) {
         const seg = document.getElementById(segId);
@@ -1924,8 +1920,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       /**
        * Returns segmented value.
-       * @param {string} segId - seg id used by the function.
-       * @returns {Object|string|Array<Object>|null} The result produced by the function.
+       * @param {string} segId - Id of the segmented control element.
+       * @returns {boolean} Active segmented-control value, defaulting to false.
        */
       function getSegmentedValue(segId) {
         const seg = document.getElementById(segId);
@@ -2002,9 +1998,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Opens the announcement modal UI.
-   * @param {string} announcementId - announcement id used by the function.
-   * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {string} announcementId - Announcement identifier to load for viewing.
+   * @returns {Promise<void>} Promise resolving after the announcement modal is populated.
+   * @throws {Error} When the announcement cannot be loaded.
    */
   async function openAnnouncementModal(announcementId) {
     const data = await fetchAnnouncementById(announcementId);
@@ -2119,9 +2115,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /**
    * Renders similar announcements into the current page.
-   * @param {Array<Object>} matches - matches used by the function.
-   * @returns {void} The result produced by the function.
-   * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+   * @param {Array<Object>} matches - Smart-match results containing announcement and score data.
+   * @returns {void}
    */
   function renderSimilarAnnouncements(matches) {
     const grid = document.getElementById('view-similar-grid');
@@ -2460,16 +2455,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 /**
- * Runs the normalize coords from input workflow.
- * @param {Object} input - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Parses modal coordinate text into GeoJSON coordinate order.
+ * @param {string} input - Coordinate input in decimal or DMS notation.
+ * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when parsing fails.
  */
 function normalizeCoordsFromInput(input) {
   if (!input) return null;
   /**
-   * Runs the try dms workflow.
-   * @param {Object} str - str used by the function.
-   * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+   * Parses a DMS coordinate fragment while suppressing parser errors.
+   * @param {string} str - DMS latitude or longitude fragment.
+   * @returns {number|null} Decimal coordinate, or null when parsing fails.
    */
   const tryDms = (str) => {
     try {
@@ -2498,9 +2493,9 @@ function normalizeCoordsFromInput(input) {
 }
 
 /**
- * Runs the dms to decimal workflow.
- * @param {Object} str - str used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Converts a DMS or decimal coordinate string to a decimal number.
+ * @param {string} str - Coordinate string, optionally including hemisphere letters.
+ * @returns {number|null} Decimal coordinate, or null when the input cannot be parsed.
  */
 function dmsToDecimal(str) {
   if (!str || typeof str !== 'string') return null;
@@ -2536,10 +2531,10 @@ function dmsToDecimal(str) {
 }
 
 /**
- * Runs the decimal to dms workflow.
- * @param {number} dec - dec used by the function.
- * @param {string} type - type used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Converts a decimal coordinate to a DMS string with hemisphere suffix.
+ * @param {number} dec - Decimal coordinate value.
+ * @param {string} type - Coordinate axis, either `lat` or `lng`.
+ * @returns {string} DMS coordinate string, or an empty string for invalid values.
  */
 function decimalToDMS(dec, type) {
   if (dec === null || dec === undefined || isNaN(dec)) return '';
@@ -2556,7 +2551,7 @@ function decimalToDMS(dec, type) {
 
 /**
  * Opens the modal for create UI.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function openModalForCreate() {
   editingId = null;
@@ -2595,8 +2590,8 @@ function openModalForCreate() {
 
 /**
  * Opens the modal for edit UI.
- * @param {Object} ann - ann used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Object} ann - Announcement being edited.
+ * @returns {void}
  */
 function openModalForEdit(ann) {
   editingId = ann._id;
@@ -2652,9 +2647,9 @@ function openModalForEdit(ann) {
 }
 
 /**
- * Runs the show modal workflow.
- * @param {boolean} visible - visible used by the function.
- * @returns {void} The result produced by the function.
+ * Shows or hides the announcement editor modal.
+ * @param {boolean} visible - Whether the modal should be visible.
+ * @returns {void}
  */
 function showModal(visible) {
   const overlay = document.getElementById('modal-overlay');
@@ -2664,8 +2659,8 @@ function showModal(visible) {
 }
 
 /**
- * Runs the initialize map picker workflow.
- * @returns {void} The result produced by the function.
+ * Initializes the Leaflet map used to pick announcement coordinates.
+ * @returns {void}
  */
 function initMapPicker() {
   if (mapInstance) return;
@@ -2679,8 +2674,8 @@ function initMapPicker() {
 }
 
 /**
- * Runs the destroy map picker workflow.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Destroys the announcement coordinate picker map and clears its marker.
+ * @returns {void}
  */
 function destroyMapPicker() {
   if (!mapInstance) return;
@@ -2693,9 +2688,9 @@ function destroyMapPicker() {
 
 /**
  * Sets marker.
- * @param {number} lng - lng used by the function.
- * @param {number} lat - lat used by the function.
- * @returns {void} The result produced by the function.
+ * @param {number} lng - Selected longitude.
+ * @param {number} lat - Selected latitude.
+ * @returns {void}
  */
 function setMarker(lng, lat){
   if (!mapInstance) initMapPicker();
@@ -2707,9 +2702,9 @@ function setMarker(lng, lat){
 
 /**
  * Sets coords from lat lng.
- * @param {number} lat - lat used by the function.
- * @param {number} lng - lng used by the function.
- * @returns {void} The result produced by the function.
+ * @param {number} lat - Selected latitude.
+ * @param {number} lng - Selected longitude.
+ * @returns {void}
  */
 function setCoordsFromLatLng(lat, lng) {
   setMarker(lng, lat);
@@ -2717,8 +2712,8 @@ function setCoordsFromLatLng(lat, lng) {
 }
 
 /**
- * Runs the show map picker workflow.
- * @returns {void} The result produced by the function.
+ * Shows the announcement coordinate picker map and refreshes its layout.
+ * @returns {void}
  */
 function showMapPicker() {
   const mapEl = document.getElementById('modal-map');

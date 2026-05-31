@@ -1,7 +1,7 @@
 /**
- * Runs the make query workflow.
- * @param {Object} result - result used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Creates a Jest mock that behaves like a chainable Mongoose query.
+ * @param {*} result - Value resolved by terminal query methods.
+ * @returns {Object} Chainable query mock with `select`, `populate`, `sort`, `limit`, `exec`, and `then`.
  */
 function makeQuery(result) {
   const query = {
@@ -17,9 +17,9 @@ function makeQuery(result) {
 }
 
 /**
- * Runs the make doc workflow.
- * @param {Object} data - data used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Creates a Jest mock document with persistence helpers.
+ * @param {Object} data - Plain fields to expose on the mock document.
+ * @returns {Object} Document-like object with mocked `save` and `toObject` methods.
  */
 function makeDoc(data = {}) {
   return {

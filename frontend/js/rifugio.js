@@ -8,8 +8,8 @@ let isFollowingCurrentRifugio = false;
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * @param {*} input - Value that will be interpolated into shelter markup.
+ * @returns {string} HTML-safe string representation of the value.
  */
 function escapeHtml(input) {
   return String(input ?? '')
@@ -21,9 +21,9 @@ function escapeHtml(input) {
 }
 
 /**
- * Runs the format number workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Formats a numeric shelter statistic for Italian UI display.
+ * @param {*} value - Numeric value or numeric string to format.
+ * @returns {string} Localized number string, or `0` for invalid values.
  */
 function formatNumber(value) {
   return Number.isFinite(Number(value)) ? Number(value).toLocaleString('it-IT') : '0';
@@ -31,8 +31,8 @@ function formatNumber(value) {
 
 /**
  * Returns rifugio name.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object from the public shelters API.
+ * @returns {string} Best available shelter display name.
  */
 function getRifugioName(rifugio) {
   return rifugio?.rifugioData?.rifugioName || rifugio?.shelterData?.shelterName || rifugio?.username || 'Rifugio';
@@ -40,8 +40,8 @@ function getRifugioName(rifugio) {
 
 /**
  * Returns coordinates.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object containing location data.
+ * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when unavailable.
  */
 function getCoordinates(rifugio) {
   const coords = rifugio?.rifugioData?.location?.coordinates || rifugio?.shelterData?.location?.coordinates;
@@ -53,7 +53,7 @@ function getCoordinates(rifugio) {
 
 /**
  * Returns rifugio id.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {string|null} Shelter id from the page query string.
  */
 function getRifugioId() {
   return new URLSearchParams(window.location.search).get('rifugioId');
@@ -61,7 +61,7 @@ function getRifugioId() {
 
 /**
  * Returns animal id.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {string|null} Animal id from the page query string.
  */
 function getAnimalId() {
   return new URLSearchParams(window.location.search).get('animalId');
@@ -69,8 +69,8 @@ function getAnimalId() {
 
 /**
  * Decodes a JWT payload without verifying the signature for client-side UI decisions.
- * @param {string} token - token used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} token - JWT string read from local storage.
+ * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
  */
 function decodeJwt(token) {
   try {
@@ -82,9 +82,9 @@ function decodeJwt(token) {
 
 /**
  * Fetches JSON from an API endpoint and throws on HTTP failures.
- * @param {string} url - url used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} url - API endpoint to request.
+ * @returns {Promise<Object|Array<Object>>} Parsed JSON response.
+ * @throws {Error} When the API response is not successful.
  */
 async function fetchJson(url) {
   const res = await fetch(url);
@@ -97,10 +97,10 @@ async function fetchJson(url) {
 
 /**
  * Fetches JSON from an authenticated API endpoint and throws on HTTP failures.
- * @param {string} url - url used by the function.
- * @param {Object} options - Options that customize the operation.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} url - Authenticated API endpoint to request.
+ * @param {Object} options - Fetch options merged with the bearer authorization header.
+ * @returns {Promise<Object|Array<Object>>} Parsed JSON response.
+ * @throws {Error} When the API response is not successful.
  */
 async function fetchAuthJson(url, options = {}) {
   const token = localStorage.getItem('token');
@@ -120,7 +120,7 @@ async function fetchAuthJson(url, options = {}) {
 
 /**
  * Reads the current user role from local storage.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {string|null} Role from the JWT payload or stored role fallback.
  */
 function getLoggedRole() {
   const token = localStorage.getItem('token');
@@ -130,7 +130,7 @@ function getLoggedRole() {
 
 /**
  * Closes the follow modal UI.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function closeFollowModal() {
   const overlay = document.getElementById('follow-shelter-overlay');
@@ -142,7 +142,7 @@ function closeFollowModal() {
 
 /**
  * Opens the follow modal UI.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function openFollowModal() {
   const overlay = document.getElementById('follow-shelter-overlay');
@@ -153,8 +153,8 @@ function openFollowModal() {
 
 /**
  * Sets follow button state.
- * @param {boolean} isFollowing - is following used by the function.
- * @returns {void} The result produced by the function.
+ * @param {boolean} isFollowing - Whether the current user follows this shelter.
+ * @returns {void}
  */
 function setFollowButtonState(isFollowing) {
   isFollowingCurrentRifugio = isFollowing;
@@ -168,8 +168,8 @@ function setFollowButtonState(isFollowing) {
 
 /**
  * Loads follow state data and updates the UI.
- * @param {string} rifugioId - rifugio id used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {string} rifugioId - Shelter identifier shown on the current page.
+ * @returns {Promise<void>} Promise resolving after the follow button is updated.
  */
 async function loadFollowState(rifugioId) {
   const token = localStorage.getItem('token');
@@ -188,9 +188,9 @@ async function loadFollowState(rifugioId) {
 }
 
 /**
- * Runs the save follow preference workflow.
- * @param {string} emailEnabled - email enabled used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * Saves the current user's follow preference for the open shelter.
+ * @param {boolean} emailEnabled - Whether shelter updates should also be sent by email.
+ * @returns {Promise<void>} Promise resolving after the preference is saved or an error is shown.
  */
 async function saveFollowPreference(emailEnabled) {
   if (!currentRifugio?._id) return;
@@ -209,8 +209,8 @@ async function saveFollowPreference(emailEnabled) {
 }
 
 /**
- * Runs the unfollow current shelter workflow.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * Removes the current shelter from the user's followed shelters.
+ * @returns {Promise<void>} Promise resolving after the follow state is updated.
  */
 async function unfollowCurrentShelter() {
   if (!currentRifugio?._id) return;
@@ -229,8 +229,8 @@ async function unfollowCurrentShelter() {
 }
 
 /**
- * Runs the initialize follow controls workflow.
- * @returns {void} The result produced by the function.
+ * Binds follow, unfollow, and follow-preference controls.
+ * @returns {void}
  */
 function initFollowControls() {
   document.getElementById('follow-shelter-button')?.addEventListener('click', () => {
@@ -258,8 +258,8 @@ function initFollowControls() {
 
 /**
  * Collects visible shelter contact fields into a list.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object with public phone and email fields.
+ * @returns {string} Contact summary joined for display.
  */
 function getAllContacts(rifugio) {
   return [rifugio?.phoneNumber, rifugio?.email].filter(Boolean).join(' · ');
@@ -267,8 +267,8 @@ function getAllContacts(rifugio) {
 
 /**
  * Summarizes shelter animals by total and adoptable counts.
- * @param {Array<Object>} animals - animals used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Array<Object>} animals - Animals registered for the shelter.
+ * @returns {{total: number, available: number}} Total and adoptable animal counts.
  */
 function summarizeAnimals(animals) {
   const list = Array.isArray(animals) ? animals : [];
@@ -280,9 +280,9 @@ function summarizeAnimals(animals) {
 
 /**
  * Renders shelter statistics into the page.
- * @param {Object} rifugio - rifugio used by the function.
- * @param {Array<Object>} animals - animals used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object for the current page.
+ * @param {Array<Object>} animals - Animals used to calculate visible shelter stats.
+ * @returns {void}
  */
 function renderStats(rifugio, animals) {
   const stats = document.getElementById('shelter-stats');
@@ -299,9 +299,9 @@ function renderStats(rifugio, animals) {
 
 /**
  * Renders shelter profile information and contacts.
- * @param {Object} rifugio - rifugio used by the function.
- * @param {Array<Object>} animals - animals used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object for the current page.
+ * @param {Array<Object>} animals - Animals used to show availability totals.
+ * @returns {void}
  */
 function renderInfo(rifugio, animals) {
   const container = document.getElementById('shelter-info-grid');
@@ -344,9 +344,8 @@ function renderInfo(rifugio, animals) {
 
 /**
  * Renders animals for shelter into the current page.
- * @param {string} rifugioId - rifugio id used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} rifugioId - Shelter identifier used to fetch animals.
+ * @returns {Promise<void>} Promise resolving after animal cards are rendered.
  */
 async function renderAnimalsForShelter(rifugioId) {
   const grid = document.getElementById('shelter-animals-grid');
@@ -419,8 +418,8 @@ async function renderAnimalsForShelter(rifugioId) {
 
 /**
  * Renders contact request panel into the current page.
- * @param {Object} animal - animal used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Object} animal - Animal shown in the open shelter animal modal.
+ * @returns {void}
  */
 function renderContactRequestPanel(animal) {
   const panel = document.getElementById('animal-contact-request');
@@ -493,9 +492,8 @@ function renderContactRequestPanel(animal) {
 
 /**
  * Opens the shelter animal modal UI.
- * @param {string} animalId - animal id used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} animalId - Animal identifier to load and show.
+ * @returns {Promise<void>} Promise resolving after the modal is populated or an error is shown.
  */
 async function openShelterAnimalModal(animalId) {
   try {
@@ -564,8 +562,8 @@ async function openShelterAnimalModal(animalId) {
 
 /**
  * Renders map markers and related map UI.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object containing the location to map.
+ * @returns {void}
  */
 function renderMap(rifugio) {
   const coords = getCoordinates(rifugio);
@@ -594,8 +592,8 @@ function renderMap(rifugio) {
 
 /**
  * Loads the page data and initializes the view.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<void>} Promise resolving after shelter data, animals, follow state, and map are initialized.
+ * @throws {Error} When the requested shelter cannot be loaded.
  */
 async function loadPage() {
   const rifugioId = getRifugioId();

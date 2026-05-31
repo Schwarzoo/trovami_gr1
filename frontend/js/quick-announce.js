@@ -11,7 +11,7 @@ let currentLocation = null;
 
 /**
  * Checks whether the browser has a stored authentication token.
- * @returns {boolean} The result produced by the function.
+ * @returns {boolean} True when a JWT token is stored in local storage.
  */
 function isUserLoggedIn() {
   return !!localStorage.getItem('token');
@@ -19,7 +19,7 @@ function isUserLoggedIn() {
 
 /**
  * Opens the quick-announcement modal.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function openQuickAnnounceModal() {
   if (!QUICK_ANNOUNCE_MODAL) {
@@ -34,7 +34,7 @@ function openQuickAnnounceModal() {
 
 /**
  * Closes the quick-announcement modal.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function closeQuickAnnounceModal() {
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'true');
@@ -46,8 +46,8 @@ function closeQuickAnnounceModal() {
 
 /**
  * Toggles loading state for the quick-announcement form.
- * @param {boolean} isLoading - is loading used by the function.
- * @returns {void} The result produced by the function.
+ * @param {boolean} isLoading - Whether submit, cancel, and close controls should be disabled.
+ * @returns {void}
  */
 function setQuickAnnounceLoading(isLoading) {
   if (QUICK_ANNOUNCE_PROGRESS) {
@@ -61,7 +61,7 @@ function setQuickAnnounceLoading(isLoading) {
 
 /**
  * Requests the current browser geolocation coordinates.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {void}
  */
 function requestGeolocation() {
   const locationDisplay = document.getElementById('qa-location-status');
@@ -113,7 +113,7 @@ function requestGeolocation() {
 /**
  * Handles quick-announcement form submission and API creation.
  * @param {Event} e - Browser event object.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @returns {Promise<void>} Promise resolving after validation and submission handling finish.
  */
 async function handleQuickAnnounceSubmit(e) {
   e.preventDefault();
@@ -159,9 +159,9 @@ async function handleQuickAnnounceSubmit(e) {
 
 /**
  * Creates the animal and quick announcement records from form data.
- * @param {Object} data - data used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {Object} data - Quick-announcement form values, coordinates, and optional photo file.
+ * @returns {Promise<void>} Promise resolving after the announcement is created and redirect is scheduled.
+ * @throws {Error} When the API rejects creation or the response cannot be submitted.
  */
 async function submitQuickAnnounce(data) {
   setQuickAnnounceLoading(true);

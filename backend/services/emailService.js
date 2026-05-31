@@ -25,7 +25,7 @@ function getTransporter() {
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} value - Value to normalize or format.
+ * @param {*} value - Text value inserted into outgoing email HTML.
  * @returns {string} Escaped HTML text.
  */
 function escapeHtml(value) {

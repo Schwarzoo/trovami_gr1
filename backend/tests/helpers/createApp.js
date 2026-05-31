@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 
 /**
- * Runs the create app workflow.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Builds an Express app wired with the API routes used by endpoint tests.
+ * @returns {import('express').Express} Configured Express application instance.
  */
 function createApp() {
   const app = express();

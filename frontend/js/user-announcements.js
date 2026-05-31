@@ -3,8 +3,8 @@ const ADMIN_BASE = 'http://localhost:3000/api/v1/admin';
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * @param {*} input - Value that will be interpolated into announcement markup.
+ * @returns {string} HTML-safe string representation of the value.
  */
 function escapeHtml(input) {
   return String(input ?? '')
@@ -17,8 +17,8 @@ function escapeHtml(input) {
 
 /**
  * Formats a value for UI display, replacing empty values with a placeholder.
- * @param {Object} value - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * @param {*} value - Field value shown in the announcement details UI.
+ * @returns {string} Trimmed display text or the empty-value placeholder.
  */
 function displayValue(value) {
   const text = String(value ?? '').trim();
@@ -27,8 +27,8 @@ function displayValue(value) {
 
 /**
  * Reads a query-string parameter from the current page URL.
- * @param {string} name - name used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} name - Query parameter name to read.
+ * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
  */
 function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
@@ -36,8 +36,8 @@ function getQueryParam(name) {
 
 /**
  * Shows an error message in the page error area.
- * @param {string} message - message used by the function.
- * @returns {void} The result produced by the function.
+ * @param {string} message - Error text displayed in the page banner.
+ * @returns {void}
  */
 function showError(message) {
   const banner = document.getElementById('error-banner');
@@ -47,8 +47,8 @@ function showError(message) {
 }
 
 /**
- * Runs the auth header workflow.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Builds authorization headers for admin moderation requests.
+ * @returns {{'Content-Type': string, Authorization: string}} JSON request headers with the stored bearer token.
  */
 function authHeader() {
   const token = localStorage.getItem('token');
@@ -60,9 +60,9 @@ function authHeader() {
 
 /**
  * Fetches announcement by id data from the API.
- * @param {string} id - id used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} id - Announcement identifier to load.
+ * @returns {Promise<Object>} Full announcement detail payload.
+ * @throws {Error} When the announcement cannot be loaded.
  */
 async function fetchAnnouncementById(id) {
   const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
@@ -71,10 +71,10 @@ async function fetchAnnouncementById(id) {
 }
 
 /**
- * Runs the read response error workflow.
- * @param {Object} res - Express response object.
- * @param {string} fallback - fallback used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * Reads an API error message, falling back to a status-aware default.
+ * @param {Response} res - Failed fetch response.
+ * @param {string} fallback - Message prefix used when the response body has no message.
+ * @returns {Promise<string>} Error message suitable for display.
  */
 async function readResponseError(res, fallback) {
   const json = await res.json().catch(() => ({}));
@@ -82,10 +82,10 @@ async function readResponseError(res, fallback) {
 }
 
 /**
- * Runs the warn user workflow.
- * @param {string} userId - user id used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * Sends an admin warning for the selected announcement publisher.
+ * @param {string} userId - User identifier to warn.
+ * @returns {Promise<void>} Promise resolving after the warning API call succeeds.
+ * @throws {Error} When the admin API rejects the warning.
  */
 async function warnUser(userId) {
   const reason = prompt('Motivo avvertimento:', 'Ammonimento da moderazione account');
@@ -101,10 +101,10 @@ async function warnUser(userId) {
 }
 
 /**
- * Runs the block user workflow.
- * @param {string} userId - user id used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * Blocks an account from the user announcements moderation page.
+ * @param {string} userId - User identifier to block.
+ * @returns {Promise<void>} Promise resolving after the account is blocked and the list reloads.
+ * @throws {Error} When the admin API rejects the block request.
  */
 async function blockUser(userId) {
   const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
@@ -122,8 +122,8 @@ async function blockUser(userId) {
 
 /**
  * Renders announcement comments as HTML markup.
- * @param {Array<Object>} comments - comments used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Array<Object>} comments - Comment records attached to the announcement.
+ * @returns {string} HTML markup for the comment list or empty state.
  */
 function renderCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
@@ -149,7 +149,7 @@ function renderCommentsHtml(comments) {
 
 /**
  * Closes the current modal and restores page scrolling.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function closeModal() {
   document.getElementById('modal-overlay')?.classList.remove('active');
@@ -158,9 +158,8 @@ function closeModal() {
 
 /**
  * Opens and populates the announcement detail modal.
- * @param {Object} ann - ann used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {Object} ann - Announcement summary used to open the modal.
+ * @returns {Promise<void>} Promise resolving after the modal is populated and shown.
  */
 async function openModal(ann) {
   let data = ann;
@@ -257,9 +256,8 @@ async function openModal(ann) {
 
 /**
  * Builds a DOM card for an announcement and binds its interactions.
- * @param {Object} ann - ann used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {Object} ann - Announcement record to render in the grid.
+ * @returns {HTMLElement} Interactive announcement card element.
  */
 function buildCard(ann) {
   const animal = ann.animalId || {};
@@ -316,7 +314,7 @@ function buildCard(ann) {
 
 /**
  * Loads user announcements data and updates the UI.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @returns {Promise<void>} Promise resolving after the user's announcement grid is updated.
  */
 async function loadUserAnnouncements() {
   const userId = getQueryParam('userId');
@@ -351,8 +349,8 @@ async function loadUserAnnouncements() {
 
 /**
  * Sets up admin actions.
- * @param {string} userId - user id used by the function.
- * @returns {void} The result produced by the function.
+ * @param {string} userId - User identifier targeted by warn and block controls.
+ * @returns {void}
  */
 function setupAdminActions(userId) {
   const warnButton = document.getElementById('warn-user');

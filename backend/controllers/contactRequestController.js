@@ -13,9 +13,8 @@ const {
 /**
  * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
  * @param {Object} res - Express response object.
- * @param {string} label - label used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} label - Human-readable name of the invalid identifier.
+ * @returns {import('express').Response} Express response with the validation error body.
  */
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
@@ -23,8 +22,8 @@ function invalidId(res, label) {
 
 /**
  * Applies the standard population chain to a contact-request query.
- * @param {Object} query - query used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} query - Mongoose query for one or more contact requests.
+ * @returns {Object} The same Mongoose query with requester, shelter, and animal references populated.
  */
 function populateRequest(query) {
   return query

@@ -5,8 +5,8 @@ const mongoose = require('mongoose');
 
 /**
  * Converts boolean-like request values to booleans.
- * @param {Object} v - v used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {boolean|string} v - Request value received from JSON or form data.
+ * @returns {boolean|undefined} Parsed boolean, or undefined when the value cannot be interpreted.
  */
 function toBool(v) {
   if (typeof v === 'boolean') return v;
@@ -16,8 +16,8 @@ function toBool(v) {
 
 /**
  * Validates and normalizes a GeoJSON point location payload.
- * @param {Object} input - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} input - Object expected to contain a two-number `coordinates` array.
+ * @returns {{type: string, coordinates: number[]}|null} GeoJSON Point payload, or null for invalid coordinates.
  */
 function normalizeLocation(input) {
   const coords = input?.coordinates;
@@ -149,9 +149,9 @@ exports.getPublicRifugi = async (req, res) => {
 
 /**
  * Formats a followed shelter for API responses while honoring contact visibility.
- * @param {Object} shelter - shelter used by the function.
- * @param {string} emailEnabled - email enabled used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} shelter - Shelter user document included in the follower list.
+ * @param {boolean} emailEnabled - Whether the follower wants email notifications for this shelter.
+ * @returns {Object} Public shelter payload enriched with the follower email preference.
  */
 function formatShelterPayload(shelter, emailEnabled) {
   const showEmail = shelter.contactVisibility?.showEmail !== false;

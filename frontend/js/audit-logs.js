@@ -1,7 +1,7 @@
 /**
  * Decodes a JWT payload without verifying the signature for client-side UI decisions.
- * @param {string} token - token used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} token - JWT string read from local storage.
+ * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
  */
 function decodeJwt(token) {
   try {
@@ -32,8 +32,8 @@ const searchInput = document.getElementById('auditSearch');
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * @param {*} input - Value that will be interpolated into table markup.
+ * @returns {string} HTML-safe string representation of the value.
  */
 function escapeHtml(input) {
   return String(input ?? '')
@@ -46,7 +46,7 @@ function escapeHtml(input) {
 
 /**
  * Builds the audit-log API URL from the current filter and sort state.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {string} Admin audit-log endpoint URL including search, sort, and limit parameters.
  */
 function buildUrl() {
   const params = new URLSearchParams({
@@ -60,8 +60,8 @@ function buildUrl() {
 
 /**
  * Renders audit-log rows into the current table body.
- * @param {Array<Object>} logs - logs used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Array<Object>} logs - Audit-log records returned by the admin API.
+ * @returns {void}
  */
 function renderRows(logs) {
   body.innerHTML = '';
@@ -86,8 +86,7 @@ function renderRows(logs) {
 
 /**
  * Loads audit logs from the API and updates the table UI.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<void>} Promise resolving after the audit table or error state is updated.
  */
 async function loadAuditLogs() {
   statusEl.textContent = 'Caricamento...';
@@ -107,7 +106,7 @@ async function loadAuditLogs() {
 
 /**
  * Updates the active state of audit-log sort controls.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function updateSortButtons() {
   document.querySelectorAll('[data-sort]').forEach((button) => {

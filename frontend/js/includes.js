@@ -2,7 +2,7 @@ let notificationBadgeTimer = null;
 
 /**
  * Opens the profile new-announcement flow from shared navigation controls.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function openProfileNewAnnouncementFlow() {
   const target = '/pages/profile.html?newAnnouncement=1';
@@ -23,8 +23,7 @@ document.addEventListener('click', (event) => {
 
 /**
  * Loads shared HTML partials and initializes navigation-dependent UI.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<void>} Promise resolving after shared partials and navigation state are initialized.
  */
 async function loadPartials() {
   const targets = Array.from(document.querySelectorAll('[data-include]'));
@@ -52,7 +51,7 @@ async function loadPartials() {
 
 /**
  * Marks the current navigation link as active.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function setActiveNav() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -73,7 +72,7 @@ function setActiveNav() {
 
 /**
  * Personalizes navigation controls based on the current authentication state.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {void}
  */
 function personalizeNav() {
   const token = localStorage.getItem('token');
@@ -91,8 +90,7 @@ function personalizeNav() {
 
 /**
  * Fetches unread notifications and updates the navigation badge.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<void>} Promise resolving after the badge is shown, hidden, or cleared.
  */
 async function updateNotificationBadge() {
   const badge = document.getElementById('notificationBadge');
@@ -128,7 +126,7 @@ async function updateNotificationBadge() {
 
 /**
  * Starts periodic notification-badge refreshes.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {void}
  */
 function startNotificationBadgeUpdates() {
   if (notificationBadgeTimer) clearInterval(notificationBadgeTimer);

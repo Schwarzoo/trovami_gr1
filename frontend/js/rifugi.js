@@ -24,8 +24,8 @@ const rifugioIcon = L.divIcon({
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * @param {*} input - Value that will be interpolated into shelter-directory markup.
+ * @returns {string} HTML-safe string representation of the value.
  */
 function escapeHtml(input) {
   return String(input ?? '')
@@ -37,9 +37,9 @@ function escapeHtml(input) {
 }
 
 /**
- * Runs the format number workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Formats a numeric shelter-directory statistic for Italian UI display.
+ * @param {*} value - Numeric value or numeric string to format.
+ * @returns {string} Localized number string, or `0` for invalid values.
  */
 function formatNumber(value) {
   return Number.isFinite(Number(value)) ? Number(value).toLocaleString('it-IT') : '0';
@@ -47,8 +47,8 @@ function formatNumber(value) {
 
 /**
  * Returns rifugio name.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object from the public shelters API.
+ * @returns {string} Best available shelter display name.
  */
 function getRifugioName(rifugio) {
   return rifugio?.rifugioData?.rifugioName || rifugio?.shelterData?.shelterName || rifugio?.username || 'Rifugio';
@@ -56,8 +56,8 @@ function getRifugioName(rifugio) {
 
 /**
  * Returns rifugio address.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object containing address fields.
+ * @returns {string} Joined public shelter address.
  */
 function getRifugioAddress(rifugio) {
   return [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
@@ -65,8 +65,8 @@ function getRifugioAddress(rifugio) {
 
 /**
  * Returns coordinates.
- * @param {Object} rifugio - rifugio used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} rifugio - Shelter user object containing location data.
+ * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when unavailable.
  */
 function getCoordinates(rifugio) {
   const coords = rifugio?.rifugioData?.location?.coordinates || rifugio?.shelterData?.location?.coordinates;
@@ -78,9 +78,9 @@ function getCoordinates(rifugio) {
 
 /**
  * Fetches JSON from an API endpoint and throws on HTTP failures.
- * @param {string} url - url used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} url - API endpoint to request.
+ * @returns {Promise<Object|Array<Object>>} Parsed JSON response.
+ * @throws {Error} When the API response is not successful.
  */
 async function fetchJson(url) {
   const res = await fetch(url);
@@ -93,16 +93,16 @@ async function fetchJson(url) {
 
 /**
  * Returns shelter announcements.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {Array<Object>} Announcements published by shelter accounts.
  */
 function getShelterAnnouncements() {
   return state.announcements.filter((announcement) => announcement?.publisherId?.role === 'shelter');
 }
 
 /**
- * Runs the normalize id workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Normalizes document-like identifiers before comparisons.
+ * @param {Object|string} value - Mongoose-like document, object containing `_id`, or raw identifier.
+ * @returns {string} Identifier string or empty string when missing.
  */
 function normalizeId(value) {
   if (!value) return '';
@@ -112,9 +112,9 @@ function normalizeId(value) {
 }
 
 /**
- * Runs the count announcements for rifugio workflow.
- * @param {string} rifugioId - rifugio id used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Counts shelter announcements for a specific shelter.
+ * @param {string} rifugioId - Shelter identifier to match against announcement publishers.
+ * @returns {number} Number of announcements owned by the shelter.
  */
 function countAnnouncementsForRifugio(rifugioId) {
   return getShelterAnnouncements().filter((announcement) => {
@@ -124,9 +124,9 @@ function countAnnouncementsForRifugio(rifugioId) {
 }
 
 /**
- * Runs the count available animals for rifugio workflow.
- * @param {string} rifugioId - rifugio id used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Counts available animals for a shelter, falling back to announcement count when needed.
+ * @param {string} rifugioId - Shelter identifier to match against animals or announcements.
+ * @returns {number} Number of animals associated with the shelter.
  */
 function countAvailableAnimalsForRifugio(rifugioId) {
   const fromAnimalsApi = state.animals.filter((animal) => {
@@ -140,15 +140,15 @@ function countAvailableAnimalsForRifugio(rifugioId) {
 
 /**
  * Returns highlight id.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {string|null} Shelter id requested through the page query string.
  */
 function getHighlightId() {
   return new URLSearchParams(window.location.search).get('rifugioId');
 }
 
 /**
- * Runs the update counters workflow.
- * @returns {void} The result produced by the function.
+ * Updates shelter-directory statistic counters.
+ * @returns {void}
  */
 function updateCounters() {
   const rifugiCount = state.rifugi.length;
@@ -166,19 +166,19 @@ function updateCounters() {
 
 /**
  * Sets empty state.
- * @param {Object} container - container used by the function.
- * @param {string} message - message used by the function.
- * @returns {void} The result produced by the function.
+ * @param {HTMLElement} container - Element that should display the empty-state message.
+ * @param {string} message - Message shown to the user.
+ * @returns {void}
  */
 function setEmptyState(container, message) {
   container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
 }
 
 /**
- * Runs the select rifugio workflow.
- * @param {string} id - id used by the function.
- * @param {Object} options - Options that customize the operation.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Selects a shelter marker on the map and optionally opens its popup.
+ * @param {string} id - Shelter identifier to select.
+ * @param {Object} options - Marker navigation options.
+ * @returns {void}
  */
 function selectRifugio(id, options = {}) {
   const { openPopup = true, panTo = true } = options;
@@ -195,7 +195,7 @@ function selectRifugio(id, options = {}) {
 
 /**
  * Renders rifugi grid into the current page.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function renderRifugiGrid() {
   const grid = document.getElementById('rifugi-grid');
@@ -244,8 +244,8 @@ function renderRifugiGrid() {
   grid.querySelectorAll('.rifugio-card').forEach((card) => {
     const id = card.dataset.id;
     /**
-     * Opens the page UI.
-     * @returns {void} The result produced by the function.
+     * Opens the selected shelter detail page.
+     * @returns {void}
      */
     const openPage = () => {
       window.location.href = `/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}`;
@@ -262,8 +262,7 @@ function renderRifugiGrid() {
 
 /**
  * Renders adoptions into the current page.
- * @returns {void} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {void}
  */
 function renderAdoptions() {
   const grid = document.getElementById('adoptions-grid');
@@ -354,7 +353,7 @@ function renderAdoptions() {
 
 /**
  * Initializes the Leaflet map instance.
- * @returns {void} The result produced by the function.
+ * @returns {Object} Leaflet map instance used by the shelter directory.
  */
 function initMap() {
   if (state.map) return state.map;
@@ -375,7 +374,7 @@ function initMap() {
 
 /**
  * Renders map markers and related map UI.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function renderMap() {
   const map = initMap();
@@ -427,8 +426,8 @@ function renderMap() {
 }
 
 /**
- * Runs the select initial rifugio workflow.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Selects the highlighted shelter from the URL, or the first shelter when none is highlighted.
+ * @returns {void}
  */
 function selectInitialRifugio() {
   const highlightId = getHighlightId();
@@ -439,9 +438,9 @@ function selectInitialRifugio() {
 }
 
 /**
- * Runs the show load error workflow.
- * @param {Object} error - error used by the function.
- * @returns {void} The result produced by the function.
+ * Displays fallback content after the shelter directory fails to load.
+ * @param {Error} error - Loading error caught during initialization.
+ * @returns {void}
  */
 function showLoadError(error) {
   const grid = document.getElementById('rifugi-grid');

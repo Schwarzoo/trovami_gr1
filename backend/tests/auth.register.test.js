@@ -2,8 +2,8 @@ const express = require('express');
 const request = require('supertest');
 
 /**
- * Runs the build auth app workflow.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Builds a minimal Express app that mounts only auth routes for registration tests.
+ * @returns {import('express').Express} Express application configured for auth endpoint tests.
  */
 function buildAuthApp() {
   const app = express();

@@ -22,8 +22,8 @@ const {
 
 /**
  * Applies publisher contact-visibility preferences to public publisher data.
- * @param {Object} publisher - publisher used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object|null} publisher - Populated publisher data attached to an announcement.
+ * @returns {Object|null} Publisher data with hidden email or phone fields set to null.
  */
 function maskPublisherContacts(publisher) {
     if (!publisher) return publisher;
@@ -39,8 +39,8 @@ function maskPublisherContacts(publisher) {
 
 /**
  * Builds the frontend URL for opening a specific announcement.
- * @param {string} announcementId - announcement id used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} announcementId - Announcement identifier to highlight in the frontend.
+ * @returns {string} Absolute frontend URL for the announcement detail view.
  */
 function buildAnnouncementUrl(announcementId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
@@ -48,9 +48,9 @@ function buildAnnouncementUrl(announcementId) {
 
 /**
  * Builds the frontend URL for opening an animal inside a shelter page.
- * @param {string} shelterId - shelter id used by the function.
- * @param {string} animalId - animal id used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} shelterId - Shelter identifier used by the shelter page.
+ * @param {string} animalId - Animal identifier to open inside the shelter page.
+ * @returns {string} Absolute frontend URL for the shelter animal detail view.
  */
 function buildShelterAnimalUrl(shelterId, animalId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/rifugio.html?rifugioId=${shelterId}&animalId=${animalId}`;
@@ -58,10 +58,10 @@ function buildShelterAnimalUrl(shelterId, animalId) {
 
 /**
  * Creates notifications for users following a shelter and optionally emails them.
- * @param {Object} announcement - announcement used by the function.
- * @param {Object} animal - animal used by the function.
- * @param {Object} shelter - shelter used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {Object} announcement - New shelter announcement used as notification context.
+ * @param {Object} animal - Animal document referenced by the announcement.
+ * @param {Object} shelter - Approved shelter user document that owns the announcement.
+ * @returns {Promise<void>} Promise resolving after follower notifications and emails are attempted.
  */
 async function notifyShelterFollowers(announcement, animal, shelter) {
     try {
@@ -107,9 +107,8 @@ async function notifyShelterFollowers(announcement, animal, shelter) {
 
 /**
  * Normalizes coordinate input into GeoJSON longitude-latitude order.
- * @param {Object} input - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {Array<number>|string|Object} input - Coordinate array, comma-separated string, JSON string, or GeoJSON-like object.
+ * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when parsing fails.
  */
 function normalizeCoordinates(input) {
     let parts = null;
@@ -140,8 +139,8 @@ function normalizeCoordinates(input) {
 
 /**
  * Normalizes an optional animal name while preserving undefined updates.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {*} value - Raw animal name submitted by the client.
+ * @returns {string|null|undefined} Trimmed name, null for empty names, or undefined when no update was submitted.
  */
 function normalizeOptionalName(value) {
     if (value === undefined) return undefined;
@@ -152,8 +151,8 @@ function normalizeOptionalName(value) {
 
 /**
  * Capitalizes the first character of a string value.
- * @param {Object} value - Value to normalize or format.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {*} value - Value to display as a capitalized label.
+ * @returns {string} Trimmed string with an uppercase first character, or an empty string.
  */
 function capitalizeFirst(value) {
     const text = String(value ?? '').trim();
@@ -163,9 +162,9 @@ function capitalizeFirst(value) {
 
 /**
  * Downloads a remote URL and resolves its response body as a buffer.
- * @param {string} url - url used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} url - HTTP or HTTPS URL to download.
+ * @returns {Promise<Buffer>} Response body as a Buffer.
+ * @throws {Error} When the request cannot be created or completed.
  */
 async function fetchUrlBuffer(url) {
     return new Promise((resolve, reject) => {
@@ -185,9 +184,9 @@ async function fetchUrlBuffer(url) {
 
 /**
  * Stores smart-match notifications and sends related emails for matching announcements.
- * @param {Object} announcement - announcement used by the function.
- * @param {Array<Object>} matches - matches used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {Object} announcement - Announcement that triggered smart matching.
+ * @param {Array<Object>} matches - Match results returned by the smart matching engine.
+ * @returns {Promise<void>} Promise resolving after notifications and emails are attempted.
  */
 async function saveMatchNotification(announcement, matches) {
     try {
@@ -249,8 +248,8 @@ async function saveMatchNotification(announcement, matches) {
 
 /**
  * Creates notifications for all active admin users.
- * @param {Object} payload - payload used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {Object} payload - Notification fields to copy onto each admin notification.
+ * @returns {Promise<void>} Promise resolving after all admin notifications are created.
  */
 async function notifyAdmins(payload) {
     const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
@@ -980,8 +979,8 @@ exports.changeStatus = async (req, res) => {
 
 /**
  * Deletes an announcement and its linked animal record as one cascade operation.
- * @param {string} announcementId - announcement id used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {string} announcementId - Announcement identifier to remove with its animal.
+ * @returns {Promise<boolean>} True when an announcement was found and deleted, otherwise false.
  */
 async function removeAnnouncementCascade(announcementId) {
     const announcement = await Announcement.findById(announcementId).populate('animalId');

@@ -11,20 +11,19 @@ const { sendAccountBlockedEmail } = require('../services/emailService');
 /**
  * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
  * @param {Object} res - Express response object.
- * @param {string} label - label used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} label - Human-readable name of the invalid identifier.
+ * @returns {import('express').Response} Express response with the validation error body.
  */
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
 }
 
 /**
- * Runs the write audit workflow.
- * @param {string} actorId - actor id used by the function.
- * @param {Object} action - action used by the function.
- * @param {Object} target - target used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * Writes an admin audit entry without exposing audit persistence details to handlers.
+ * @param {string} actorId - Authenticated admin user identifier.
+ * @param {string} action - Audit action label to store.
+ * @param {Object|string|null} target - User, announcement owner, or identifier affected by the action.
+ * @returns {Promise<void>} Promise resolving after the audit write attempt finishes.
  */
 async function writeAudit(actorId, action, target) {
   await writeAuditLog({ actor: actorId, action, target });
@@ -32,17 +31,17 @@ async function writeAudit(actorId, action, target) {
 
 /**
  * Returns published announcements count.
- * @param {string} userId - user id used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {string} userId - Publisher user identifier.
+ * @returns {Promise<number>} Number of announcements published by the user.
  */
 async function getPublishedAnnouncementsCount(userId) {
   return Announcement.countDocuments({ publisherId: userId });
 }
 
 /**
- * Runs the with published announcements count workflow.
- * @param {Object} user - user used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * Adds the published-announcement count to a user payload.
+ * @param {Object} user - Mongoose user document or plain user object.
+ * @returns {Promise<Object>} User payload with `publishedAnnouncementsCount`.
  */
 async function withPublishedAnnouncementsCount(user) {
   const obj = user.toObject ? user.toObject() : user;

@@ -6,8 +6,8 @@ const SORT_FIELDS = new Set(['actorName', 'action', 'targetUsername', 'createdAt
 
 /**
  * Converts a value to a MongoDB ObjectId when possible.
- * @param {Object} value - Value to normalize or format.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object|string} value - User document, object containing `_id`, or raw identifier.
+ * @returns {mongoose.Types.ObjectId|null} ObjectId instance, or null when the value is missing or invalid.
  */
 function toObjectId(value) {
   const raw = value?._id || value;
@@ -17,9 +17,9 @@ function toObjectId(value) {
 
 /**
  * Normalizes a display name and falls back when the value is empty.
- * @param {Object} value - Value to normalize or format.
- * @param {string} fallback - fallback used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} value - Candidate display name.
+ * @param {string|null} fallback - Name to use when the candidate is blank.
+ * @returns {string|null} Trimmed display name or the fallback value.
  */
 function normalizeName(value, fallback) {
   const text = typeof value === 'string' ? value.trim() : '';
@@ -28,8 +28,8 @@ function normalizeName(value, fallback) {
 
 /**
  * Builds the audit-log display name for a shelter user.
- * @param {Object} user - user used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} user - User document or plain user object.
+ * @returns {string|null} Shelter audit label, or null when the user is not a shelter.
  */
 function getRifugioAuditName(user) {
   if (!user || user.role !== 'shelter') return null;
@@ -69,9 +69,9 @@ function buildAuditEntry({ actor, action, target }) {
 
 /**
  * Converts audit-log sort query parameters into a MongoDB sort object.
- * @param {string} sortBy - sort by used by the function.
- * @param {string} sortDir - sort dir used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} sortBy - Requested audit-log field to sort by.
+ * @param {string} sortDir - Requested sort direction, either `asc` or `desc`.
+ * @returns {Object} MongoDB sort specification for the audit-log query.
  */
 function normalizeSort(sortBy = 'createdAt', sortDir = 'desc') {
   if (!SORT_FIELDS.has(sortBy)) return { createdAt: -1 };
@@ -80,8 +80,8 @@ function normalizeSort(sortBy = 'createdAt', sortDir = 'desc') {
 
 /**
  * Builds the MongoDB filter, sort, and limit for audit-log listing.
- * @param {Object} query - query used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} query - HTTP query parameters from the admin audit-log endpoint.
+ * @returns {{filter: Object, sort: Object, limit: number}} MongoDB query options for listing audit logs.
  */
 function buildAuditQuery(query = {}) {
   const search = String(query.search || '').trim();
@@ -105,8 +105,8 @@ function buildAuditQuery(query = {}) {
 
 /**
  * Resolves an actor identifier to a user document when needed.
- * @param {Object} actor - actor used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {Object|string} actor - User document, audit actor object, or identifier to resolve.
+ * @returns {Promise<Object|null>} User document or actor-like object, or null when it cannot be resolved.
  */
 async function resolveActor(actor) {
   if (!actor) return null;

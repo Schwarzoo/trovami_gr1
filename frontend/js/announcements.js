@@ -766,9 +766,9 @@ function getUserLocation() {
  */
 function computeDistanceMeters(lat1, lon1, lat2, lon2) {
     /**
-     * Runs the to rad workflow.
-     * @param {Object} deg - deg used by the function.
-     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     * Converts degrees to radians for the haversine distance calculation.
+     * @param {number} deg - Angle in degrees.
+     * @returns {number} Angle in radians.
      */
     const toRad = (deg) => deg * Math.PI / 180;
     const R = 6371000;

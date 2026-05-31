@@ -8,8 +8,8 @@ const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/e
 
 /**
  * Maps a MongoDB duplicate-key error to a user-facing account message.
- * @param {Object} err - err used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} err - Error thrown by MongoDB/Mongoose during account creation.
+ * @returns {string|null} Localized duplicate-account message, or null when the error is unrelated.
  */
 function duplicateAccountMessage(err) {
   if (err?.code !== 11000) return null;
@@ -20,8 +20,8 @@ function duplicateAccountMessage(err) {
 
 /**
  * Normalizes an account role value to the format stored in the database.
- * @param {string} role - role used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {string} role - Role value received from a user document or token payload.
+ * @returns {string} Lowercase role when the input is a string; otherwise the original value.
  */
 function normalizeAccountRole(role) {
   return typeof role === 'string' ? role.toLowerCase() : role;

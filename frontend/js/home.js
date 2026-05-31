@@ -5,9 +5,9 @@ const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/resolved/c
 const HOME_PUBLIC_RIFUGI_API = 'http://localhost:3000/api/v1/users/rifugi/public';
 
 /**
- * Runs the home display value workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * Formats a value for the home-page announcement UI.
+ * @param {*} value - Announcement field value to display.
+ * @returns {string} Trimmed display text or the home empty-value placeholder.
  */
 function homeDisplayValue(value) {
   if (value === null || value === undefined) return HOME_EMPTY_VALUE;
@@ -16,9 +16,9 @@ function homeDisplayValue(value) {
 }
 
 /**
- * Runs the home escape html workflow.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * Escapes HTML-sensitive characters before inserting text into home markup.
+ * @param {*} input - Value that will be interpolated into HTML.
+ * @returns {string} HTML-safe string representation of the value.
  */
 function homeEscapeHtml(input) {
   return String(input ?? '')
@@ -31,8 +31,7 @@ function homeEscapeHtml(input) {
 
 /**
  * Fetches home announcements data from the API.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<Array<Object>>} Announcement list for the home page, or an empty array on failure.
  */
 async function fetchHomeAnnouncements() {
   try {
@@ -48,8 +47,8 @@ async function fetchHomeAnnouncements() {
 
 /**
  * Fetches home announcement by id data from the API.
- * @param {string} id - id used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {string} id - Announcement identifier to load.
+ * @returns {Promise<Object|null>} Announcement detail payload, or null when loading fails.
  */
 async function fetchHomeAnnouncementById(id) {
   try {
@@ -63,8 +62,7 @@ async function fetchHomeAnnouncementById(id) {
 
 /**
  * Fetches public rifugi count data from the API.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<number>} Number of public shelters returned by the API, or 0 on failure.
  */
 async function fetchPublicRifugiCount() {
   try {
@@ -80,8 +78,7 @@ async function fetchPublicRifugiCount() {
 
 /**
  * Fetches resolved announcements count data from the API.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @returns {Promise<number>} Total resolved-announcement count, or 0 on failure.
  */
 async function fetchResolvedAnnouncementsCount() {
   try {
@@ -97,8 +94,8 @@ async function fetchResolvedAnnouncementsCount() {
 
 /**
  * Returns home announcement date.
- * @param {Object} announcement - announcement used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Object} announcement - Announcement record that may contain date fields.
+ * @returns {Date|null} Parsed announcement date, or null when no valid date exists.
  */
 function getHomeAnnouncementDate(announcement) {
   const rawDate = announcement?.createdAt || announcement?.date || announcement?.updatedAt;
@@ -109,9 +106,9 @@ function getHomeAnnouncementDate(announcement) {
 
 /**
  * Checks whether same day.
- * @param {Object} left - left used by the function.
- * @param {Object} right - right used by the function.
- * @returns {boolean} The result produced by the function.
+ * @param {Date|null} left - First date to compare.
+ * @param {Date|null} right - Second date to compare.
+ * @returns {boolean} True when both dates fall on the same calendar day.
  */
 function isSameDay(left, right) {
   if (!left || !right) return false;
@@ -122,8 +119,8 @@ function isSameDay(left, right) {
 
 /**
  * Checks whether within last24 hours.
- * @param {Object} date - date used by the function.
- * @returns {boolean} The result produced by the function.
+ * @param {Date|null} date - Date to compare with the current time.
+ * @returns {boolean} True when the date is within the last 24 hours.
  */
 function isWithinLast24Hours(date) {
   if (!date) return false;
@@ -131,11 +128,11 @@ function isWithinLast24Hours(date) {
 }
 
 /**
- * Runs the post home announcement comment workflow.
- * @param {string} id - id used by the function.
- * @param {string} text - text used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * Posts a new comment for an announcement shown on the home page.
+ * @param {string} id - Announcement identifier receiving the comment.
+ * @param {string} text - Comment text submitted by the user.
+ * @returns {Promise<Object>} API response containing the new comment and updated comment list.
+ * @throws {Error} When the user is not logged in or the API rejects the comment.
  */
 async function postHomeAnnouncementComment(id, text) {
   const token = localStorage.getItem('token');
@@ -159,9 +156,9 @@ async function postHomeAnnouncementComment(id, text) {
 
 /**
  * Fetches home public user data from the API.
- * @param {string} userId - user id used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {string} userId - User identifier whose public contact data should be loaded.
+ * @returns {Promise<Object>} Public user payload containing visible contact fields.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
  */
 async function fetchHomePublicUser(userId) {
   const token = localStorage.getItem('token');
@@ -176,10 +173,9 @@ async function fetchHomePublicUser(userId) {
 }
 
 /**
- * Runs the build home card workflow.
- * @param {Object} ann - ann used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * Builds a home-page announcement card and wires detail-opening interactions.
+ * @param {Object} ann - Announcement record to render.
+ * @returns {HTMLElement} Interactive card element for the home announcement grid.
  */
 function buildHomeCard(ann) {
   const animal = ann.animalId;
@@ -200,7 +196,7 @@ function buildHomeCard(ann) {
 
   /**
    * Opens the details UI.
-   * @returns {void} The result produced by the function.
+   * @returns {void}
    */
   const openDetails = () => openHomeModal(ann);
 
@@ -256,8 +252,8 @@ function buildHomeCard(ann) {
 
 /**
  * Opens the home modal UI.
- * @param {Object} ann - ann used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @param {Object} ann - Announcement summary used to seed the modal while details load.
+ * @returns {Promise<void>} Promise resolving after the modal is populated and shown.
  */
 async function openHomeModal(ann) {
   const isLoggedIn = !!localStorage.getItem('token');
@@ -349,10 +345,9 @@ async function openHomeModal(ann) {
 
 /**
  * Loads home modal photo data and updates the UI.
- * @param {Object} gallery - gallery used by the function.
- * @param {string} id - id used by the function.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {HTMLElement} gallery - Modal gallery element that receives the image or empty state.
+ * @param {string} id - Announcement identifier whose photo should be loaded.
+ * @returns {Promise<void>} Promise resolving after the gallery is updated.
  */
 async function loadHomeModalPhoto(gallery, id) {
   try {
@@ -374,8 +369,8 @@ async function loadHomeModalPhoto(gallery, id) {
 
 /**
  * Renders home comments html into the current page.
- * @param {Array<Object>} comments - comments used by the function.
- * @returns {void} The result produced by the function.
+ * @param {Array<Object>} comments - Comment records attached to the announcement.
+ * @returns {string} HTML markup for the comments list or empty state.
  */
 function renderHomeCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
@@ -403,9 +398,9 @@ function renderHomeCommentsHtml(comments) {
 }
 
 /**
- * Runs the bind home comment form workflow.
- * @param {string} announcementId - announcement id used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Binds the comment form inside the currently open home announcement modal.
+ * @param {string} announcementId - Announcement identifier used when submitting the comment.
+ * @returns {void}
  */
 function bindHomeCommentForm(announcementId) {
   const form = document.querySelector('#modal-body .comment-form');
@@ -443,8 +438,8 @@ function bindHomeCommentForm(announcementId) {
 }
 
 /**
- * Runs the bind home comment contacts workflow.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Binds click handlers that reveal public contact data for comment authors.
+ * @returns {void}
  */
 function bindHomeCommentContacts() {
   const modalBody = document.getElementById('modal-body');
@@ -490,7 +485,7 @@ function bindHomeCommentContacts() {
 
 /**
  * Closes the home modal UI.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function closeHomeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
@@ -499,7 +494,7 @@ function closeHomeModal() {
 
 /**
  * Renders hero stats into the current page.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @returns {Promise<void>} Promise resolving after hero counters are refreshed.
  */
 async function renderHeroStats() {
   const resolvedCounter = document.getElementById('resolved-announcements-count');
@@ -524,7 +519,7 @@ async function renderHeroStats() {
 
 /**
  * Renders home stats strip into the current page.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @returns {Promise<void>} Promise resolving after the home stats strip is refreshed.
  */
 async function renderHomeStatsStrip() {
   const last24hCounter = document.getElementById('home-last-24h-count');
@@ -554,8 +549,8 @@ async function renderHomeStatsStrip() {
 }
 
 /**
- * Runs the initialize home announcements workflow.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * Loads the home announcement grid and binds modal controls.
+ * @returns {Promise<void>} Promise resolving after initial home announcements are rendered.
  */
 async function initHomeAnnouncements() {
   const grid = document.getElementById('home-announcements-grid');

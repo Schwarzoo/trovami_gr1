@@ -6,26 +6,26 @@ describe('authMiddleware', () => {
   });
 
   /**
-   * Runs the create res workflow.
-   * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+   * Creates a minimal chainable Express response mock for middleware tests.
+   * @returns {{statusCode: number|null, body: Object|null, status: Function, json: Function}} Response mock.
    */
   function createRes() {
     return {
       statusCode: null,
       body: null,
       /**
-       * Runs the status workflow.
-       * @param {Object} code - code used by the function.
-       * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+       * Stores the HTTP status code and preserves Express-style chaining.
+       * @param {number} code - HTTP status code set by the middleware.
+       * @returns {Object} This response mock.
        */
       status(code) {
         this.statusCode = code;
         return this;
       },
       /**
-       * Runs the json workflow.
-       * @param {Object} payload - payload used by the function.
-       * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+       * Stores the JSON response body and preserves Express-style chaining.
+       * @param {Object} payload - JSON body sent by the middleware.
+       * @returns {Object} This response mock.
        */
       json(payload) {
         this.body = payload;

@@ -78,9 +78,9 @@ let allRifugi = [];
 let _visibleBounds = null;
 
 /**
- * Runs the normalize text workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Normalizes a value for case-insensitive map filtering.
+ * @param {*} value - Raw filter value or announcement field.
+ * @returns {string} Lowercase trimmed text.
  */
 function normalizeText(value) {
   return (value || '').toString().toLowerCase().trim();
@@ -88,8 +88,8 @@ function normalizeText(value) {
 
 /**
  * Checks whether unknown value.
- * @param {Object} value - Value to normalize or format.
- * @returns {boolean} The result produced by the function.
+ * @param {*} value - Animal field value to inspect.
+ * @returns {boolean} True when the value is blank or marked as unknown.
  */
 function isUnknownValue(value) {
   const text = normalizeText(value);
@@ -97,19 +97,19 @@ function isUnknownValue(value) {
 }
 
 /**
- * Runs the tokenize query workflow.
- * @param {Object} query - query used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Splits a search query into normalized tokens.
+ * @param {*} query - Raw search query entered in a filter field.
+ * @returns {string[]} Non-empty normalized query tokens.
  */
 function tokenizeQuery(query) {
   return normalizeText(query).split(/\s+/).filter(Boolean);
 }
 
 /**
- * Runs the matches tokens workflow.
- * @param {Object} value - Value to normalize or format.
- * @param {string} tokens - tokens used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Checks whether a value contains every search token.
+ * @param {*} value - Text value to search.
+ * @param {string[]} tokens - Normalized tokens that must all be present.
+ * @returns {boolean} True when all tokens match the normalized value.
  */
 function matchesTokens(value, tokens) {
   if (tokens.length === 0) return true;
@@ -118,9 +118,9 @@ function matchesTokens(value, tokens) {
 }
 
 /**
- * Runs the parse date input workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Parses a date filter input value.
+ * @param {*} value - Raw value from a date input.
+ * @returns {Date|null} Parsed date, or null when empty or invalid.
  */
 function parseDateInput(value) {
   if (!value) return null;
@@ -129,9 +129,9 @@ function parseDateInput(value) {
 }
 
 /**
- * Runs the end of day workflow.
- * @param {Object} date - date used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * Expands a date filter to the last millisecond of that day.
+ * @param {Date|null} date - Date selected as the upper bound.
+ * @returns {Date|null} End-of-day date, or null when no date was provided.
  */
 function endOfDay(date) {
   if (!date) return null;
@@ -142,7 +142,7 @@ function endOfDay(date) {
 
 /**
  * Returns announcements filtered by the current UI controls.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @returns {Array<Object>} Announcements matching the active map filters.
  */
 function getFilteredAnnouncements() {
   const typeInput = document.getElementById('filter-type');
@@ -216,8 +216,8 @@ function getFilteredAnnouncements() {
 
 /**
  * Updates the visible result counter.
- * @param {number} n - n used by the function.
- * @returns {void} The result produced by the function.
+ * @param {number} n - Number of currently visible announcements.
+ * @returns {void}
  */
 function updateCount(n) {
   const count = document.getElementById('result-count');
@@ -227,9 +227,8 @@ function updateCount(n) {
 
 /**
  * Renders announcements into the current list view.
- * @param {Array<Object>} announcements - announcements used by the function.
- * @returns {void} The result produced by the function.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ * @param {Array<Object>} announcements - Filtered announcements to place on the Leaflet map.
+ * @returns {void}
  */
 function renderAnnouncements(announcements) {
   let highlightedMarker = null;
@@ -396,8 +395,8 @@ function renderAnnouncements(announcements) {
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
+ * @param {*} input - Value interpolated into popup markup.
+ * @returns {string} HTML-safe string representation of the value.
  */
 function escapeHtml(input) {
   return String(input ?? '')
@@ -411,10 +410,10 @@ function escapeHtml(input) {
 
 /**
  * Builds select options from unique filter values.
- * @param {Object} selectEl - select el used by the function.
- * @param {Array<Object>} values - values used by the function.
- * @param {Object} placeholder - placeholder used by the function.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @param {HTMLSelectElement|null} selectEl - Filter select element to populate.
+ * @param {string[]} values - Sorted option labels to insert.
+ * @param {string} placeholder - Placeholder label for the empty option.
+ * @returns {void}
  */
 function buildSelectOptions(selectEl, values, placeholder) {
   if (!selectEl) return;
@@ -439,9 +438,9 @@ function buildSelectOptions(selectEl, values, placeholder) {
 }
 
 /**
- * Runs the format label workflow.
- * @param {Object} value - Value to normalize or format.
- * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * Formats a filter value as a human-readable label.
+ * @param {string} value - Raw unique value collected from announcements.
+ * @returns {string} Title-cased label for a select option.
  */
 function formatLabel(value) {
   return value
@@ -453,9 +452,9 @@ function formatLabel(value) {
 
 /**
  * Adds a normalized option value to a map of unique values.
- * @param {Object} map - map used by the function.
- * @param {Object} value - Value to normalize or format.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Map<string,string>} map - Destination map keyed by normalized option value.
+ * @param {string} value - Raw value from an announcement animal field.
+ * @returns {void}
  */
 function addUniqueOption(map, value) {
   if (!value) return;
@@ -469,8 +468,8 @@ function addUniqueOption(map, value) {
 
 /**
  * Populates all filter controls from announcement data.
- * @param {Array<Object>} announcements - announcements used by the function.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @param {Array<Object>} announcements - Announcements used to derive species, breed, and color filters.
+ * @returns {void}
  */
 function populateFilterOptions(announcements) {
   const speciesSelect = document.getElementById('filter-species');
@@ -499,7 +498,7 @@ function populateFilterOptions(announcements) {
 
 /**
  * Loads announcements for the current frontend view.
- * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @returns {Promise<void>} Promise resolving after map data, filters, and markers are refreshed.
  */
 async function loadAnnouncements() {
   const [annRes, rifugiRes] = await Promise.all([
@@ -520,7 +519,7 @@ async function loadAnnouncements() {
 
 /**
  * Binds filter controls to map/list rendering.
- * @returns {void} The result produced by the function.
+ * @returns {void}
  */
 function wireFilters() {
   const typeInput = document.getElementById('filter-type');
@@ -531,8 +530,8 @@ function wireFilters() {
   const dateToInput = document.getElementById('filter-date-to');
   const includeUnknownInput = document.getElementById('filter-include-unknown');
   /**
-   * Runs the handle r workflow.
-   * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+   * Recomputes filtered announcements and redraws the map after a filter change.
+   * @returns {void}
    */
   const handler = () => {
     const filtered = getFilteredAnnouncements();
@@ -563,9 +562,9 @@ let _userMarker = null;
 
 /**
  * Shows the user location marker on the map.
- * @param {number} lat - lat used by the function.
- * @param {number} lng - lng used by the function.
- * @returns {void} The result produced by the function.
+ * @param {number} lat - User latitude from the browser geolocation API.
+ * @param {number} lng - User longitude from the browser geolocation API.
+ * @returns {void}
  */
 function showUserLocation(lat, lng) {
   try {
