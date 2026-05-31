@@ -1,5 +1,25 @@
 const mongoose = require('mongoose');
 
+/**
+ * @typedef {Object} Announcement
+ * @description Rappresenta un annuncio pubblicato nel database.
+ * @property {string} type Tipo di annuncio.
+ * @property {mongoose.Types.ObjectId} publisherId Utente che pubblica l'annuncio.
+ * @property {mongoose.Types.ObjectId} animalId Animale associato all'annuncio.
+ * @property {Date} date Data dell'annuncio.
+ * @property {string} description Descrizione dell'annuncio.
+ * @property {boolean} isQuick Indica se l'annuncio è stato creato rapidamente.
+ * @property {{ name: string, email: string, phoneNumber: string }} quickContact Contatto rapido, se presente.
+ * @property {{ type: string, coordinates: number[] }} location Posizione geografica dell'annuncio.
+ * @property {string} status Stato corrente dell'annuncio.
+ * @property {number[]|null} imageEmbedding Embedding immagine, se presente.
+ * @property {Date} lastSeenDate Data dell'ultimo avvistamento.
+ * @property {boolean} isCurrentlyThere Indica se l'animale è ancora sul posto.
+ * @property {string} animalBehaviour Comportamento osservato.
+ * @property {string} healthCondition Condizioni di salute.
+ * @property {{ data: Buffer, contentType: string }} photo Foto archiviata nel database.
+ * @property {Array<{ userId: mongoose.Types.ObjectId, username: string, text: string }>} comments Commenti collegati all'annuncio.
+ */
 const commentSchema = new mongoose.Schema({
     userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     username: { type: String, required: true },
@@ -34,7 +54,7 @@ const announcementSchema = new mongoose.Schema({
 
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], required: true } // [Longitudine, Latitudine]
+        coordinates: { type: [Number], required: true }
     },
 
     status: {
