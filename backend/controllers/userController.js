@@ -128,6 +128,11 @@ exports.getPublicUser = async (req, res) => {
  */
 exports.getPublicRifugi = async (req, res) => {
   try {
+    const isPublic = req.query?.isPublic;
+    if (isPublic !== undefined && String(isPublic).toLowerCase() !== 'true') {
+      return res.json([]);
+    }
+
     const rifugi = await User.find({
       role: 'shelter',
       rifugioStatus: 'approved',

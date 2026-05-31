@@ -430,7 +430,8 @@ exports.unblockUser = async (req, res) => {
  */
 exports.getPendingRifugi = async (req, res) => {
   try {
-    const rifugi = await User.find({ role: 'shelter', rifugioStatus: 'pending' })
+    const status = (req.query?.status || 'pending').toString().trim();
+    const rifugi = await User.find({ role: 'shelter', rifugioStatus: status })
       .select('-passwordHash -sessionToken')
       .sort({ createdAt: -1 });
     res.json(rifugi);

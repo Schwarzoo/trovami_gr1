@@ -503,7 +503,7 @@ function populateFilterOptions(announcements) {
 async function loadAnnouncements() {
   const [annRes, rifugiRes] = await Promise.all([
     fetch('http://localhost:3000/api/v1/announcements'),
-    fetch('http://localhost:3000/api/v1/users/rifugi/public')
+    fetch('http://localhost:3000/api/v1/users/rifugi?isPublic=true')
   ]);
   if (!annRes.ok) { console.error('Errore fetch annunci'); return; }
 

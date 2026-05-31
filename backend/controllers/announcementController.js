@@ -317,8 +317,9 @@ exports.getAnnouncements = async (req, res) => {
  */
 exports.getResolvedAnnouncementsCount = async (req, res) => {
     try {
-        const resolvedCount = await Announcement.countDocuments({ status: 'RESOLVED' });
-        res.json({ resolvedCount });
+        const requestedStatus = (req.query?.status || 'resolved').toString().trim().toUpperCase();
+        const count = await Announcement.countDocuments({ status: requestedStatus });
+        res.json({ count, resolvedCount: count });
     } catch (err) {
         res.status(500).json({ message: 'Errore recupero conteggio annunci risolti', error: err.message });
     }
@@ -392,8 +393,13 @@ exports.addAnnouncementComment = async (req, res) => {
  * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
 exports.createAnnouncement = async (req,res)=>{
-        
+
     try {
+        const isQuick = req.body?.isQuick === true || req.body?.isQuick === 'true' || req.body?.isQuick === 1 || req.body?.isQuick === '1';
+        if (isQuick) {
+            return createQuickAnnouncementInternal(req, res);
+        }
+
         const { type, animalId, description, coordinates, location, lastSeenDate, isCurrentlyThere, animalBehaviour, healthCondition } = req.body;
         const isCurrentlyThereBool = (typeof isCurrentlyThere === 'string') ? (isCurrentlyThere === 'true') : !!isCurrentlyThere;
 
@@ -477,13 +483,13 @@ exports.createAnnouncement = async (req,res)=>{
 };
 
 /**
- * Handles the create quick announcement API request and writes the HTTP response.
+ * Handles the quick announcement creation path and writes the HTTP response.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Promise resolving when the operation completes.
  * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
-exports.createQuickAnnouncement = async (req, res) => {
+async function createQuickAnnouncementInternal(req, res) {
     try {
         const {
             name,
@@ -572,7 +578,7 @@ exports.createQuickAnnouncement = async (req, res) => {
         console.error('Errore creazione annuncio veloce:', err);
         res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
     }
-};
+}
 
 /**
  * Handles the report announcement API request and writes the HTTP response.

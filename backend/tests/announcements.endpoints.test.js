@@ -124,12 +124,13 @@ describe('announcement endpoints', () => {
     expect(res.body.matches).toHaveLength(1);
   });
 
-  test('POST /api/v1/announcements/quick creates quick announcement', async () => {
+  test('POST /api/v1/announcements with isQuick creates quick announcement', async () => {
     mockAnimalModel.create.mockResolvedValue(makeDoc({ _id: 'animal1' }));
 
     const res = await request(app)
-      .post('/api/v1/announcements/quick')
+      .post('/api/v1/announcements')
       .send({
+        isQuick: true,
         species: 'Dog',
         color: 'Brown',
         coordinates: [12.5, 41.9]

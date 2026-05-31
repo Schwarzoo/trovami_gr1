@@ -84,7 +84,7 @@ describe('users endpoints', () => {
     expect(res.body.username).toBe('luigi');
   });
 
-  test('GET /api/v1/users/rifugi/public returns shelters', async () => {
+  test('GET /api/v1/users/rifugi?isPublic=true returns shelters', async () => {
     mockUserModel.find.mockReturnValue(
       makeQuery([
         makeDoc({
@@ -98,7 +98,7 @@ describe('users endpoints', () => {
       ])
     );
 
-    const res = await request(app).get('/api/v1/users/rifugi/public');
+    const res = await request(app).get('/api/v1/users/rifugi?isPublic=true');
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);

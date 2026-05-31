@@ -38,7 +38,7 @@ describe('admin endpoints', () => {
     });
   });
 
-  test('GET /api/v1/admin/rifugi/pending returns pending shelters', async () => {
+  test('GET /api/v1/admin/rifugi?status=pending returns pending shelters', async () => {
     mockUserModel.find.mockReturnValue(
       makeQuery([
         makeDoc({
@@ -50,7 +50,7 @@ describe('admin endpoints', () => {
     );
 
     const res = await request(app)
-      .get('/api/v1/admin/rifugi/pending')
+      .get('/api/v1/admin/rifugi?status=pending')
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);

@@ -56,7 +56,7 @@ router.patch('/readmissions/:id', (req, res, next) => {
   else return res.status(400).json({ message: 'Status riammissione non valido' });
   return reviewReadmissionRequest(req, res, next);
 });
-router.get('/rifugi/pending', getPendingRifugi);
+router.get('/rifugi', getPendingRifugi);
 /**
  * Routes admin shelter-status updates to the approval or rejection controller.
  * @param {Object} req - Express request object.

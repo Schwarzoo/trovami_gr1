@@ -177,6 +177,7 @@ async function submitQuickAnnounce(data) {
   setQuickAnnounceLoading(true);
 
   const announcementPayload = {
+    isQuick: true,
     type: data.type,
     species: data.species,
     breed: data.breed,
@@ -199,6 +200,7 @@ async function submitQuickAnnounce(data) {
     if (data.photo && data.photo.size > 0) {
       const announcementForm = new FormData();
       announcementForm.append('type', announcementPayload.type);
+      announcementForm.append('isQuick', 'true');
       announcementForm.append('species', announcementPayload.species);
       announcementForm.append('breed', announcementPayload.breed);
       announcementForm.append('gender', announcementPayload.gender);
@@ -215,12 +217,12 @@ async function submitQuickAnnounce(data) {
       announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
       announcementForm.append('photo', data.photo);
 
-      announcementRes = await fetch('http://localhost:3000/api/v1/announcements/quick', {
+      announcementRes = await fetch('http://localhost:3000/api/v1/announcements', {
         method: 'POST',
         body: announcementForm
       });
     } else {
-      announcementRes = await fetch('http://localhost:3000/api/v1/announcements/quick', {
+      announcementRes = await fetch('http://localhost:3000/api/v1/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(announcementPayload)

@@ -1,8 +1,8 @@
 const HOME_API = 'http://localhost:3000/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
-const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/resolved/count';
-const HOME_PUBLIC_RIFUGI_API = 'http://localhost:3000/api/v1/users/rifugi/public';
+const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/count?status=resolved';
+const HOME_PUBLIC_RIFUGI_API = 'http://localhost:3000/api/v1/users/rifugi?isPublic=true';
 
 /**
  * Formats a value for the home-page announcement UI.
@@ -85,7 +85,7 @@ async function fetchResolvedAnnouncementsCount() {
     const res = await fetch(HOME_RESOLVED_API);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    return Number(json?.resolvedCount || 0);
+    return Number(json?.count ?? json?.resolvedCount ?? 0);
   } catch (err) {
     console.error('Errore fetch annunci risolti', err);
     return 0;

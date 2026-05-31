@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @returns {Promise<Array<Object>>} Shelter account requests waiting for approval.
    */
   async function fetchPendingRifugi() {
-    const res = await fetch('http://localhost:3000/api/v1/admin/rifugi/pending', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('http://localhost:3000/api/v1/admin/rifugi?status=pending', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
