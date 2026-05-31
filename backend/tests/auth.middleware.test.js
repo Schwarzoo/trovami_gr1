@@ -64,7 +64,8 @@ describe('authMiddleware', () => {
     const mockUser = {
       _id: 'user1',
       sessionToken: 'tok',
-      isActive: true
+      isActive: true,
+      role: 'user'
     };
 
     jest.doMock(require.resolve('../models/User'), () => ({
@@ -83,5 +84,31 @@ describe('authMiddleware', () => {
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(req.user).toEqual({ userId: 'user1', role: 'user' });
+  });
+
+  test('uses current database role instead of stale token role', async () => {
+    const mockUser = {
+      _id: 'user1',
+      sessionToken: 'tok',
+      isActive: true,
+      role: 'shelter'
+    };
+
+    jest.doMock(require.resolve('../models/User'), () => ({
+      findById: jest.fn(async () => mockUser)
+    }));
+
+    const { authMiddleware } = require('../middleware/auth');
+    const req = { headers: {} };
+    const res = createRes();
+    const next = jest.fn();
+    const token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
+    mockUser.sessionToken = token;
+    req.headers.authorization = `Bearer ${token}`;
+
+    await authMiddleware(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user).toEqual({ userId: 'user1', role: 'shelter' });
   });
 });

@@ -1,53 +1,10 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const Notification = require('../models/Notification');
 const { writeAuditLog } = require('../services/auditService');
-
-/**
- * Creates the Nodemailer transporter configured from environment variables.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
- */
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-}
-
-/**
- * Sends an email-verification message containing the raw verification token link.
- * @param {Object} user - user used by the function.
- * @param {string} rawToken - raw token used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- */
-async function sendVerificationEmail(user, rawToken) {
-  const transporter = createTransporter();
-  const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/auth/email-verifications?token=${rawToken}`;
-
-  const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: user.email,
-    subject: 'Verifica Email - Trovami',
-    html: `
-      <h1>Trovami! - Verifica Email</h1>
-      <p>Per attivare il tuo account, clicca il link qui sotto:</p>
-      <a href="${verifyUrl}" style="background-color:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
-        Verifica Email
-      </a>
-      <p>Questo link scade tra 24 ore.</p>
-    `
-  };
-
-  await transporter.sendMail(mailOptions);
-}
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
 
 /**
  * Maps a MongoDB duplicate-key error to a user-facing account message.
@@ -300,28 +257,7 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpires = resetExpires;
     await user.save();
 
-    
-    const transporter = createTransporter();
-
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/reset-password.html?token=${resetToken}`;
-
-    const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: email,
-      subject: 'Recupero Password - Trovami',
-      html: `
-        <h1>Trovami! - Recupero Password</h1>
-        <h2>Hai richiesto il recupero della password</h2>
-        <p>Clicca il link qui sotto per impostare una nuova password:</p>
-        <a href="${resetUrl}" style="background-color:#007bff;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
-          Reimposta Password
-        </a>
-        <p>Questo link scade tra 15 minuti.</p>
-        <p>Se non hai richiesto il recupero della password, ignora questo email.</p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
+    await sendPasswordResetEmail(email, resetToken);
 
     res.json({ message: 'Email di recupero inviata' });
   } catch (err) {

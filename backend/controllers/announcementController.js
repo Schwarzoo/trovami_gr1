@@ -12,9 +12,13 @@ const Notification = require('../models/Notification');
 const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
-const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 const { writeAuditLog } = require('../services/auditService');
+const {
+    sendAnnouncementCommentEmail,
+    sendShelterAnnouncementEmail,
+    sendSmartMatchEmail
+} = require('../services/emailService');
 
 /**
  * Applies publisher contact-visibility preferences to public publisher data.
@@ -34,22 +38,6 @@ function maskPublisherContacts(publisher) {
 }
 
 /**
- * Creates the Nodemailer transporter configured from environment variables.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
- */
-function createTransporter() {
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: process.env.SMTP_PORT || 587,
-        secure: false,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        }
-    });
-}
-
-/**
  * Builds the frontend URL for opening a specific announcement.
  * @param {string} announcementId - announcement id used by the function.
  * @returns {Object|string|Array<Object>|null} The result produced by the function.
@@ -66,82 +54,6 @@ function buildAnnouncementUrl(announcementId) {
  */
 function buildShelterAnimalUrl(shelterId, animalId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/rifugio.html?rifugioId=${shelterId}&animalId=${animalId}`;
-}
-
-/**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} value - Value to normalize or format.
- * @returns {string} The result produced by the function.
- */
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-/**
- * Sends a smart-match email notification when email delivery is configured.
- * @param {string} userId - user id used by the function.
- * @param {Object} subject - subject used by the function.
- * @param {Object} html - html used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- */
-async function sendSmartMatchEmail(userId, subject, html) {
-    try {
-        const recipient = await User.findById(userId).select('email username');
-        if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
-
-        const transporter = createTransporter();
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: recipient.email,
-            subject,
-            html
-        });
-    } catch (err) {
-        console.error('Errore invio email smart match:', err);
-    }
-}
-
-/**
- * Sends an email to a shelter follower for a newly published shelter animal.
- * @param {Object} recipient - recipient used by the function.
- * @param {Object} shelter - shelter used by the function.
- * @param {Object} animal - animal used by the function.
- * @param {string} url - url used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- */
-async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
-    try {
-        if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
-
-        const animalName = animal?.name || 'un nuovo animale';
-        const breed = animal?.breed || 'Non specificata';
-        const age = animal?.age || 'Non specificata';
-        const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'un rifugio che segui';
-
-        const transporter = createTransporter();
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: recipient.email,
-            subject: `Trovami - Nuovo annuncio da ${shelterName}`,
-            html: `
-                <p>Ciao ${escapeHtml(recipient.username || '')},</p>
-                <p>${escapeHtml(shelterName)} ha pubblicato un nuovo annuncio.</p>
-                <ul>
-                    <li><strong>Nome:</strong> ${escapeHtml(animalName)}</li>
-                    <li><strong>Età:</strong> ${escapeHtml(age)}</li>
-                    <li><strong>Razza:</strong> ${escapeHtml(breed)}</li>
-                </ul>
-                <p><a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#C85A2A;color:#ffffff;text-decoration:none;font-weight:700;">Apri scheda animale</a></p>
-            `
-        });
-    } catch (err) {
-        console.error('Errore invio email annuncio rifugio:', err);
-    }
 }
 
 /**
@@ -461,22 +373,8 @@ exports.addAnnouncementComment = async (req, res) => {
                 });
 
                 const publisher = await User.findById(publisherId).select('email username notificationPrefs');
-                const emailOn = !!publisher?.notificationPrefs?.emailOnComment;
-                const canSend = emailOn && publisher?.email && process.env.SMTP_USER && process.env.SMTP_PASS;
-                if (canSend) {
-                    const transporter = createTransporter();
-                    const annUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${ann._id}`;
-                    await transporter.sendMail({
-                        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-                        to: publisher.email,
-                        subject: 'Trovami - Nuovo commento',
-                        html: `
-                            <h2>Nuovo commento su un tuo annuncio</h2>
-                            <p><strong>${user.username}</strong>: ${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
-                            <p><a href="${annUrl}">Vedi annuncio</a></p>
-                        `
-                    });
-                }
+                const annUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${ann._id}`;
+                await sendAnnouncementCommentEmail(publisher, user.username, text, annUrl);
             }
         } catch (e) {
         }

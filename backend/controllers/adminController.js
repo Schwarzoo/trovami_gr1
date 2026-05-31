@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
 const Announcement = require('../models/Announcement');
 const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
@@ -7,6 +6,7 @@ const Report = require('../models/Report');
 const User = require('../models/User');
 const { removeAnnouncementCascade } = require('./announcementController');
 const { buildAuditQuery, writeAuditLog } = require('../services/auditService');
+const { sendAccountBlockedEmail } = require('../services/emailService');
 
 /**
  * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
@@ -28,58 +28,6 @@ function invalidId(res, label) {
  */
 async function writeAudit(actorId, action, target) {
   await writeAuditLog({ actor: actorId, action, target });
-}
-
-/**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {Object} input - Value to normalize or format.
- * @returns {string} The result produced by the function.
- */
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-/**
- * Creates the Nodemailer transporter configured from environment variables.
- * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
- */
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-}
-
-/**
- * Runs the send account blocked email workflow.
- * @param {Object} user - user used by the function.
- * @param {string} reason - reason used by the function.
- * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
- */
-async function sendAccountBlockedEmail(user, reason) {
-  if (!user?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
-  const transporter = createTransporter();
-  const safeReason = escapeHtml(reason);
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: user.email,
-    subject: 'Account bloccato - Trovami',
-    html: `
-      <h2>Account bloccato</h2>
-      <p>Il tuo account Trovami e stato bloccato da un admin.</p>
-      <p><strong>Motivo:</strong> ${safeReason}</p>
-    `
-  });
 }
 
 /**

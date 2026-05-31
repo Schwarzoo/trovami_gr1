@@ -33,7 +33,8 @@ describe('admin endpoints', () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'admin1',
       sessionToken: token,
-      isActive: true
+      isActive: true,
+      role: 'admin'
     });
   });
 

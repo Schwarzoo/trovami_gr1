@@ -29,7 +29,7 @@ const authMiddleware = async (req, res, next) => {
       return res.status(403).json({ message: 'Account bloccato' });
     }
 
-    req.user = { userId: decoded.userId, role: decoded.role };
+    req.user = { userId: decoded.userId, role: user.role };
     next();
   } catch (err) {
     return res.status(401).json({ message: 'Token non valido', error: err.message });
