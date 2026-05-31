@@ -139,7 +139,12 @@ const shelterUserSchema = new mongoose.Schema({
 const User = mongoose.model("User", userBaseSchema);
 const ShelterUser = User.discriminator("shelter", shelterUserSchema);
 
+const StandardUser = User.discriminator('user', new mongoose.Schema({}, { _id: false }));
+const AdminUser = User.discriminator('admin', new mongoose.Schema({}, { _id: false }));
+
 module.exports = User;
 module.exports.User = User;
 module.exports.userBaseSchema = userBaseSchema;
 module.exports.ShelterUser = ShelterUser;
+module.exports.StandardUser = StandardUser;
+module.exports.AdminUser = AdminUser;

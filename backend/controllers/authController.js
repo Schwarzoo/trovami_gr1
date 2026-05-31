@@ -110,6 +110,7 @@ exports.register = async (req, res) => {
       rifugioStatus: user.rifugioStatus || 'none'
     });
   } catch (err) {
+    console.error('Register error:', err);
     const duplicateMessage = duplicateAccountMessage(err);
     if (duplicateMessage) {
       return res.status(400).json({ message: duplicateMessage });
