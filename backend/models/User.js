@@ -86,7 +86,7 @@ userBaseSchema.index({ _id: 1, "followedShelters.shelterId": 1 });
  * @param {Function} next Callback di completamento del middleware.
  * @returns {void}
  */
-userBaseSchema.pre("validate", function normalizeRole(next) {
+userBaseSchema.pre("validate", function normalizeRole() {
   if (typeof this.role === "string") {
     this.role = this.role.toLowerCase();
   }
@@ -94,8 +94,6 @@ userBaseSchema.pre("validate", function normalizeRole(next) {
   if (this.role === "shelter" && this.rifugioStatus == null) {
     this.rifugioStatus = "pending";
   }
-
-  if (typeof next === "function") next();
 });
 
 /**

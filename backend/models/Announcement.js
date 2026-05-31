@@ -71,6 +71,25 @@ const announcementBaseSchema = new mongoose.Schema({
     discriminatorKey: 'type'
 });
 
+announcementBaseSchema.pre('validate', function validateQuickAnnouncement() {
+    if (this.isQuick === true) {
+        const phoneNumber = this.quickContact?.phoneNumber;
+        const email = this.quickContact?.email;
+
+        if (!phoneNumber && !email) {
+            const error = new mongoose.Error.ValidationError(this);
+            error.addError(
+                'quickContact',
+                new mongoose.Error.ValidatorError({
+                    path: 'quickContact',
+                    message: 'Un annuncio rapido deve avere almeno un contatto tra phoneNumber ed email'
+                })
+            );
+            throw error;
+        }
+    }
+});
+
 announcementBaseSchema.index({ location: '2dsphere' });
 
 const Announcement = mongoose.model('Announcement', announcementBaseSchema);

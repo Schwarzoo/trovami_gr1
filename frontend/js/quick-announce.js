@@ -122,9 +122,16 @@ async function handleQuickAnnounceSubmit(e) {
   const color = document.getElementById('qa-color').value.trim();
   const healthCondition = document.getElementById('qa-health').value;
   const type = document.getElementById('qa-type').value;
+  const contactEmail = document.getElementById('qa-contact-email')?.value.trim();
+  const contactPhone = document.getElementById('qa-contact-phone')?.value.trim();
 
   if (!species || !color || !healthCondition || !type) {
     alert('Per favore, compila i campi obbligatori: Specie, Colore, Condizioni di salute e Tipo di segnalazione.');
+    return;
+  }
+
+  if (!contactEmail && !contactPhone) {
+    alert('Per pubblicare una segnalazione rapida devi inserire almeno un contatto tra email e telefono.');
     return;
   }
 
@@ -145,6 +152,9 @@ async function handleQuickAnnounceSubmit(e) {
     description: formData.get('description') || 'Nessuna descrizione',
     healthCondition: formData.get('healthCondition'),
     animalBehaviour: formData.get('animalBehaviour') || 'indifferente',
+    contactName: formData.get('contactName') || '',
+    contactEmail: formData.get('contactEmail') || '',
+    contactPhone: formData.get('contactPhone') || '',
     coordinates: currentLocation.coordinates,
     photo: formData.get('photo')
   };
@@ -178,6 +188,9 @@ async function submitQuickAnnounce(data) {
     coordinates: data.coordinates,
     healthCondition: data.healthCondition,
     animalBehaviour: data.animalBehaviour,
+    contactName: data.contactName,
+    contactEmail: data.contactEmail,
+    contactPhone: data.contactPhone,
     lastSeenDate: new Date().toISOString()
   };
 
@@ -193,6 +206,9 @@ async function submitQuickAnnounce(data) {
       if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
       if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
       announcementForm.append('description', announcementPayload.description);
+      if (announcementPayload.contactName) announcementForm.append('contactName', announcementPayload.contactName);
+      if (announcementPayload.contactEmail) announcementForm.append('contactEmail', announcementPayload.contactEmail);
+      if (announcementPayload.contactPhone) announcementForm.append('contactPhone', announcementPayload.contactPhone);
       announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
       announcementForm.append('healthCondition', announcementPayload.healthCondition);
       announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);

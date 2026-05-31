@@ -569,6 +569,7 @@ exports.createQuickAnnouncement = async (req, res) => {
         await writeAuditLog({ actor: null, action: 'creato annuncio', target: null });
         res.status(201).json(announcement);
     } catch (err) {
+        console.error('Errore creazione annuncio veloce:', err);
         res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
     }
 };

@@ -37,4 +37,18 @@ const animalSchema = new mongoose.Schema({
     otherInfo:          { type: String, default: '' }
 }, { timestamps: true });
 
+animalSchema.pre('validate', function validateAdoptableAnimal() {
+    if (this.adoptable === true && !this.shelterId) {
+        const error = new mongoose.Error.ValidationError(this);
+        error.addError(
+            'shelterId',
+            new mongoose.Error.ValidatorError({
+                path: 'shelterId',
+                message: 'Un animale adottabile deve avere un rifugio assegnato'
+            })
+        );
+        throw error;
+    }
+});
+
 module.exports = mongoose.model('Animal', animalSchema);
