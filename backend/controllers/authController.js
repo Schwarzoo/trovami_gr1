@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const ShelterUser = User.ShelterUser || User;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -57,7 +58,9 @@ exports.register = async (req, res) => {
     const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex');
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const user = await User.create({
+    const AccountModel = wantsRifugio ? ShelterUser : User;
+
+    const user = await AccountModel.create({
       username,
       email,
       passwordHash,
@@ -104,7 +107,7 @@ exports.register = async (req, res) => {
         : 'Account creato. Controlla la mail per verificare l\'account',
       userId: user._id,
       role: user.role,
-      rifugioStatus: user.rifugioStatus
+      rifugioStatus: user.rifugioStatus || 'none'
     });
   } catch (err) {
     const duplicateMessage = duplicateAccountMessage(err);
