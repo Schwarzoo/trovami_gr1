@@ -76,11 +76,15 @@ exports.updateMe = async (req, res) => {
       updates['rifugioData.location'] = location;
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.user.userId,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).select('-passwordHash -__v');
+    const userDoc = await User.findById(req.user.userId);
+    if (!userDoc) return res.status(404).json({ message: 'Utente non trovato' });
+
+    userDoc.set(updates);
+    const savedUser = await userDoc.save();
+    const user = savedUser.toObject();
+    delete user.passwordHash;
+    delete user.__v;
+
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
     await writeAuditLog({ actor: user, action: 'modificato profilo', target: null });
     res.json(user);

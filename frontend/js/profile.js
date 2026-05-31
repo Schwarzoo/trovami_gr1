@@ -912,7 +912,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const [lng, lat] = pendingRifugioLocation;
     const res = await fetch('http://localhost:3000/api/v1/users/me', {
       method: 'PUT',
-      headers: authHeader,
+      headers: {
+        ...authHeader,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         rifugioData: {
           location: { type: 'Point', coordinates: [lng, lat] }
