@@ -422,10 +422,10 @@ async function renderHeroStats() {
 
 async function renderHomeStatsStrip() {
   const last24hCounter = document.getElementById('home-last-24h-count');
-  const resolvedTodayCounter = document.getElementById('home-resolved-today-count');
+  const createdTodayCounter = document.getElementById('home-created-today-count');
   const resolvedTotalCounter = document.getElementById('home-resolved-total-count');
   const resolvedTotalInline = document.getElementById('home-resolved-total-inline');
-  if (!last24hCounter && !resolvedTodayCounter && !resolvedTotalCounter && !resolvedTotalInline) return;
+  if (!last24hCounter && !createdTodayCounter && !resolvedTotalCounter && !resolvedTotalInline) return;
 
   const [announcements, resolvedTotalCount] = await Promise.all([
     fetchHomeAnnouncements(),
@@ -437,15 +437,12 @@ async function renderHomeStatsStrip() {
     ? announcements.filter((announcement) => isWithinLast24Hours(getHomeAnnouncementDate(announcement))).length
     : 0;
 
-  const resolvedTodayCount = Array.isArray(announcements)
-    ? announcements.filter((announcement) => {
-        if (announcement?.status !== 'RESOLVED') return false;
-        return isSameDay(getHomeAnnouncementDate(announcement), now);
-      }).length
+  const createdTodayCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => isSameDay(getHomeAnnouncementDate(announcement), now)).length
     : 0;
 
   if (last24hCounter) last24hCounter.textContent = String(last24hCount);
-  if (resolvedTodayCounter) resolvedTodayCounter.textContent = String(resolvedTodayCount);
+  if (createdTodayCounter) createdTodayCounter.textContent = String(createdTodayCount);
   if (resolvedTotalCounter) resolvedTotalCounter.textContent = String(resolvedTotalCount);
   if (resolvedTotalInline) resolvedTotalInline.textContent = String(resolvedTotalCount);
 }
