@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 
-// GET /api/v1/notifications?unread=1
+/**
+ * Handles the get notifications API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getNotifications = async (req, res) => {
   try {
     const unread = (req.query.unread === undefined) ? true : (String(req.query.unread) !== '0');
@@ -18,7 +24,13 @@ exports.getNotifications = async (req, res) => {
   }
 };
 
-// PATCH /api/v1/notifications/:id
+/**
+ * Handles the mark notification read API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.markNotificationRead = async (req, res) => {
   try {
     const id = req.params.id;
@@ -37,7 +49,13 @@ exports.markNotificationRead = async (req, res) => {
   }
 };
 
-// PATCH /api/v1/notifications
+/**
+ * Handles the mark all read API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.markAllRead = async (req, res) => {
   try {
     const r = await Notification.updateMany(

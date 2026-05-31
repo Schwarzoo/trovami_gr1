@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+/**
+ * Validates the JWT bearer token, checks the stored session, and attaches the authenticated user to the request.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware callback.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -28,6 +36,12 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+/**
+ * Creates an Express middleware that allows access only to users with one of the required roles.
+ * @param {...string} roles - Roles allowed to access the protected route.
+ * @returns {Function} Express middleware that validates the authenticated user's role.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user?.role)) {

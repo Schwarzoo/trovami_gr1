@@ -1,4 +1,3 @@
-// Quick Announcement Modal Management
 const QUICK_ANNOUNCE_MODAL = document.getElementById('quick-announce-modal');
 const QUICK_ANNOUNCE_FORM = document.getElementById('quick-announce-form');
 const QUICK_ANNOUNCE_BTN = document.getElementById('quick-announce-btn');
@@ -10,12 +9,18 @@ const QUICK_ANNOUNCE_QUERY = 'quick-announce=1';
 
 let currentLocation = null;
 
-// Check Authentication
+/**
+ * Checks whether the browser has a stored authentication token.
+ * @returns {boolean} The result produced by the function.
+ */
 function isUserLoggedIn() {
   return !!localStorage.getItem('token');
 }
 
-// Modal Control Functions
+/**
+ * Opens the quick-announcement modal.
+ * @returns {void} The result produced by the function.
+ */
 function openQuickAnnounceModal() {
   if (!QUICK_ANNOUNCE_MODAL) {
     window.location.href = '/?quick-announce=1';
@@ -24,10 +29,13 @@ function openQuickAnnounceModal() {
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   
-  // Request geolocation silently
   requestGeolocation();
 }
 
+/**
+ * Closes the quick-announcement modal.
+ * @returns {void} The result produced by the function.
+ */
 function closeQuickAnnounceModal() {
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
@@ -36,6 +44,11 @@ function closeQuickAnnounceModal() {
   setQuickAnnounceLoading(false);
 }
 
+/**
+ * Toggles loading state for the quick-announcement form.
+ * @param {boolean} isLoading - is loading used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function setQuickAnnounceLoading(isLoading) {
   if (QUICK_ANNOUNCE_PROGRESS) {
     QUICK_ANNOUNCE_PROGRESS.classList.toggle('is-visible', isLoading);
@@ -46,7 +59,10 @@ function setQuickAnnounceLoading(isLoading) {
   if (QUICK_ANNOUNCE_CLOSE) QUICK_ANNOUNCE_CLOSE.disabled = isLoading;
 }
 
-// Geolocation Handler
+/**
+ * Requests the current browser geolocation coordinates.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function requestGeolocation() {
   const locationDisplay = document.getElementById('qa-location-status');
   
@@ -94,11 +110,14 @@ function requestGeolocation() {
   );
 }
 
-// Form Submission Handler
+/**
+ * Handles quick-announcement form submission and API creation.
+ * @param {Event} e - Browser event object.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function handleQuickAnnounceSubmit(e) {
   e.preventDefault();
 
-  // Validate required fields
   const species = document.getElementById('qa-species').value.trim();
   const color = document.getElementById('qa-color').value.trim();
   const healthCondition = document.getElementById('qa-health').value;
@@ -114,7 +133,6 @@ async function handleQuickAnnounceSubmit(e) {
     return;
   }
 
-  // Collect form data
   const formData = new FormData(QUICK_ANNOUNCE_FORM);
   const data = {
     type: formData.get('type'),
@@ -139,7 +157,12 @@ async function handleQuickAnnounceSubmit(e) {
   }
 }
 
-// API Call to Create Announcement
+/**
+ * Creates the animal and quick announcement records from form data.
+ * @param {Object} data - data used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function submitQuickAnnounce(data) {
   setQuickAnnounceLoading(true);
 
@@ -205,24 +228,23 @@ async function submitQuickAnnounce(data) {
   }
 }
 
-// Event Listeners
+/**
+ * Binds quick-announcement modal controls after the DOM is ready.
+ * @returns {void} No return value.
+ */
 document.addEventListener('DOMContentLoaded', () => {
-  // Modal open/close events
   QUICK_ANNOUNCE_BTN?.addEventListener('click', openQuickAnnounceModal);
   QUICK_ANNOUNCE_CLOSE?.addEventListener('click', closeQuickAnnounceModal);
   QUICK_ANNOUNCE_CANCEL?.addEventListener('click', closeQuickAnnounceModal);
 
-  // Close modal on overlay click (outside content)
   QUICK_ANNOUNCE_MODAL?.addEventListener('click', (e) => {
     if (e.target === QUICK_ANNOUNCE_MODAL) {
       closeQuickAnnounceModal();
     }
   });
 
-  // Form submission
   QUICK_ANNOUNCE_FORM?.addEventListener('submit', handleQuickAnnounceSubmit);
 
-  // Keyboard shortcut: Escape to close
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && QUICK_ANNOUNCE_MODAL?.getAttribute('aria-hidden') === 'false') {
       closeQuickAnnounceModal();

@@ -6,12 +6,22 @@ let currentLocation = null;
 let sortByProximity = false;
 const EMPTY_VALUE = '- -';
 
+/**
+ * Formats a value for display, replacing null, undefined, or blank text with a placeholder.
+ * @param {*} value - Value to format for UI display.
+ * @returns {string} The formatted display value or the empty-value placeholder.
+ */
 function displayValue(value) {
     if (value === null || value === undefined) return EMPTY_VALUE;
     const text = String(value).trim();
     return text ? text : EMPTY_VALUE;
 }
 
+/**
+ * Escapes HTML-sensitive characters in a value before injecting it into markup.
+ * @param {*} input - Value to escape.
+ * @returns {string} HTML-safe string representation of the input.
+ */
 function escapeHtml(input) {
     return String(input ?? '')
         .replaceAll('&', '&amp;')
@@ -21,8 +31,12 @@ function escapeHtml(input) {
         .replaceAll("'", '&#39;');
 }
 
-// --- Fetch ---
 
+/**
+ * Fetches the announcements list from the API using optional query parameters.
+ * @param {Object} [params={}] - Query parameters to append to the announcements API URL.
+ * @returns {Promise<Array<Object>>} Promise resolving to an array of announcements, or an empty array on failure.
+ */
 async function fetchAnnouncements(params = {}) {
     const query = new URLSearchParams(params).toString();
     const url = query ? `${API_BASE}?${query}` : API_BASE;
@@ -37,6 +51,11 @@ async function fetchAnnouncements(params = {}) {
     }
 }
 
+/**
+ * Fetches a single announcement by its identifier.
+ * @param {string} id - Announcement identifier.
+ * @returns {Promise<Object|null>} Promise resolving to the announcement object, or null when not found or on failure.
+ */
 async function fetchAnnouncementById(id) {
     try {
         const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
@@ -47,6 +66,13 @@ async function fetchAnnouncementById(id) {
     }
 }
 
+/**
+ * Sends a new comment for an announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} text - Comment text to submit.
+ * @returns {Promise<Object>} Promise resolving to the API response JSON.
+ * @throws {Error} Throws when the user is not logged in or when the API returns an HTTP error response.
+ */
 async function postAnnouncementComment(id, text) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
@@ -68,6 +94,14 @@ async function postAnnouncementComment(id, text) {
     return json;
 }
 
+/**
+ * Sends a report for an announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} reason - Report reason selected by the user.
+ * @param {string} details - Additional report details.
+ * @returns {Promise<Object>} Promise resolving to the API response JSON.
+ * @throws {Error} Throws when the user is not logged in or when the API returns an HTTP error response.
+ */
 async function postAnnouncementReport(id, reason, details) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
@@ -86,6 +120,13 @@ async function postAnnouncementReport(id, reason, details) {
     return json;
 }
 
+/**
+ * Updates the moderation status of an announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} status - Status value to apply to the announcement.
+ * @returns {Promise<Object>} Promise resolving to the API response JSON.
+ * @throws {Error} Throws when the user is not logged in or when the API returns an HTTP error response.
+ */
 async function patchAnnouncementStatus(id, status) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
@@ -104,6 +145,12 @@ async function patchAnnouncementStatus(id, status) {
     return json;
 }
 
+/**
+ * Fetches public contact data for a user.
+ * @param {string} userId - User identifier.
+ * @returns {Promise<Object>} Promise resolving to the public user data returned by the API.
+ * @throws {Error} Throws when the user is not logged in or when the API returns an HTTP error response.
+ */
 async function fetchPublicUser(userId) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
@@ -115,8 +162,12 @@ async function fetchPublicUser(userId) {
     return json;
 }
 
-// --- Rendering ---
 
+/**
+ * Renders announcement cards into the announcements grid and toggles the empty state.
+ * @param {Array<Object>} announcements - Announcements to render.
+ * @returns {void}
+ */
 function renderCards(announcements) {
     const grid = document.getElementById('announcements-grid');
     const empty = document.getElementById('empty-state');
@@ -137,6 +188,11 @@ function renderCards(announcements) {
     });
 }
 
+/**
+ * Builds a DOM card element for an announcement and wires its modal/image behavior.
+ * @param {Object} ann - Announcement data used to create the card.
+ * @returns {HTMLElement} The created announcement card element.
+ */
 function buildCard(ann) {
     const animal = ann.animalId;
     const publisher = ann.publisherId;
@@ -150,7 +206,6 @@ function buildCard(ann) {
         ? `<div class="card-distance">${ann._distance < 1000 ? `${Math.round(ann._distance)} m` : `${(ann._distance / 1000).toFixed(1)} km`} da te</div>`
         : '';
 
-    // try announcement photo endpoint first
     const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
     const date = new Date(ann.date).toLocaleDateString('it-IT', {
         day: '2-digit', month: 'short', year: 'numeric'
@@ -212,8 +267,12 @@ function buildCard(ann) {
     return card;
 }
 
-// --- Modal ---
 
+/**
+ * Opens the announcement detail modal, loads full data, and binds modal actions.
+ * @param {Object} ann - Announcement summary or full announcement data.
+ * @returns {Promise<void>} Promise resolving when the modal has been populated and opened.
+ */
 async function openModal(ann) {
     const isLoggedIn = !!localStorage.getItem('token'); // check auth
     const full = await fetchAnnouncementById(ann._id);
@@ -265,7 +324,6 @@ async function openModal(ann) {
     }
 
         const gallery = document.getElementById('modal-gallery');
-        // try to load announcement photo from backend endpoint and fallback to text if missing
         gallery.innerHTML = '<div class="modal-spinner">…</div>';
         (async () => {
             const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
@@ -300,7 +358,6 @@ async function openModal(ann) {
                 gallery.innerHTML = '';
                 gallery.appendChild(wrapper);
             } catch (err) {
-                // show fallback and overlay button if available
                 if (rifugioLink) {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'modal-gallery-wrapper';
@@ -501,7 +558,6 @@ async function openModal(ann) {
         });
     }
 
-    // click username in comment -> show contacts
     const modalBody = document.getElementById('modal-body');
     if (modalBody && modalBody.dataset.commentContactsBound !== 'true') {
       modalBody.dataset.commentContactsBound = 'true';
@@ -515,7 +571,6 @@ async function openModal(ann) {
         const slot = slotId ? document.getElementById(slotId) : null;
         if (!slot) return;
 
-        // toggle off
         if (slot.dataset.loaded === 'true') {
             slot.dataset.loaded = 'false';
             slot.innerHTML = '';
@@ -550,6 +605,11 @@ async function openModal(ann) {
     document.body.style.overflow = 'hidden';
 }
 
+/**
+ * Renders the comments section markup for an announcement.
+ * @param {Array<Object>} comments - Comment objects to render.
+ * @returns {string} HTML string containing the rendered comments or the empty state.
+ */
 function renderCommentsHtml(comments) {
     if (!Array.isArray(comments) || comments.length === 0) {
         return `<div class="comments-empty">Nessun commento</div>`;
@@ -573,12 +633,20 @@ function renderCommentsHtml(comments) {
     }).join('');
 }
 
+/**
+ * Closes the announcement detail modal and restores page scrolling.
+ * @returns {void}
+ */
 function closeModal() {
     document.getElementById('modal-overlay').classList.remove('active');
     document.body.style.overflow = '';
 }
 
-// --- Filtri ---
+/**
+ * Populates the shelter filter with unique shelter publishers found in announcements.
+ * @param {Array<Object>} announcements - Announcements used to derive shelter filter options.
+ * @returns {void}
+ */
 function populateRifugioFilter(announcements) {
     const select = document.getElementById('filter-rifugio');
     if (!select) return;
@@ -603,6 +671,10 @@ function populateRifugioFilter(announcements) {
         });
 }
 
+/**
+ * Applies the current UI filter state to the cached announcements list.
+ * @returns {Array<Object>} Filtered announcements, optionally sorted by proximity.
+ */
 function getFilteredAnnouncements() {
     const type    = document.getElementById('filter-type').value;
     const species = document.getElementById('filter-species').value.trim();
@@ -623,30 +695,52 @@ function getFilteredAnnouncements() {
     return filtered;
 }
 
+/**
+ * Re-renders the announcement list using the active filters and updates the result count.
+ * @returns {void}
+ */
 function applyFilters() {
     const filtered = getFilteredAnnouncements();
     renderCards(filtered);
     updateCount(filtered.length);
 }
 
+/**
+ * Updates the visible result counter.
+ * @param {number} n - Number of announcements currently shown.
+ * @returns {void}
+ */
 function updateCount(n) {
     document.getElementById('result-count').textContent =
         `${n} ${n === 1 ? 'annuncio trovato' : 'annunci trovati'}`;
 }
 
-// --- Error ---
 
+/**
+ * Clears and hides the global error banner.
+ * @returns {void}
+ */
 function clearError() {
     const banner = document.getElementById('error-banner');
     banner.textContent = '';
     banner.style.display = 'none';
 }
 
+/**
+ * Updates the text shown in the location status area.
+ * @param {string} text - Status text to display.
+ * @returns {void}
+ */
 function updateLocationStatus(text) {
     const status = document.getElementById('location-status');
     status.textContent = text || '';
 }
 
+/**
+ * Requests the user's current browser geolocation.
+ * @returns {Promise<Array<number>>} Promise resolving to [latitude, longitude].
+ * @throws {Error|GeolocationPositionError} Rejects when geolocation is unavailable, denied, or times out.
+ */
 function getUserLocation() {
     return new Promise((resolve, reject) => {
         if (!navigator.geolocation) {
@@ -662,7 +756,20 @@ function getUserLocation() {
     });
 }
 
+/**
+ * Computes the great-circle distance between two latitude/longitude points.
+ * @param {number} lat1 - Latitude of the first point.
+ * @param {number} lon1 - Longitude of the first point.
+ * @param {number} lat2 - Latitude of the second point.
+ * @param {number} lon2 - Longitude of the second point.
+ * @returns {number} Distance between the two points in meters.
+ */
 function computeDistanceMeters(lat1, lon1, lat2, lon2) {
+    /**
+     * Runs the to rad workflow.
+     * @param {Object} deg - deg used by the function.
+     * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+     */
     const toRad = (deg) => deg * Math.PI / 180;
     const R = 6371000;
     const dLat = toRad(lat2 - lat1);
@@ -672,6 +779,12 @@ function computeDistanceMeters(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+/**
+ * Adds distance metadata to announcements and sorts them by distance from the user.
+ * @param {Array<Object>} announcements - Announcements to sort.
+ * @param {Array<number>} userLocation - User location as [latitude, longitude].
+ * @returns {Array<Object>} New announcement objects sorted from nearest to farthest.
+ */
 function sortAnnouncementsByDistance(announcements, [userLat, userLng]) {
     return announcements
         .map((ann) => {
@@ -684,18 +797,31 @@ function sortAnnouncementsByDistance(announcements, [userLat, userLng]) {
         .sort((a, b) => (a._distance || 0) - (b._distance || 0));
 }
 
+/**
+ * Sorts announcements by date in descending order without mutating the input array.
+ * @param {Array<Object>} announcements - Announcements to sort.
+ * @returns {Array<Object>} Announcements sorted from newest to oldest.
+ */
 function sortAnnouncementsByDate(announcements) {
     return [...announcements].sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
+/**
+ * Shows a message in the global error banner.
+ * @param {string} msg - Error message to display.
+ * @returns {void}
+ */
 function showError(msg) {
     const banner = document.getElementById('error-banner');
     banner.textContent = msg;
     banner.style.display = 'block';
 }
 
-// --- Init ---
 
+/**
+ * Initializes the announcements page after the DOM is ready.
+ * @returns {Promise<void>} Promise resolving when initial announcements are loaded and event handlers are bound.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
     allAnnouncements = await fetchAnnouncements();
     allAnnouncements = sortAnnouncementsByDate(allAnnouncements);
@@ -751,28 +877,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Escape') closeModal();
     });
 
-    // If the page was opened with a highlight query param, open that announcement
     try {
         const params = new URLSearchParams(window.location.search);
         const highlight = params.get('highlight');
         if (highlight) {
-            // Wait a tick to ensure DOM is rendered
             setTimeout(() => {
-                // find announcement by id
                 const ann = allAnnouncements.find(a => a._id === highlight);
                 if (ann) {
-                    // render cards already done; scroll card into view if exists
                     const card = document.querySelector(`.card[data-id="${highlight}"]`);
                     if (card) {
                         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        // briefly highlight the card
                         card.style.transition = 'box-shadow 250ms ease';
                         card.style.boxShadow = '0 6px 20px rgba(26,115,232,0.25)';
                         setTimeout(() => card.style.boxShadow = '', 2000);
-                        // open modal for the announcement
                         openModal(ann);
                     } else {
-                        // fallback: open modal anyway
                         openModal(ann);
                     }
                 }

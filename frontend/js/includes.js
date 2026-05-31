@@ -1,5 +1,9 @@
 let notificationBadgeTimer = null;
 
+/**
+ * Opens the profile new-announcement flow from shared navigation controls.
+ * @returns {void} The result produced by the function.
+ */
 function openProfileNewAnnouncementFlow() {
   const target = '/pages/profile.html?newAnnouncement=1';
   const token = localStorage.getItem('token');
@@ -17,6 +21,11 @@ document.addEventListener('click', (event) => {
   openProfileNewAnnouncementFlow();
 });
 
+/**
+ * Loads shared HTML partials and initializes navigation-dependent UI.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function loadPartials() {
   const targets = Array.from(document.querySelectorAll('[data-include]'));
   if (targets.length === 0) return;
@@ -41,6 +50,10 @@ async function loadPartials() {
   startNotificationBadgeUpdates();
 }
 
+/**
+ * Marks the current navigation link as active.
+ * @returns {void} The result produced by the function.
+ */
 function setActiveNav() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const links = Array.from(document.querySelectorAll('[data-nav]'));
@@ -58,6 +71,10 @@ function setActiveNav() {
   });
 }
 
+/**
+ * Personalizes navigation controls based on the current authentication state.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function personalizeNav() {
   const token = localStorage.getItem('token');
   const loginAnchors = Array.from(document.querySelectorAll('[data-login-target]'));
@@ -72,6 +89,11 @@ function personalizeNav() {
   });
 }
 
+/**
+ * Fetches unread notifications and updates the navigation badge.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function updateNotificationBadge() {
   const badge = document.getElementById('notificationBadge');
   const token = localStorage.getItem('token');
@@ -104,6 +126,10 @@ async function updateNotificationBadge() {
   }
 }
 
+/**
+ * Starts periodic notification-badge refreshes.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function startNotificationBadgeUpdates() {
   if (notificationBadgeTimer) clearInterval(notificationBadgeTimer);
   updateNotificationBadge();

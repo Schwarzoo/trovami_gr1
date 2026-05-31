@@ -6,6 +6,11 @@ const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-sh
 let currentRifugio = null;
 let isFollowingCurrentRifugio = false;
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -15,14 +20,29 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Runs the format number workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function formatNumber(value) {
   return Number.isFinite(Number(value)) ? Number(value).toLocaleString('it-IT') : '0';
 }
 
+/**
+ * Returns rifugio name.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getRifugioName(rifugio) {
   return rifugio?.rifugioData?.rifugioName || rifugio?.shelterData?.shelterName || rifugio?.username || 'Rifugio';
 }
 
+/**
+ * Returns coordinates.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getCoordinates(rifugio) {
   const coords = rifugio?.rifugioData?.location?.coordinates || rifugio?.shelterData?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
@@ -31,14 +51,27 @@ function getCoordinates(rifugio) {
   return [lng, lat];
 }
 
+/**
+ * Returns rifugio id.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getRifugioId() {
   return new URLSearchParams(window.location.search).get('rifugioId');
 }
 
+/**
+ * Returns animal id.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getAnimalId() {
   return new URLSearchParams(window.location.search).get('animalId');
 }
 
+/**
+ * Decodes a JWT payload without verifying the signature for client-side UI decisions.
+ * @param {string} token - token used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function decodeJwt(token) {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -47,6 +80,12 @@ function decodeJwt(token) {
   }
 }
 
+/**
+ * Fetches JSON from an API endpoint and throws on HTTP failures.
+ * @param {string} url - url used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchJson(url) {
   const res = await fetch(url);
   if (!res.ok) {
@@ -56,6 +95,13 @@ async function fetchJson(url) {
   return await res.json();
 }
 
+/**
+ * Fetches JSON from an authenticated API endpoint and throws on HTTP failures.
+ * @param {string} url - url used by the function.
+ * @param {Object} options - Options that customize the operation.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchAuthJson(url, options = {}) {
   const token = localStorage.getItem('token');
   const headers = {
@@ -71,14 +117,21 @@ async function fetchAuthJson(url, options = {}) {
   return json;
 }
 
-// announcements removed from shelter page; no helper needed
 
+/**
+ * Reads the current user role from local storage.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getLoggedRole() {
   const token = localStorage.getItem('token');
   const payload = token ? decodeJwt(token) : null;
   return payload?.role || localStorage.getItem('role') || null;
 }
 
+/**
+ * Closes the follow modal UI.
+ * @returns {void} The result produced by the function.
+ */
 function closeFollowModal() {
   const overlay = document.getElementById('follow-shelter-overlay');
   if (overlay) overlay.style.display = 'none';
@@ -87,6 +140,10 @@ function closeFollowModal() {
   if (status) status.textContent = '';
 }
 
+/**
+ * Opens the follow modal UI.
+ * @returns {void} The result produced by the function.
+ */
 function openFollowModal() {
   const overlay = document.getElementById('follow-shelter-overlay');
   if (!overlay) return;
@@ -94,6 +151,11 @@ function openFollowModal() {
   document.body.style.overflow = 'hidden';
 }
 
+/**
+ * Sets follow button state.
+ * @param {boolean} isFollowing - is following used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function setFollowButtonState(isFollowing) {
   isFollowingCurrentRifugio = isFollowing;
   const button = document.getElementById('follow-shelter-button');
@@ -104,6 +166,11 @@ function setFollowButtonState(isFollowing) {
   button.classList.toggle('primary', !isFollowing);
 }
 
+/**
+ * Loads follow state data and updates the UI.
+ * @param {string} rifugioId - rifugio id used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function loadFollowState(rifugioId) {
   const token = localStorage.getItem('token');
   if (!token || getLoggedRole() !== 'user') {
@@ -120,6 +187,11 @@ async function loadFollowState(rifugioId) {
   }
 }
 
+/**
+ * Runs the save follow preference workflow.
+ * @param {string} emailEnabled - email enabled used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function saveFollowPreference(emailEnabled) {
   if (!currentRifugio?._id) return;
   const status = document.getElementById('follow-shelter-status');
@@ -136,6 +208,10 @@ async function saveFollowPreference(emailEnabled) {
   }
 }
 
+/**
+ * Runs the unfollow current shelter workflow.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function unfollowCurrentShelter() {
   if (!currentRifugio?._id) return;
   const button = document.getElementById('follow-shelter-button');
@@ -152,6 +228,10 @@ async function unfollowCurrentShelter() {
   }
 }
 
+/**
+ * Runs the initialize follow controls workflow.
+ * @returns {void} The result produced by the function.
+ */
 function initFollowControls() {
   document.getElementById('follow-shelter-button')?.addEventListener('click', () => {
     const token = localStorage.getItem('token');
@@ -176,10 +256,20 @@ function initFollowControls() {
   document.getElementById('follow-site-email')?.addEventListener('click', () => saveFollowPreference(true));
 }
 
+/**
+ * Collects visible shelter contact fields into a list.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getAllContacts(rifugio) {
   return [rifugio?.phoneNumber, rifugio?.email].filter(Boolean).join(' · ');
 }
 
+/**
+ * Summarizes shelter animals by total and adoptable counts.
+ * @param {Array<Object>} animals - animals used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function summarizeAnimals(animals) {
   const list = Array.isArray(animals) ? animals : [];
   return {
@@ -188,6 +278,12 @@ function summarizeAnimals(animals) {
   };
 }
 
+/**
+ * Renders shelter statistics into the page.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @param {Array<Object>} animals - animals used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderStats(rifugio, animals) {
   const stats = document.getElementById('shelter-stats');
   const { total, available } = summarizeAnimals(animals);
@@ -201,6 +297,12 @@ function renderStats(rifugio, animals) {
   `;
 }
 
+/**
+ * Renders shelter profile information and contacts.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @param {Array<Object>} animals - animals used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderInfo(rifugio, animals) {
   const container = document.getElementById('shelter-info-grid');
   const coords = getCoordinates(rifugio);
@@ -239,8 +341,13 @@ function renderInfo(rifugio, animals) {
   `;
 }
 
-// Announcements section removed from shelter page
 
+/**
+ * Renders animals for shelter into the current page.
+ * @param {string} rifugioId - rifugio id used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function renderAnimalsForShelter(rifugioId) {
   const grid = document.getElementById('shelter-animals-grid');
   const counter = document.getElementById('shelter-animals-count');
@@ -269,7 +376,6 @@ async function renderAnimalsForShelter(rifugioId) {
         </article>
       `;
     }).join('');
-    // load photos for animals
     list.forEach(a => {
       const card = grid.querySelector(`.card[data-id="${a._id}"]`);
       if (!card) return;
@@ -298,7 +404,6 @@ async function renderAnimalsForShelter(rifugioId) {
         }
       })();
     });
-    // attach click handler to open animal detail modal (view-only)
     grid.addEventListener('click', (e) => {
       const clicked = e.target.closest('.card');
       if (!clicked || !grid.contains(clicked)) return;
@@ -312,6 +417,11 @@ async function renderAnimalsForShelter(rifugioId) {
   }
 }
 
+/**
+ * Renders contact request panel into the current page.
+ * @param {Object} animal - animal used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderContactRequestPanel(animal) {
   const panel = document.getElementById('animal-contact-request');
   if (!panel) return;
@@ -381,6 +491,12 @@ function renderContactRequestPanel(animal) {
   });
 }
 
+/**
+ * Opens the shelter animal modal UI.
+ * @param {string} animalId - animal id used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function openShelterAnimalModal(animalId) {
   try {
     const res = await fetch(`${API_ANIMALS}/${encodeURIComponent(animalId)}`);
@@ -408,7 +524,6 @@ async function openShelterAnimalModal(animalId) {
     const adoptableEl = document.getElementById('animal-adoptable-display');
     if (adoptableEl) adoptableEl.textContent = adoptableText;
 
-    // notes
     if (notesContainer) {
       notesContainer.innerHTML = '';
       const notes = Array.isArray(a.medicalNotes) ? a.medicalNotes.slice().reverse() : [];
@@ -421,7 +536,6 @@ async function openShelterAnimalModal(animalId) {
       });
     }
 
-    // gallery
     if (gallery) {
       gallery.innerHTML = '';
       const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
@@ -448,6 +562,11 @@ async function openShelterAnimalModal(animalId) {
   }
 }
 
+/**
+ * Renders map markers and related map UI.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderMap(rifugio) {
   const coords = getCoordinates(rifugio);
   const mapLink = document.getElementById('shelter-map-link');
@@ -473,6 +592,11 @@ function renderMap(rifugio) {
   requestAnimationFrame(() => map.invalidateSize());
 }
 
+/**
+ * Loads the page data and initializes the view.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function loadPage() {
   const rifugioId = getRifugioId();
   const animalId = getAnimalId();
@@ -500,13 +624,16 @@ async function loadPage() {
   renderInfo(rifugio, animals);
   renderMap(rifugio);
   await loadFollowState(rifugio._id);
-  // load animals for this shelter
   await renderAnimalsForShelter(rifugio._id);
   if (animalId) {
     await openShelterAnimalModal(animalId).catch(() => {});
   }
 }
 
+/**
+ * Initializes the single shelter page after the DOM is ready.
+ * @returns {Promise<void>} Promise resolving when shelter data and controls are initialized.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
   initFollowControls();
   try {

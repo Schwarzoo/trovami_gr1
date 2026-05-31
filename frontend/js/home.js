@@ -4,12 +4,22 @@ const HOME_EMPTY_VALUE = '- -';
 const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/resolved/count';
 const HOME_PUBLIC_RIFUGI_API = 'http://localhost:3000/api/v1/users/rifugi/public';
 
+/**
+ * Runs the home display value workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function homeDisplayValue(value) {
   if (value === null || value === undefined) return HOME_EMPTY_VALUE;
   const text = String(value).trim();
   return text ? text : HOME_EMPTY_VALUE;
 }
 
+/**
+ * Runs the home escape html workflow.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function homeEscapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -19,6 +29,11 @@ function homeEscapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Fetches home announcements data from the API.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchHomeAnnouncements() {
   try {
     const res = await fetch(HOME_API);
@@ -31,6 +46,11 @@ async function fetchHomeAnnouncements() {
   }
 }
 
+/**
+ * Fetches home announcement by id data from the API.
+ * @param {string} id - id used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function fetchHomeAnnouncementById(id) {
   try {
     const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}`);
@@ -41,6 +61,11 @@ async function fetchHomeAnnouncementById(id) {
   }
 }
 
+/**
+ * Fetches public rifugi count data from the API.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchPublicRifugiCount() {
   try {
     const res = await fetch(HOME_PUBLIC_RIFUGI_API);
@@ -53,6 +78,11 @@ async function fetchPublicRifugiCount() {
   }
 }
 
+/**
+ * Fetches resolved announcements count data from the API.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchResolvedAnnouncementsCount() {
   try {
     const res = await fetch(HOME_RESOLVED_API);
@@ -65,6 +95,11 @@ async function fetchResolvedAnnouncementsCount() {
   }
 }
 
+/**
+ * Returns home announcement date.
+ * @param {Object} announcement - announcement used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getHomeAnnouncementDate(announcement) {
   const rawDate = announcement?.createdAt || announcement?.date || announcement?.updatedAt;
   if (!rawDate) return null;
@@ -72,6 +107,12 @@ function getHomeAnnouncementDate(announcement) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/**
+ * Checks whether same day.
+ * @param {Object} left - left used by the function.
+ * @param {Object} right - right used by the function.
+ * @returns {boolean} The result produced by the function.
+ */
 function isSameDay(left, right) {
   if (!left || !right) return false;
   return left.getFullYear() === right.getFullYear()
@@ -79,11 +120,23 @@ function isSameDay(left, right) {
     && left.getDate() === right.getDate();
 }
 
+/**
+ * Checks whether within last24 hours.
+ * @param {Object} date - date used by the function.
+ * @returns {boolean} The result produced by the function.
+ */
 function isWithinLast24Hours(date) {
   if (!date) return false;
   return Date.now() - date.getTime() <= 24 * 60 * 60 * 1000;
 }
 
+/**
+ * Runs the post home announcement comment workflow.
+ * @param {string} id - id used by the function.
+ * @param {string} text - text used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function postHomeAnnouncementComment(id, text) {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('not logged in');
@@ -104,6 +157,12 @@ async function postHomeAnnouncementComment(id, text) {
   return json;
 }
 
+/**
+ * Fetches home public user data from the API.
+ * @param {string} userId - user id used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchHomePublicUser(userId) {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('not logged in');
@@ -116,10 +175,15 @@ async function fetchHomePublicUser(userId) {
   return json;
 }
 
+/**
+ * Runs the build home card workflow.
+ * @param {Object} ann - ann used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function buildHomeCard(ann) {
   const animal = ann.animalId;
   const isLost = ann.type === 'LostAnimal';
-  // try to use announcement-specific photo endpoint, fallback to placeholder
   const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
   const date = new Date(ann.date).toLocaleDateString('it-IT', {
     day: '2-digit',
@@ -134,6 +198,10 @@ function buildHomeCard(ann) {
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', `Vedi dettagli annuncio ${animal?.species || 'animale'}`);
 
+  /**
+   * Opens the details UI.
+   * @returns {void} The result produced by the function.
+   */
   const openDetails = () => openHomeModal(ann);
 
   card.addEventListener('click', openDetails);
@@ -186,6 +254,11 @@ function buildHomeCard(ann) {
   return card;
 }
 
+/**
+ * Opens the home modal UI.
+ * @param {Object} ann - ann used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function openHomeModal(ann) {
   const isLoggedIn = !!localStorage.getItem('token');
   const full = await fetchHomeAnnouncementById(ann._id);
@@ -274,6 +347,13 @@ async function openHomeModal(ann) {
   document.body.style.overflow = 'hidden';
 }
 
+/**
+ * Loads home modal photo data and updates the UI.
+ * @param {Object} gallery - gallery used by the function.
+ * @param {string} id - id used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function loadHomeModalPhoto(gallery, id) {
   try {
     const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}/photo`, { method: 'GET' });
@@ -292,6 +372,11 @@ async function loadHomeModalPhoto(gallery, id) {
   }
 }
 
+/**
+ * Renders home comments html into the current page.
+ * @param {Array<Object>} comments - comments used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderHomeCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return `<div class="comments-empty">Nessun commento</div>`;
@@ -317,6 +402,11 @@ function renderHomeCommentsHtml(comments) {
   }).join('');
 }
 
+/**
+ * Runs the bind home comment form workflow.
+ * @param {string} announcementId - announcement id used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function bindHomeCommentForm(announcementId) {
   const form = document.querySelector('#modal-body .comment-form');
   if (!form) return;
@@ -352,6 +442,10 @@ function bindHomeCommentForm(announcementId) {
   });
 }
 
+/**
+ * Runs the bind home comment contacts workflow.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function bindHomeCommentContacts() {
   const modalBody = document.getElementById('modal-body');
   if (!modalBody || modalBody.dataset.homeCommentContactsBound === 'true') return;
@@ -394,11 +488,19 @@ function bindHomeCommentContacts() {
   });
 }
 
+/**
+ * Closes the home modal UI.
+ * @returns {void} The result produced by the function.
+ */
 function closeHomeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
   document.body.style.overflow = '';
 }
 
+/**
+ * Renders hero stats into the current page.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function renderHeroStats() {
   const resolvedCounter = document.getElementById('resolved-announcements-count');
   const activeCounter = document.getElementById('active-announcements-count');
@@ -420,6 +522,10 @@ async function renderHeroStats() {
   if (rifugiCounter) rifugiCounter.textContent = String(rifugiCount);
 }
 
+/**
+ * Renders home stats strip into the current page.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function renderHomeStatsStrip() {
   const last24hCounter = document.getElementById('home-last-24h-count');
   const createdTodayCounter = document.getElementById('home-created-today-count');
@@ -447,6 +553,10 @@ async function renderHomeStatsStrip() {
   if (resolvedTotalInline) resolvedTotalInline.textContent = String(resolvedTotalCount);
 }
 
+/**
+ * Runs the initialize home announcements workflow.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function initHomeAnnouncements() {
   const grid = document.getElementById('home-announcements-grid');
   const empty = document.getElementById('home-empty');
@@ -472,6 +582,10 @@ async function initHomeAnnouncements() {
   trimmed.forEach((ann) => grid.appendChild(buildHomeCard(ann)));
 }
 
+/**
+ * Initializes home page data and recurring stats refresh after the DOM is ready.
+ * @returns {Promise<void>} Promise resolving when the initial home widgets are loaded.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([initHomeAnnouncements(), renderHeroStats(), renderHomeStatsStrip()]);
   window.addEventListener('announcements:resolved-updated', renderHeroStats);

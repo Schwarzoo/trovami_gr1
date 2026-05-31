@@ -6,6 +6,10 @@ const crypto = require('crypto');
 const Notification = require('../models/Notification');
 const { writeAuditLog } = require('../services/auditService');
 
+/**
+ * Creates the Nodemailer transporter configured from environment variables.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function createTransporter() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -18,6 +22,12 @@ function createTransporter() {
   });
 }
 
+/**
+ * Sends an email-verification message containing the raw verification token link.
+ * @param {Object} user - user used by the function.
+ * @param {string} rawToken - raw token used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function sendVerificationEmail(user, rawToken) {
   const transporter = createTransporter();
   const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/auth/email-verifications?token=${rawToken}`;
@@ -39,6 +49,11 @@ async function sendVerificationEmail(user, rawToken) {
   await transporter.sendMail(mailOptions);
 }
 
+/**
+ * Maps a MongoDB duplicate-key error to a user-facing account message.
+ * @param {Object} err - err used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function duplicateAccountMessage(err) {
   if (err?.code !== 11000) return null;
   if (err.keyPattern?.email || err.keyValue?.email) return 'Email gia registrata';
@@ -46,10 +61,22 @@ function duplicateAccountMessage(err) {
   return 'Account gia esistente';
 }
 
+/**
+ * Normalizes an account role value to the format stored in the database.
+ * @param {string} role - role used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function normalizeAccountRole(role) {
   return typeof role === 'string' ? role.toLowerCase() : role;
 }
 
+/**
+ * Handles the register API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.register = async (req, res) => {
   try {
     const { username, email, password, phoneNumber, accountType, role, rifugioData } = req.body;
@@ -131,6 +158,13 @@ exports.register = async (req, res) => {
   }
 };
 
+/**
+ * Handles the login API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -175,6 +209,13 @@ exports.login = async (req, res) => {
   }
 };
 
+/**
+ * Handles the request readmission API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.requestReadmission = async (req, res) => {
   try {
     const { userId, email, message } = req.body;
@@ -215,6 +256,13 @@ exports.requestReadmission = async (req, res) => {
   }
 };
 
+/**
+ * Handles the logout API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.logout = async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user.userId, { sessionToken: null });
@@ -224,6 +272,13 @@ exports.logout = async (req, res) => {
   }
 };
 
+/**
+ * Handles the forgot password API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -275,6 +330,13 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * Handles the verify email API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
@@ -320,6 +382,13 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
+/**
+ * Handles the reset password API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -357,6 +426,13 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+/**
+ * Handles the resend verification API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.resendVerification = async (req, res) => {
   try {
     const { email } = req.body;

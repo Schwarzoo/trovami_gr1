@@ -3,12 +3,22 @@ const Announcement = require('../models/Announcement');
 const { writeAuditLog } = require('../services/auditService');
 const mongoose = require('mongoose');
 
+/**
+ * Converts boolean-like request values to booleans.
+ * @param {Object} v - v used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function toBool(v) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'string') return v.toLowerCase() === 'true';
   return undefined;
 }
 
+/**
+ * Validates and normalizes a GeoJSON point location payload.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function normalizeLocation(input) {
   const coords = input?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
@@ -17,6 +27,13 @@ function normalizeLocation(input) {
   return { type: 'Point', coordinates: normalized };
 }
 
+/**
+ * Handles the get me API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-passwordHash -__v');
@@ -27,6 +44,13 @@ exports.getMe = async (req, res) => {
   }
 };
 
+/**
+ * Handles the update me API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateMe = async (req, res) => {
   try {
     const updates = {};
@@ -65,7 +89,13 @@ exports.updateMe = async (req, res) => {
   }
 };
 
-// GET /api/v1/users/:id/public  (auth) - masked contacts by user prefs
+/**
+ * Handles the get public user API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPublicUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('username email phoneNumber contactVisibility');
@@ -85,6 +115,13 @@ exports.getPublicUser = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get public rifugi API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPublicRifugi = async (req, res) => {
   try {
     const rifugi = await User.find({
@@ -110,6 +147,12 @@ exports.getPublicRifugi = async (req, res) => {
   }
 };
 
+/**
+ * Formats a followed shelter for API responses while honoring contact visibility.
+ * @param {Object} shelter - shelter used by the function.
+ * @param {string} emailEnabled - email enabled used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function formatShelterPayload(shelter, emailEnabled) {
   const showEmail = shelter.contactVisibility?.showEmail !== false;
   const showPhone = shelter.contactVisibility?.showPhone !== false;
@@ -123,6 +166,13 @@ function formatShelterPayload(shelter, emailEnabled) {
   };
 }
 
+/**
+ * Handles the get followed shelters API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getFollowedShelters = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId)
@@ -141,6 +191,13 @@ exports.getFollowedShelters = async (req, res) => {
   }
 };
 
+/**
+ * Handles the follow shelter API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.followShelter = async (req, res) => {
   try {
     const shelterId = req.params.shelterId;
@@ -174,6 +231,13 @@ exports.followShelter = async (req, res) => {
   }
 };
 
+/**
+ * Handles the unfollow shelter API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.unfollowShelter = async (req, res) => {
   try {
     const shelterId = req.params.shelterId;
@@ -204,6 +268,13 @@ const {
    removeAnnouncementCascade
 } = require('./announcementController');
 
+/**
+ * Handles the delete me API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteMe = async(req,res)=>{
 
     try{

@@ -10,10 +10,22 @@ const {
   normalizeReplyMessage
 } = require('../services/contactRequestService');
 
+/**
+ * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
+ * @param {Object} res - Express response object.
+ * @param {string} label - label used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
 }
 
+/**
+ * Applies the standard population chain to a contact-request query.
+ * @param {Object} query - query used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function populateRequest(query) {
   return query
     .populate('requesterId', 'username email phoneNumber')
@@ -21,6 +33,13 @@ function populateRequest(query) {
     .populate('animalId', 'name species breed photos adoptable');
 }
 
+/**
+ * Handles the create contact request API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.createContactRequest = async (req, res) => {
   try {
     const animalId = req.body?.animalId;
@@ -68,6 +87,13 @@ exports.createContactRequest = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get contact requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getContactRequests = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('role rifugioStatus');
@@ -86,6 +112,13 @@ exports.getContactRequests = async (req, res) => {
   }
 };
 
+/**
+ * Handles the clear replied contact requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.clearRepliedContactRequests = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('role rifugioStatus');
@@ -114,6 +147,13 @@ exports.clearRepliedContactRequests = async (req, res) => {
   }
 };
 
+/**
+ * Handles the clear requester replied contact requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.clearRequesterRepliedContactRequests = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('role');
@@ -133,6 +173,13 @@ exports.clearRequesterRepliedContactRequests = async (req, res) => {
   }
 };
 
+/**
+ * Handles the reply to contact request API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.replyToContactRequest = async (req, res) => {
   try {
     const requestId = req.params.id;

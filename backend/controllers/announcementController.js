@@ -16,6 +16,11 @@ const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
 const { writeAuditLog } = require('../services/auditService');
 
+/**
+ * Applies publisher contact-visibility preferences to public publisher data.
+ * @param {Object} publisher - publisher used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function maskPublisherContacts(publisher) {
     if (!publisher) return publisher;
     const vis = publisher.contactVisibility || {};
@@ -28,6 +33,10 @@ function maskPublisherContacts(publisher) {
     };
 }
 
+/**
+ * Creates the Nodemailer transporter configured from environment variables.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function createTransporter() {
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -40,14 +49,30 @@ function createTransporter() {
     });
 }
 
+/**
+ * Builds the frontend URL for opening a specific announcement.
+ * @param {string} announcementId - announcement id used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function buildAnnouncementUrl(announcementId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
 }
 
+/**
+ * Builds the frontend URL for opening an animal inside a shelter page.
+ * @param {string} shelterId - shelter id used by the function.
+ * @param {string} animalId - animal id used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function buildShelterAnimalUrl(shelterId, animalId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/rifugio.html?rifugioId=${shelterId}&animalId=${animalId}`;
 }
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -57,6 +82,13 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+/**
+ * Sends a smart-match email notification when email delivery is configured.
+ * @param {string} userId - user id used by the function.
+ * @param {Object} subject - subject used by the function.
+ * @param {Object} html - html used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function sendSmartMatchEmail(userId, subject, html) {
     try {
         const recipient = await User.findById(userId).select('email username');
@@ -74,6 +106,14 @@ async function sendSmartMatchEmail(userId, subject, html) {
     }
 }
 
+/**
+ * Sends an email to a shelter follower for a newly published shelter animal.
+ * @param {Object} recipient - recipient used by the function.
+ * @param {Object} shelter - shelter used by the function.
+ * @param {Object} animal - animal used by the function.
+ * @param {string} url - url used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
     try {
         if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
@@ -104,6 +144,13 @@ async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
     }
 }
 
+/**
+ * Creates notifications for users following a shelter and optionally emails them.
+ * @param {Object} announcement - announcement used by the function.
+ * @param {Object} animal - animal used by the function.
+ * @param {Object} shelter - shelter used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function notifyShelterFollowers(announcement, animal, shelter) {
     try {
         if (!shelter || shelter.role !== 'shelter' || shelter.rifugioStatus !== 'approved') return;
@@ -146,6 +193,12 @@ async function notifyShelterFollowers(announcement, animal, shelter) {
     }
 }
 
+/**
+ * Normalizes coordinate input into GeoJSON longitude-latitude order.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function normalizeCoordinates(input) {
     let parts = null;
     if (Array.isArray(input)) parts = input.map(Number);
@@ -173,6 +226,11 @@ function normalizeCoordinates(input) {
     return [a, b];
 }
 
+/**
+ * Normalizes an optional animal name while preserving undefined updates.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function normalizeOptionalName(value) {
     if (value === undefined) return undefined;
     if (value === null) return null;
@@ -180,12 +238,23 @@ function normalizeOptionalName(value) {
     return text || null;
 }
 
+/**
+ * Capitalizes the first character of a string value.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function capitalizeFirst(value) {
     const text = String(value ?? '').trim();
     if (!text) return '';
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/**
+ * Downloads a remote URL and resolves its response body as a buffer.
+ * @param {string} url - url used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchUrlBuffer(url) {
     return new Promise((resolve, reject) => {
         try {
@@ -202,7 +271,12 @@ async function fetchUrlBuffer(url) {
     });
 }
 
-// Helper interno per gestire il salvataggio dei match
+/**
+ * Stores smart-match notifications and sends related emails for matching announcements.
+ * @param {Object} announcement - announcement used by the function.
+ * @param {Array<Object>} matches - matches used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function saveMatchNotification(announcement, matches) {
     try {
         if (!matches || matches.length === 0) return;
@@ -261,6 +335,11 @@ async function saveMatchNotification(announcement, matches) {
     }
 }
 
+/**
+ * Creates notifications for all active admin users.
+ * @param {Object} payload - payload used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function notifyAdmins(payload) {
     const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
     await Promise.all(admins.map(admin => Notification.create({
@@ -269,6 +348,13 @@ async function notifyAdmins(payload) {
     })));
 }
 
+/**
+ * Handles the get announcements API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAnnouncements = async (req, res) => {
     try {
         const { type, species, status, rifugioId, userId } = req.query;
@@ -311,6 +397,13 @@ exports.getAnnouncements = async (req, res) => {
     }
 };
 
+/**
+ * Handles the get resolved announcements count API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getResolvedAnnouncementsCount = async (req, res) => {
     try {
         const resolvedCount = await Announcement.countDocuments({ status: 'RESOLVED' });
@@ -321,7 +414,13 @@ exports.getResolvedAnnouncementsCount = async (req, res) => {
 };
 
 
-// POST /api/v1/announcements/:id/comments  (auth) - add comment
+/**
+ * Handles the add announcement comment API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.addAnnouncementComment = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -349,7 +448,6 @@ exports.addAnnouncementComment = async (req, res) => {
 
         const newComment = ann.comments[ann.comments.length - 1];
 
-        // notification for announcement owner (skip self-comments)
         try {
             const publisherId = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id : ann.publisherId;
             if (publisherId && publisherId.toString() !== user._id.toString()) {
@@ -381,7 +479,6 @@ exports.addAnnouncementComment = async (req, res) => {
                 }
             }
         } catch (e) {
-            // best-effort
         }
 
         res.status(201).json({ comment: newComment, comments: ann.comments });
@@ -390,7 +487,13 @@ exports.addAnnouncementComment = async (req, res) => {
     }
 };
 
-// POST /api/v1/announcements
+/**
+ * Handles the create announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.createAnnouncement = async (req,res)=>{
         
     try {
@@ -451,7 +554,6 @@ exports.createAnnouncement = async (req,res)=>{
         await announcement.save();
         await writeAuditLog({ actor: publisher, action: 'creato annuncio', target: null });
 
-            // If announcement has a photo, add/update animal.photos with a URL to this announcement photo
             try {
                 if (announcement.photo && announcement._id) {
                     const base = req.protocol + '://' + req.get('host');
@@ -477,7 +579,13 @@ exports.createAnnouncement = async (req,res)=>{
     }
 };
 
-// POST /api/v1/announcements/quick
+/**
+ * Handles the create quick announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.createQuickAnnouncement = async (req, res) => {
     try {
         const {
@@ -552,7 +660,6 @@ exports.createQuickAnnouncement = async (req, res) => {
         }
 
         await announcement.save();
-        // if quick announcement has photo, update animal.photos
         try {
             if (announcement.photo && announcement._id) {
                 const base = req.protocol + '://' + req.get('host');
@@ -569,7 +676,13 @@ exports.createQuickAnnouncement = async (req, res) => {
     }
 };
 
-// POST /api/v1/announcements/:id/reports
+/**
+ * Handles the report announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.reportAnnouncement = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -616,7 +729,13 @@ exports.reportAnnouncement = async (req, res) => {
     }
 };
 
-// GET /api/v1/announcements/:id
+	/**
+	 * Handles the get announcement by id API request and writes the HTTP response.
+	 * @param {Object} req - Express request object.
+	 * @param {Object} res - Express response object.
+	 * @returns {Promise<void>} Promise resolving when the operation completes.
+	 * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+	 */
 	exports.getAnnouncementById = async (req, res) => {
 	    try {
 	        const announcement = await Announcement.findById(req.params.id)
@@ -636,6 +755,13 @@ exports.reportAnnouncement = async (req, res) => {
 	    }
 	};
 
+/**
+ * Handles the get announcement photo API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAnnouncementPhoto = async (req, res) => {
     try {
         const announcement = await Announcement.findById(req.params.id).select('photo');
@@ -647,6 +773,13 @@ exports.getAnnouncementPhoto = async (req, res) => {
     }
 };
 
+/**
+ * Handles the generate flyer API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.generateFlyer = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -666,7 +799,6 @@ exports.generateFlyer = async (req, res) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         doc.pipe(res);
 
-        // Add background image
         try {
             const bgPath = path.join(__dirname, '../assests/sfondo volantino.png');
             if (fs.existsSync(bgPath)) {
@@ -676,7 +808,6 @@ exports.generateFlyer = async (req, res) => {
             console.warn('Errore caricamento sfondo:', err);
         }
 
-        // Add semi-transparent white overlay
         doc.opacity(0.75);
         doc.fillColor('#ffffff').rect(0, 0, 595, 842).fill();
         doc.opacity(1);
@@ -694,7 +825,6 @@ exports.generateFlyer = async (req, res) => {
         if (announcement.photo && announcement.photo.data) {
             try {
                 const imageTop = doc.y;
-                // Draw rounded border (image slightly less tall)
                 const imgWidth = 450;
                 const imgHeight = 260;
                 const imgX = 75;
@@ -729,7 +859,6 @@ exports.generateFlyer = async (req, res) => {
         doc.font('Helvetica').fontSize(12).text(announcement.description || 'Nessuna descrizione', { align: 'center' });
         doc.moveDown(0.8);
 
-        // Contact info (owner)
         const publisher = announcement.publisherId || {};
         doc.fontSize(14).fillColor('#111827').font('Helvetica-Bold').text('In caso di ritrovamento contattare:', { align: 'center' });
         doc.font('Helvetica').fontSize(13);
@@ -761,16 +890,13 @@ exports.generateFlyer = async (req, res) => {
             const totalHeight = captionHeight + gap + qrSize + gap + genHeight;
             const topY = bottom - totalHeight;
 
-            // Didascalia (sopra il QR)
             doc.fontSize(captionFontSize).font('Helvetica-Bold').fillColor('#111827');
             doc.text("Scansiona per vedere l'annuncio completo", leftMargin, topY, { width: pageWidth - leftMargin - rightMargin, align: 'center' });
 
-            // QR centrato
             const qrX = (pageWidth - qrSize) / 2;
             const qrY = topY + captionHeight + gap;
             doc.image(qrBuf, qrX, qrY, { width: qrSize });
 
-            // Testo generato (sotto il QR), allineato al centro, ma partendo dal fondo
             const genY = qrY + qrSize + gap;
             doc.fontSize(genFontSize).fillColor('gray').font('Helvetica');
             doc.text('Generato da Trovami', leftMargin, genY, { width: pageWidth - leftMargin - rightMargin, align: 'center' });
@@ -787,7 +913,13 @@ exports.generateFlyer = async (req, res) => {
     }
 };
 
-// GET /api/v1/announcements/:id/similar
+/**
+ * Handles the get similar announcements API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getSimilarAnnouncements = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -826,6 +958,13 @@ exports.getSimilarAnnouncements = async (req, res) => {
     }
 };
 
+/**
+ * Handles the update announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateAnnouncement = async (req, res) => {
     try {
         const ann = await Announcement.findById(req.params.id);
@@ -869,7 +1008,6 @@ exports.updateAnnouncement = async (req, res) => {
                     .toBuffer();
                 ann.photo = { data: processed, contentType: 'image/jpeg' };
                 
-                // Rigeneriamo embedding se la foto cambia
                 const embedding = await smartMatchingEngine.generateImageEmbedding(processed);
                 if (embedding) {
                     ann.imageEmbedding = embedding;
@@ -888,7 +1026,6 @@ exports.updateAnnouncement = async (req, res) => {
         await ann.save();
         await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
 
-        // If updated announcement has a new photo, update animal.photos
         try {
             if (ann.photo && ann._id) {
                 const base = req.protocol + '://' + req.get('host');
@@ -912,6 +1049,13 @@ exports.updateAnnouncement = async (req, res) => {
     }
 };
 
+/**
+ * Handles the change status API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.changeStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -936,6 +1080,11 @@ exports.changeStatus = async (req, res) => {
     }
 };
 
+/**
+ * Deletes an announcement and its linked animal record as one cascade operation.
+ * @param {string} announcementId - announcement id used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function removeAnnouncementCascade(announcementId) {
     const announcement = await Announcement.findById(announcementId).populate('animalId');
     if (!announcement) return false;
@@ -947,6 +1096,13 @@ async function removeAnnouncementCascade(announcementId) {
 
 exports.removeAnnouncementCascade = removeAnnouncementCascade;
 
+/**
+ * Handles the delete announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteAnnouncement = async (req, res) => {
     try {
         const announcement = await Announcement.findById(req.params.id);

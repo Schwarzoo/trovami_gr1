@@ -1,3 +1,8 @@
+/**
+ * Decodes a JWT payload without verifying the signature for client-side UI decisions.
+ * @param {string} token - token used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function decodeJwt(token) {
   try {
     const payload = token.split('.')[1];
@@ -25,6 +30,11 @@ const body = document.getElementById('auditTableBody');
 const statusEl = document.getElementById('auditStatus');
 const searchInput = document.getElementById('auditSearch');
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -34,6 +44,10 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Builds the audit-log API URL from the current filter and sort state.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function buildUrl() {
   const params = new URLSearchParams({
     limit: '200',
@@ -44,6 +58,11 @@ function buildUrl() {
   return `http://localhost:3000/api/v1/admin/audit-logs?${params.toString()}`;
 }
 
+/**
+ * Renders audit-log rows into the current table body.
+ * @param {Array<Object>} logs - logs used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderRows(logs) {
   body.innerHTML = '';
   if (!logs.length) {
@@ -65,6 +84,11 @@ function renderRows(logs) {
   });
 }
 
+/**
+ * Loads audit logs from the API and updates the table UI.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function loadAuditLogs() {
   statusEl.textContent = 'Caricamento...';
   try {
@@ -81,6 +105,10 @@ async function loadAuditLogs() {
   }
 }
 
+/**
+ * Updates the active state of audit-log sort controls.
+ * @returns {void} The result produced by the function.
+ */
 function updateSortButtons() {
   document.querySelectorAll('[data-sort]').forEach((button) => {
     const isActive = button.dataset.sort === state.sortBy;

@@ -1,6 +1,11 @@
 const API_BASE = 'http://localhost:3000/api/v1/announcements';
 const ADMIN_BASE = 'http://localhost:3000/api/v1/admin';
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -10,15 +15,30 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Formats a value for UI display, replacing empty values with a placeholder.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function displayValue(value) {
   const text = String(value ?? '').trim();
   return text || '- -';
 }
 
+/**
+ * Reads a query-string parameter from the current page URL.
+ * @param {string} name - name used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+/**
+ * Shows an error message in the page error area.
+ * @param {string} message - message used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function showError(message) {
   const banner = document.getElementById('error-banner');
   if (!banner) return;
@@ -26,6 +46,10 @@ function showError(message) {
   banner.style.display = 'block';
 }
 
+/**
+ * Runs the auth header workflow.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function authHeader() {
   const token = localStorage.getItem('token');
   return {
@@ -34,17 +58,35 @@ function authHeader() {
   };
 }
 
+/**
+ * Fetches announcement by id data from the API.
+ * @param {string} id - id used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchAnnouncementById(id) {
   const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
   if (!res.ok) throw new Error('Errore caricamento annuncio');
   return res.json();
 }
 
+/**
+ * Runs the read response error workflow.
+ * @param {Object} res - Express response object.
+ * @param {string} fallback - fallback used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function readResponseError(res, fallback) {
   const json = await res.json().catch(() => ({}));
   return json?.message || `${fallback} (${res.status})`;
 }
 
+/**
+ * Runs the warn user workflow.
+ * @param {string} userId - user id used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function warnUser(userId) {
   const reason = prompt('Motivo avvertimento:', 'Ammonimento da moderazione account');
   if (reason === null) return;
@@ -58,6 +100,12 @@ async function warnUser(userId) {
   alert('Avvertimento inviato');
 }
 
+/**
+ * Runs the block user workflow.
+ * @param {string} userId - user id used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function blockUser(userId) {
   const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
   if (reason === null) return;
@@ -72,6 +120,11 @@ async function blockUser(userId) {
   await loadUserAnnouncements();
 }
 
+/**
+ * Renders announcement comments as HTML markup.
+ * @param {Array<Object>} comments - comments used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function renderCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return '<div class="comments-empty">Nessun commento</div>';
@@ -94,11 +147,21 @@ function renderCommentsHtml(comments) {
     .join('');
 }
 
+/**
+ * Closes the current modal and restores page scrolling.
+ * @returns {void} The result produced by the function.
+ */
 function closeModal() {
   document.getElementById('modal-overlay')?.classList.remove('active');
   document.body.style.overflow = '';
 }
 
+/**
+ * Opens and populates the announcement detail modal.
+ * @param {Object} ann - ann used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function openModal(ann) {
   let data = ann;
   try {
@@ -192,6 +255,12 @@ async function openModal(ann) {
   document.body.style.overflow = 'hidden';
 }
 
+/**
+ * Builds a DOM card for an announcement and binds its interactions.
+ * @param {Object} ann - ann used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function buildCard(ann) {
   const animal = ann.animalId || {};
   const publisher = ann.publisherId || {};
@@ -245,6 +314,10 @@ function buildCard(ann) {
   return card;
 }
 
+/**
+ * Loads user announcements data and updates the UI.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function loadUserAnnouncements() {
   const userId = getQueryParam('userId');
   const user = getQueryParam('user');
@@ -276,6 +349,11 @@ async function loadUserAnnouncements() {
   data.forEach((ann) => grid.appendChild(buildCard(ann)));
 }
 
+/**
+ * Sets up admin actions.
+ * @param {string} userId - user id used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function setupAdminActions(userId) {
   const warnButton = document.getElementById('warn-user');
   const blockButton = document.getElementById('block-user');

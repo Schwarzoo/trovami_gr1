@@ -1,7 +1,13 @@
 const Animal = require('../models/Animal');
 const mongoose = require('mongoose');
 
-// POST /api/v1/animals
+/**
+ * Handles the create animal API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.createAnimal = async (req, res) => {
   try {
     const {
@@ -44,7 +50,13 @@ exports.createAnimal = async (req, res) => {
   }
 };
 
-// PUT /api/v1/animals/:id
+/**
+ * Handles the update animal API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateAnimal = async (req, res) => {
   try {
     const updates = {};
@@ -59,7 +71,6 @@ exports.updateAnimal = async (req, res) => {
     if (req.body.adoptable !== undefined && req.user?.role === 'shelter') {
       updates.adoptable = !!req.body.adoptable;
     }
-    // handle dateArrived specifically (expect ISO date or empty)
     if (req.body.dateArrived !== undefined) {
       updates.dateArrived = req.body.dateArrived ? new Date(req.body.dateArrived) : null;
     }
@@ -67,7 +78,6 @@ exports.updateAnimal = async (req, res) => {
     const animal = await Animal.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!animal) return res.status(404).json({ message: 'Animal non trovato' });
 
-    // handle adding a medical note if provided
     if (req.body.medicalNote) {
       const noteText = String(req.body.medicalNote).trim();
       if (noteText) {
@@ -83,7 +93,13 @@ exports.updateAnimal = async (req, res) => {
   }
 };
 
-// GET /api/v1/animals/:id
+/**
+ * Handles the get animal by id API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAnimalById = async (req, res) => {
   try {
     const id = req.params.id;
@@ -96,17 +112,21 @@ exports.getAnimalById = async (req, res) => {
   }
 };
 
-// DELETE /api/v1/animals/:id
+/**
+ * Handles the delete animal API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteAnimal = async (req, res) => {
   try {
     const animalId = req.params.id;
 
-    // 1) controlla che sia un ObjectId valido
     if (!mongoose.isValidObjectId(animalId)) {
       return res.status(400).json({ message: "ID animale non valido" });
     }
 
-    // 2) tenta cancellazione
     const deleted = await Animal.findByIdAndDelete(animalId);
     if (!deleted) {
       return res.status(404).json({ message: "Animal non trovato" });
@@ -119,7 +139,13 @@ exports.deleteAnimal = async (req, res) => {
   }
 };
 
-// GET /api/v1/animals?shelterId=...
+/**
+ * Handles the list animals API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.listAnimals = async (req, res) => {
   try {
     const { shelterId } = req.query;
@@ -130,13 +156,11 @@ exports.listAnimals = async (req, res) => {
     } else if (req.user && req.user.userId) {
       filter.shelterId = req.user.userId;
     } else {
-      // no filter and no auth -> return empty
       return res.json([]);
     }
 
     const animals = await Animal.find(filter).sort({ createdAt: -1 });
 
-    // If some animals have empty photos, try to find a recent announcement photo to use as fallback
     const Announcement = require('../models/Announcement');
     const hostBase = req.protocol + '://' + req.get('host');
     const out = await Promise.all(animals.map(async (a) => {
@@ -148,7 +172,6 @@ exports.listAnimals = async (req, res) => {
             obj.photos = [`${hostBase}/api/v1/announcements/${ann._id}/photo`];
           }
         } catch (e) {
-          // ignore fallback error
         }
       }
       return obj;

@@ -11,7 +11,6 @@ const animalSchema = new mongoose.Schema({
     age:                { type: String, default: null },
     microchipId:        { type: String, default: null }, 
     shelterId:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Se l'animale è in un rifugio[cite: 2]
-    // Stato disponibilità per adozione
     adoptable:          { type: Boolean, default: false },
     photos:             [{ type: String }],
     dateArrived:        { type: Date, default: null },

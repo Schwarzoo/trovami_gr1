@@ -1,3 +1,8 @@
+/**
+ * Runs the make query workflow.
+ * @param {Object} result - result used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function makeQuery(result) {
   const query = {
     select: jest.fn(() => query),
@@ -11,6 +16,11 @@ function makeQuery(result) {
   return query;
 }
 
+/**
+ * Runs the make doc workflow.
+ * @param {Object} data - data used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function makeDoc(data = {}) {
   return {
     ...data,

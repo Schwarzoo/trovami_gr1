@@ -1,4 +1,3 @@
-// Initialize map centered on Trento (approx) and clamp to world bounds to avoid repeated worlds when zooming out
 const europeBounds = L.latLngBounds(
   [34.0, -25.0],
   [72.0, 45.0]
@@ -17,7 +16,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get('highlight');
 const highlightRifugioId = urlParams.get('rifugioId');
 
-// Disable tile wrapping (noWrap: true) to prevent seeing multiple copies of the world
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors',
@@ -77,34 +75,64 @@ const rifugioIcon = L.divIcon({
 let allAnnouncements = [];
 let allRifugi = [];
 
-// Keep track of current visible markers bounds so we can restrict zoom/pan
 let _visibleBounds = null;
 
+/**
+ * Runs the normalize text workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function normalizeText(value) {
   return (value || '').toString().toLowerCase().trim();
 }
 
+/**
+ * Checks whether unknown value.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {boolean} The result produced by the function.
+ */
 function isUnknownValue(value) {
   const text = normalizeText(value);
   return text === '' || text.startsWith('sconosciut') || text === 'unknown';
 }
 
+/**
+ * Runs the tokenize query workflow.
+ * @param {Object} query - query used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function tokenizeQuery(query) {
   return normalizeText(query).split(/\s+/).filter(Boolean);
 }
 
+/**
+ * Runs the matches tokens workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @param {string} tokens - tokens used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function matchesTokens(value, tokens) {
   if (tokens.length === 0) return true;
   const hay = normalizeText(value);
   return tokens.every(token => hay.includes(token));
 }
 
+/**
+ * Runs the parse date input workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function parseDateInput(value) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/**
+ * Runs the end of day workflow.
+ * @param {Object} date - date used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function endOfDay(date) {
   if (!date) return null;
   const end = new Date(date);
@@ -112,6 +140,10 @@ function endOfDay(date) {
   return end;
 }
 
+/**
+ * Returns announcements filtered by the current UI controls.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getFilteredAnnouncements() {
   const typeInput = document.getElementById('filter-type');
   const speciesInput = document.getElementById('filter-species');
@@ -182,17 +214,27 @@ function getFilteredAnnouncements() {
   });
 }
 
+/**
+ * Updates the visible result counter.
+ * @param {number} n - n used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function updateCount(n) {
   const count = document.getElementById('result-count');
   if (!count) return;
   count.textContent = `${n} ${n === 1 ? 'annuncio trovato' : 'annunci trovati'}`;
 }
 
+/**
+ * Renders announcements into the current list view.
+ * @param {Array<Object>} announcements - announcements used by the function.
+ * @returns {void} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function renderAnnouncements(announcements) {
   let highlightedMarker = null;
   let highlightedRifugioMarker = null;
 
-  // remove existing markers
   if (window._tm_markers) { window._tm_markers.forEach(m => map.removeLayer(m)); }
   if (window._tm_rifugio_markers) { window._tm_rifugio_markers.forEach(m => map.removeLayer(m)); }
   window._tm_markers = [];
@@ -205,7 +247,6 @@ function renderAnnouncements(announcements) {
   const isLost = a.type === 'LostAnimal';
   const date = new Date(a.date).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
 
-  // media placeholder (we'll try to fetch announcement photo and replace if present)
   const emoji = animal?.species?.toLowerCase().includes('gatt') ? '🐈' : '🐕';
   const mediaBlock = `
     <div class="popup-media" data-ann-id="${a._id}" style="width:100%;height:110px;overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:42px;">
@@ -254,7 +295,6 @@ function renderAnnouncements(announcements) {
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
-  // try to load announcement photo and update popup content if found
   (async () => {
     const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
     try {
@@ -264,21 +304,15 @@ function renderAnnouncements(announcements) {
       if (!ct.startsWith('image')) throw new Error('not image');
       const blob = await res.blob();
       const imgUrl = URL.createObjectURL(blob);
-      // build a new media block with the image
       const imgBlock = `<img src="${imgUrl}" style="width:100%;height:110px;object-fit:cover;display:block;"/>`;
-      // replace media block in popup HTML
       const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
       marker.getPopup().setContent(newPopup);
-      // store image url on marker for later revoke
       marker._imgUrl = imgUrl;
-      // revoke object URL when popup closes to free memory
       marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
     } catch (err) {
-      // leave emoji placeholder
     }
   })();
 
-  // ensure we (re)fetch the image every time the popup opens (handles revoke on close)
   marker.on('popupopen', async () => {
     const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
     try {
@@ -293,10 +327,8 @@ function renderAnnouncements(announcements) {
       marker.getPopup().setContent(newPopup);
       if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); }
       marker._imgUrl = imgUrl;
-      // revoke when closed
       marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
     } catch (err) {
-      // keep placeholder
     }
   });
 
@@ -360,29 +392,13 @@ function renderAnnouncements(announcements) {
     }
   }
 
-  // // If we have markers, fit map to them but do not constrain user movement
-  // if (window._tm_markers.length > 0 && bounds.isValid()) {
-  //   if (highlightedMarker) {
-  //     const { lat, lng } = highlightedMarker.getLatLng();
-  //     map.setView([lat, lng], 16, { animate: false });
-  //     map.panBy([0, -140], { animate: false });
-  //     highlightedMarker.openPopup();
-  //   } else {
-  //     map.fitBounds(bounds, {
-  //       paddingTopLeft: [120, 120],
-  //       paddingBottomRight: [120, 120],
-  //       animate: true,
-  //       maxZoom: 12
-  //     });
-  //   }
-  // }
-  // try {
-  //   map.setMinZoom(2);
-  // } catch (err) {
-  //   console.warn('Could not set min zoom', err);
-  // }
 }
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -393,6 +409,13 @@ function escapeHtml(input) {
 }
 
 
+/**
+ * Builds select options from unique filter values.
+ * @param {Object} selectEl - select el used by the function.
+ * @param {Array<Object>} values - values used by the function.
+ * @param {Object} placeholder - placeholder used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function buildSelectOptions(selectEl, values, placeholder) {
   if (!selectEl) return;
   const current = selectEl.value;
@@ -415,6 +438,11 @@ function buildSelectOptions(selectEl, values, placeholder) {
   }
 }
 
+/**
+ * Runs the format label workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function formatLabel(value) {
   return value
     .split(' ')
@@ -423,6 +451,12 @@ function formatLabel(value) {
     .join(' ');
 }
 
+/**
+ * Adds a normalized option value to a map of unique values.
+ * @param {Object} map - map used by the function.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function addUniqueOption(map, value) {
   if (!value) return;
   const trimmed = value.trim();
@@ -433,6 +467,11 @@ function addUniqueOption(map, value) {
   }
 }
 
+/**
+ * Populates all filter controls from announcement data.
+ * @param {Array<Object>} announcements - announcements used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function populateFilterOptions(announcements) {
   const speciesSelect = document.getElementById('filter-species');
   const breedSelect = document.getElementById('filter-breed');
@@ -458,6 +497,10 @@ function populateFilterOptions(announcements) {
   buildSelectOptions(colorSelect, sortedColors, 'Tutti');
 }
 
+/**
+ * Loads announcements for the current frontend view.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function loadAnnouncements() {
   const [annRes, rifugiRes] = await Promise.all([
     fetch('http://localhost:3000/api/v1/announcements'),
@@ -475,6 +518,10 @@ async function loadAnnouncements() {
   renderAnnouncements(filtered);
 }
 
+/**
+ * Binds filter controls to map/list rendering.
+ * @returns {void} The result produced by the function.
+ */
 function wireFilters() {
   const typeInput = document.getElementById('filter-type');
   const speciesInput = document.getElementById('filter-species');
@@ -483,6 +530,10 @@ function wireFilters() {
   const dateFromInput = document.getElementById('filter-date-from');
   const dateToInput = document.getElementById('filter-date-to');
   const includeUnknownInput = document.getElementById('filter-include-unknown');
+  /**
+   * Runs the handle r workflow.
+   * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+   */
   const handler = () => {
     const filtered = getFilteredAnnouncements();
     updateCount(filtered.length);
@@ -501,17 +552,21 @@ function wireFilters() {
 wireFilters();
 loadAnnouncements();
 
-// Listen for updates from other pages (profile) and refresh
 window.addEventListener('storage', (e) => {
   if (e.key === 'announcements:update') {
     loadAnnouncements();
   }
 });
 
-// --- User locate button: geolocation, marker and centering ---
 const locateBtn = document.getElementById('locate-btn');
 let _userMarker = null;
 
+/**
+ * Shows the user location marker on the map.
+ * @param {number} lat - lat used by the function.
+ * @param {number} lng - lng used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function showUserLocation(lat, lng) {
   try {
     if (_userMarker) {
@@ -555,5 +610,4 @@ if (locateBtn) {
   });
 }
 
-// Also refresh when tab becomes visible (helpful after redirect)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAnnouncements(); });

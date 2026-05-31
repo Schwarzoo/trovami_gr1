@@ -50,7 +50,6 @@ const announcementSchema = new mongoose.Schema({
 
     lastSeenDate: { type: Date },
 
-    // Campi specifici per Sighting (UC4)[cite: 1, 2]
     isCurrentlyThere: { type: Boolean, default: false },
     animalBehaviour:  { type: String,
         enum: ['tranquillo', 'spaventato', 'indifferente', 'aggressivo'],
@@ -63,7 +62,6 @@ const announcementSchema = new mongoose.Schema({
     }
 
     ,
-    // optional photo stored in MongoDB (binary)
     photo: {
         data: Buffer,
         contentType: String
@@ -74,7 +72,6 @@ const announcementSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-// Indice per le query geografiche (Mappa)
 announcementSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Announcement', announcementSchema);

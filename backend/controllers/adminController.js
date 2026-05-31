@@ -8,14 +8,33 @@ const User = require('../models/User');
 const { removeAnnouncementCascade } = require('./announcementController');
 const { buildAuditQuery, writeAuditLog } = require('../services/auditService');
 
+/**
+ * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
+ * @param {Object} res - Express response object.
+ * @param {string} label - label used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
 }
 
+/**
+ * Runs the write audit workflow.
+ * @param {string} actorId - actor id used by the function.
+ * @param {Object} action - action used by the function.
+ * @param {Object} target - target used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function writeAudit(actorId, action, target) {
   await writeAuditLog({ actor: actorId, action, target });
 }
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -25,6 +44,10 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Creates the Nodemailer transporter configured from environment variables.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function createTransporter() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -37,6 +60,12 @@ function createTransporter() {
   });
 }
 
+/**
+ * Runs the send account blocked email workflow.
+ * @param {Object} user - user used by the function.
+ * @param {string} reason - reason used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function sendAccountBlockedEmail(user, reason) {
   if (!user?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
   const transporter = createTransporter();
@@ -53,16 +82,33 @@ async function sendAccountBlockedEmail(user, reason) {
   });
 }
 
+/**
+ * Returns published announcements count.
+ * @param {string} userId - user id used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function getPublishedAnnouncementsCount(userId) {
   return Announcement.countDocuments({ publisherId: userId });
 }
 
+/**
+ * Runs the with published announcements count workflow.
+ * @param {Object} user - user used by the function.
+ * @returns {Promise<void|Object|Array<Object>|null>} Promise resolving when the operation completes.
+ */
 async function withPublishedAnnouncementsCount(user) {
   const obj = user.toObject ? user.toObject() : user;
   obj.publishedAnnouncementsCount = await getPublishedAnnouncementsCount(obj._id);
   return obj;
 }
 
+/**
+ * Handles the get reports API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getReports = async (req, res) => {
   try {
     const status = req.query.status || 'OPEN';
@@ -105,6 +151,13 @@ exports.getReports = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get user details API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getUserDetails = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -119,6 +172,13 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get user announcement count API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getUserAnnouncementCount = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -130,6 +190,13 @@ exports.getUserAnnouncementCount = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get audit logs API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAuditLogs = async (req, res) => {
   try {
     const { filter, sort, limit } = buildAuditQuery(req.query);
@@ -140,6 +207,13 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
+/**
+ * Handles the update report status API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateReportStatus = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return invalidId(res, 'ID report');
@@ -159,6 +233,13 @@ exports.updateReportStatus = async (req, res) => {
   }
 };
 
+/**
+ * Handles the delete announcement as admin API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteAnnouncementAsAdmin = async (req, res) => {
   try {
     const announcementId = req.params.id;
@@ -188,6 +269,13 @@ exports.deleteAnnouncementAsAdmin = async (req, res) => {
   }
 };
 
+/**
+ * Handles the block user API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.blockUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -247,6 +335,13 @@ exports.blockUser = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get pending readmission requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPendingReadmissionRequests = async (req, res) => {
   try {
     const users = await User.find({
@@ -261,6 +356,13 @@ exports.getPendingReadmissionRequests = async (req, res) => {
   }
 };
 
+/**
+ * Handles the review readmission request API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.reviewReadmissionRequest = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -308,6 +410,13 @@ exports.reviewReadmissionRequest = async (req, res) => {
   }
 };
 
+/**
+ * Handles the warn user API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.warnUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -343,6 +452,13 @@ exports.warnUser = async (req, res) => {
   }
 };
 
+/**
+ * Handles the unblock user API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.unblockUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -358,6 +474,13 @@ exports.unblockUser = async (req, res) => {
   }
 };
 
+/**
+ * Handles the get pending rifugi API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPendingRifugi = async (req, res) => {
   try {
     const rifugi = await User.find({ role: 'shelter', rifugioStatus: 'pending' })
@@ -369,6 +492,13 @@ exports.getPendingRifugi = async (req, res) => {
   }
 };
 
+/**
+ * Handles the approve rifugio API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.approveRifugio = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -394,6 +524,13 @@ exports.approveRifugio = async (req, res) => {
   }
 };
 
+/**
+ * Handles the reject rifugio API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.rejectRifugio = async (req, res) => {
   try {
     const userId = req.params.id;

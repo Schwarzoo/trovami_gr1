@@ -5,14 +5,28 @@ describe('authMiddleware', () => {
     jest.resetModules();
   });
 
+  /**
+   * Runs the create res workflow.
+   * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+   */
   function createRes() {
     return {
       statusCode: null,
       body: null,
+      /**
+       * Runs the status workflow.
+       * @param {Object} code - code used by the function.
+       * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+       */
       status(code) {
         this.statusCode = code;
         return this;
       },
+      /**
+       * Runs the json workflow.
+       * @param {Object} payload - payload used by the function.
+       * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+       */
       json(payload) {
         this.body = payload;
         return this;

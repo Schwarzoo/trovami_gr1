@@ -22,6 +22,11 @@ const rifugioIcon = L.divIcon({
   popupAnchor: [0, -14]
 });
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {Object} input - Value to normalize or format.
+ * @returns {string} The result produced by the function.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -31,18 +36,38 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Runs the format number workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function formatNumber(value) {
   return Number.isFinite(Number(value)) ? Number(value).toLocaleString('it-IT') : '0';
 }
 
+/**
+ * Returns rifugio name.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getRifugioName(rifugio) {
   return rifugio?.rifugioData?.rifugioName || rifugio?.shelterData?.shelterName || rifugio?.username || 'Rifugio';
 }
 
+/**
+ * Returns rifugio address.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getRifugioAddress(rifugio) {
   return [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
 }
 
+/**
+ * Returns coordinates.
+ * @param {Object} rifugio - rifugio used by the function.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getCoordinates(rifugio) {
   const coords = rifugio?.rifugioData?.location?.coordinates || rifugio?.shelterData?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
@@ -51,6 +76,12 @@ function getCoordinates(rifugio) {
   return [lng, lat];
 }
 
+/**
+ * Fetches JSON from an API endpoint and throws on HTTP failures.
+ * @param {string} url - url used by the function.
+ * @returns {Promise<Object|Array<Object>|null>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 async function fetchJson(url) {
   const res = await fetch(url);
   if (!res.ok) {
@@ -60,10 +91,19 @@ async function fetchJson(url) {
   return await res.json();
 }
 
+/**
+ * Returns shelter announcements.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getShelterAnnouncements() {
   return state.announcements.filter((announcement) => announcement?.publisherId?.role === 'shelter');
 }
 
+/**
+ * Runs the normalize id workflow.
+ * @param {Object} value - Value to normalize or format.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function normalizeId(value) {
   if (!value) return '';
   if (typeof value === 'string') return value;
@@ -71,6 +111,11 @@ function normalizeId(value) {
   return String(value);
 }
 
+/**
+ * Runs the count announcements for rifugio workflow.
+ * @param {string} rifugioId - rifugio id used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function countAnnouncementsForRifugio(rifugioId) {
   return getShelterAnnouncements().filter((announcement) => {
     const publisherId = announcement?.publisherId?._id || announcement?.publisherId;
@@ -78,6 +123,11 @@ function countAnnouncementsForRifugio(rifugioId) {
   }).length;
 }
 
+/**
+ * Runs the count available animals for rifugio workflow.
+ * @param {string} rifugioId - rifugio id used by the function.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function countAvailableAnimalsForRifugio(rifugioId) {
   const fromAnimalsApi = state.animals.filter((animal) => {
     const shelterId = animal?.shelterId?._id || animal?.shelterId;
@@ -88,10 +138,18 @@ function countAvailableAnimalsForRifugio(rifugioId) {
   return countAnnouncementsForRifugio(rifugioId);
 }
 
+/**
+ * Returns highlight id.
+ * @returns {Object|string|Array<Object>|null} The result produced by the function.
+ */
 function getHighlightId() {
   return new URLSearchParams(window.location.search).get('rifugioId');
 }
 
+/**
+ * Runs the update counters workflow.
+ * @returns {void} The result produced by the function.
+ */
 function updateCounters() {
   const rifugiCount = state.rifugi.length;
   const totalAvailableAnimals = state.animals.length > 0
@@ -106,10 +164,22 @@ function updateCounters() {
   document.getElementById('adoptions-count').textContent = `${formatNumber(adoptionsCount)} annunci`;
 }
 
+/**
+ * Sets empty state.
+ * @param {Object} container - container used by the function.
+ * @param {string} message - message used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function setEmptyState(container, message) {
   container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
 }
 
+/**
+ * Runs the select rifugio workflow.
+ * @param {string} id - id used by the function.
+ * @param {Object} options - Options that customize the operation.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function selectRifugio(id, options = {}) {
   const { openPopup = true, panTo = true } = options;
   const rifugio = state.rifugi.find((item) => item._id === id) || null;
@@ -123,6 +193,10 @@ function selectRifugio(id, options = {}) {
   }
 }
 
+/**
+ * Renders rifugi grid into the current page.
+ * @returns {void} The result produced by the function.
+ */
 function renderRifugiGrid() {
   const grid = document.getElementById('rifugi-grid');
   if (!grid) return;
@@ -169,6 +243,10 @@ function renderRifugiGrid() {
 
   grid.querySelectorAll('.rifugio-card').forEach((card) => {
     const id = card.dataset.id;
+    /**
+     * Opens the page UI.
+     * @returns {void} The result produced by the function.
+     */
     const openPage = () => {
       window.location.href = `/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}`;
     };
@@ -182,6 +260,11 @@ function renderRifugiGrid() {
   });
 }
 
+/**
+ * Renders adoptions into the current page.
+ * @returns {void} The result produced by the function.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 function renderAdoptions() {
   const grid = document.getElementById('adoptions-grid');
   if (!grid) return;
@@ -269,6 +352,10 @@ function renderAdoptions() {
   });
 }
 
+/**
+ * Initializes the Leaflet map instance.
+ * @returns {void} The result produced by the function.
+ */
 function initMap() {
   if (state.map) return state.map;
   state.map = L.map('rifugi-map', {
@@ -286,6 +373,10 @@ function initMap() {
   return state.map;
 }
 
+/**
+ * Renders map markers and related map UI.
+ * @returns {void} The result produced by the function.
+ */
 function renderMap() {
   const map = initMap();
 
@@ -335,6 +426,10 @@ function renderMap() {
   }
 }
 
+/**
+ * Runs the select initial rifugio workflow.
+ * @returns {void|Object|string|Array<Object>|null} The result produced by the function.
+ */
 function selectInitialRifugio() {
   const highlightId = getHighlightId();
   const match = highlightId ? state.rifugi.find((rifugio) => rifugio._id === highlightId) : state.rifugi[0];
@@ -343,6 +438,11 @@ function selectInitialRifugio() {
   }
 }
 
+/**
+ * Runs the show load error workflow.
+ * @param {Object} error - error used by the function.
+ * @returns {void} The result produced by the function.
+ */
 function showLoadError(error) {
   const grid = document.getElementById('rifugi-grid');
   const adoptionsGrid = document.getElementById('adoptions-grid');
@@ -350,6 +450,10 @@ function showLoadError(error) {
   if (adoptionsGrid) setEmptyState(adoptionsGrid, 'Impossibile caricare le adozioni.');
 }
 
+/**
+ * Loads shelter directory data and initializes the shelters page after the DOM is ready.
+ * @returns {Promise<void>} Promise resolving when shelters, adoptions, and map UI are initialized.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const [rifugi, announcements] = await Promise.all([

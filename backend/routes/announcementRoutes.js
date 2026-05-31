@@ -4,7 +4,6 @@ const { getAnnouncements, getAnnouncementById, getSimilarAnnouncements, createAn
 const { authMiddleware } = require('../middleware/auth');
 const multer = require('multer');
 
-// keep files in memory so we can store directly to MongoDB
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 
@@ -19,9 +18,7 @@ router.post('/:id/reports', authMiddleware, reportAnnouncement);
 router.put('/:id', authMiddleware, upload.single('photo'), updateAnnouncement);
 router.patch('/:id/status', authMiddleware, changeStatus);
 router.delete('/:id', authMiddleware, deleteAnnouncement);
-// serve announcement photo
 router.get('/:id/photo', getAnnouncementPhoto);
-// generate PDF flyer for announcement (owner only)
 router.get('/:id/flyer', authMiddleware, generateFlyer);
 
 module.exports = router;
