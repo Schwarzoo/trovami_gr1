@@ -101,7 +101,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    res.status(201).json({
+    res.location(`${req.protocol}://${req.get('host')}/api/v1/users/${user._id}`).status(201).json({
       message: wantsRifugio
         ? 'Account rifugio creato. Controlla la mail e attendi approvazione admin'
         : 'Account creato. Controlla la mail per verificare l\'account',

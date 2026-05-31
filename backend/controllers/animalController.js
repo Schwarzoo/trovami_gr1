@@ -44,7 +44,7 @@ exports.createAnimal = async (req, res) => {
     });
 
     await animal.save();
-    res.status(201).json(animal);
+    res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${animal._id}`).status(201).json(animal);
   } catch (err) {
     res.status(400).json({ message: 'Errore nella creazione', error: err.message });
   }

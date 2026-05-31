@@ -378,7 +378,7 @@ exports.addAnnouncementComment = async (req, res) => {
         } catch (e) {
         }
 
-        res.status(201).json({ comment: newComment, comments: ann.comments });
+        res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcementId}/comments/${newComment._id}`).status(201).json({ comment: newComment, comments: ann.comments });
     } catch (err) {
         res.status(500).json({ message: 'Errore inserimento commento', error: err.message });
     }
@@ -470,7 +470,7 @@ exports.createAnnouncement = async (req,res)=>{
 
         await notifyShelterFollowers(announcement, animal, publisher);
 
-        res.status(201).json(announcement);
+            res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcement._id}`).status(201).json(announcement);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -567,7 +567,7 @@ exports.createQuickAnnouncement = async (req, res) => {
             console.warn('Impossibile aggiornare foto animale (quick):', err.message || err);
         }
         await writeAuditLog({ actor: null, action: 'creato annuncio', target: null });
-        res.status(201).json(announcement);
+        res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcement._id}`).status(201).json(announcement);
     } catch (err) {
         console.error('Errore creazione annuncio veloce:', err);
         res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
@@ -621,7 +621,7 @@ exports.reportAnnouncement = async (req, res) => {
             target: announcement.publisherId || null
         });
 
-        res.status(201).json({ message: 'Segnalazione inviata', report });
+        res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcementId}/reports/${report._id}`).status(201).json({ message: 'Segnalazione inviata', report });
     } catch (err) {
         res.status(500).json({ message: 'Errore invio segnalazione', error: err.message });
     }

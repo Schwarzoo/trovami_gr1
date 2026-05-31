@@ -79,7 +79,7 @@ exports.createContactRequest = async (req, res) => {
     });
 
     const fullRequest = await populateRequest(ContactRequest.findById(contactRequest._id));
-    res.status(201).json(fullRequest);
+    res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${contactRequest._id}`).status(201).json(fullRequest);
   } catch (err) {
     const status = /obbligatorio|troppo lungo/i.test(err.message) ? 400 : 500;
     res.status(status).json({ message: err.message || 'Errore invio richiesta adozione' });
