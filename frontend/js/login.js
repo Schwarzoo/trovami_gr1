@@ -37,7 +37,7 @@ form.addEventListener('submit', async (e) => {
       window.location.href = `./readmission.html?userId=${encodeURIComponent(data.userId)}&status=${encodeURIComponent(data.readmissionStatus || 'none')}`;
       return;
     }
-    errorBox.textContent = data.message || 'Errore di login';
+    errorBox.textContent = data.userMessage || data.message || 'Errore di login';
     return;
   }
 

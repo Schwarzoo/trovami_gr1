@@ -13,6 +13,7 @@ const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
 const PDFDocument = require('pdfkit');
+const { sendError } = require('../utils/errorResponse');
 const { writeAuditLog } = require('../services/auditService');
 const {
     sendAnnouncementCommentEmail,
@@ -318,7 +319,7 @@ exports.getAnnouncements = async (req, res) => {
             data: masked
         });
     } catch (err) {
-        res.status(500).json({ message: 'Errore nel recupero degli annunci', error: err.message });
+        sendError(res, 500, err.message, 'Errore nel recupero degli annunci', 'ANNOUNCEMENTS_LIST_ERROR');
     }
 };
 
@@ -335,7 +336,7 @@ exports.getResolvedAnnouncementsCount = async (req, res) => {
         const count = await Announcement.countDocuments({ status: requestedStatus });
         res.json({ count, resolvedCount: count });
     } catch (err) {
-        res.status(500).json({ message: 'Errore recupero conteggio annunci risolti', error: err.message });
+        sendError(res, 500, err.message, 'Errore recupero conteggio annunci risolti', 'ANNOUNCEMENTS_COUNT_ERROR');
     }
 };
 
@@ -395,7 +396,7 @@ exports.addAnnouncementComment = async (req, res) => {
 
         res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcementId}/comments/${newComment._id}`).status(201).json({ comment: newComment, comments: ann.comments });
     } catch (err) {
-        res.status(500).json({ message: 'Errore inserimento commento', error: err.message });
+        sendError(res, 500, err.message, 'Errore inserimento commento', 'ANNOUNCEMENT_COMMENT_CREATE_ERROR');
     }
 };
 
@@ -492,7 +493,7 @@ exports.createAnnouncement = async (req,res)=>{
 
             res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcement._id}`).status(201).json(announcement);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        sendError(res, 500, err.message, 'Errore creazione annuncio', 'ANNOUNCEMENT_CREATE_ERROR');
     }
 };
 
@@ -590,7 +591,7 @@ async function createQuickAnnouncementInternal(req, res) {
         res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcement._id}`).status(201).json(announcement);
     } catch (err) {
         console.error('Errore creazione annuncio veloce:', err);
-        res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
+        sendError(res, 500, err.message, 'Errore creazione annuncio veloce', 'QUICK_ANNOUNCEMENT_CREATE_ERROR');
     }
 }
 
@@ -643,7 +644,7 @@ exports.reportAnnouncement = async (req, res) => {
 
         res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcementId}/reports/${report._id}`).status(201).json({ message: 'Segnalazione inviata', report });
     } catch (err) {
-        res.status(500).json({ message: 'Errore invio segnalazione', error: err.message });
+        sendError(res, 500, err.message, 'Errore invio segnalazione', 'ANNOUNCEMENT_REPORT_CREATE_ERROR');
     }
 };
 
@@ -669,7 +670,7 @@ exports.reportAnnouncement = async (req, res) => {
 	        if (obj.publisherId) obj.publisherId = maskPublisherContacts(obj.publisherId);
 	        res.json(obj);
 	    } catch (err) {
-	        res.status(500).json({ message: "Errore nel recupero dell'annuncio", error: err.message });
+	        sendError(res, 500, err.message, "Errore nel recupero dell'annuncio", 'ANNOUNCEMENT_FETCH_ERROR');
 	    }
 	};
 
@@ -687,7 +688,7 @@ exports.getAnnouncementPhoto = async (req, res) => {
         res.contentType(announcement.photo.contentType || 'image/jpeg');
         res.send(announcement.photo.data);
     } catch (err) {
-        res.status(500).json({ message: 'Errore recupero foto', error: err.message });
+        sendError(res, 500, err.message, 'Errore recupero foto', 'ANNOUNCEMENT_PHOTO_FETCH_ERROR');
     }
 };
 
@@ -827,7 +828,7 @@ exports.generateFlyer = async (req, res) => {
         doc.end();
     } catch (err) {
         console.error('Errore generazione volantino:', err);
-        if (!res.headersSent) res.status(500).json({ message: 'Errore generazione volantino', error: err.message });
+        if (!res.headersSent) sendError(res, 500, err.message, 'Errore generazione volantino', 'ANNOUNCEMENT_FLYER_ERROR');
     }
 };
 
@@ -872,7 +873,7 @@ exports.getSimilarAnnouncements = async (req, res) => {
 
         res.json({ matches: payload });
     } catch (err) {
-        res.status(500).json({ message: 'Errore recupero smart match', error: err.message });
+        sendError(res, 500, err.message, 'Errore recupero smart match', 'ANNOUNCEMENT_SIMILAR_FETCH_ERROR');
     }
 };
 
@@ -963,7 +964,7 @@ exports.updateAnnouncement = async (req, res) => {
 
         res.json(ann);
     } catch (err) {
-        res.status(500).json({ message: 'Errore aggiornamento', error: err.message });
+        sendError(res, 500, err.message, 'Errore aggiornamento', 'ANNOUNCEMENT_UPDATE_ERROR');
     }
 };
 
@@ -994,7 +995,7 @@ exports.changeStatus = async (req, res) => {
         await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
         res.json(ann);
     } catch (err) {
-        res.status(500).json({ message: 'Errore cambio status', error: err.message });
+        sendError(res, 500, err.message, 'Errore cambio status', 'ANNOUNCEMENT_STATUS_UPDATE_ERROR');
     }
 };
 
@@ -1030,6 +1031,6 @@ exports.deleteAnnouncement = async (req, res) => {
         await writeAuditLog({ actor: req.user.userId, action: 'eliminato annuncio', target: null });
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        sendError(res, 500, err.message, 'Errore eliminazione annuncio', 'ANNOUNCEMENT_DELETE_ERROR');
     }
 };

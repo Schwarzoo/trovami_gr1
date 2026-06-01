@@ -78,7 +78,7 @@ async function fetchAnnouncementById(id) {
  */
 async function readResponseError(res, fallback) {
   const json = await res.json().catch(() => ({}));
-  return json?.message || `${fallback} (${res.status})`;
+  return json?.userMessage || json?.message || `${fallback} (${res.status})`;
 }
 
 /**

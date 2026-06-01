@@ -35,10 +35,10 @@ form.addEventListener('submit', async (event) => {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    statusBox.textContent = data.message || 'Errore invio richiesta';
+    statusBox.textContent = data.userMessage || data.message || 'Errore invio richiesta';
     return;
   }
 
-  statusBox.textContent = data.message || 'Richiesta inviata. Attendi approvazione admin.';
+  statusBox.textContent = data.userMessage || data.message || 'Richiesta inviata. Attendi approvazione admin.';
   form.querySelector('button[type="submit"]').disabled = true;
 });

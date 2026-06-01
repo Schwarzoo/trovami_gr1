@@ -94,7 +94,7 @@ async function loadAuditLogs() {
     const res = await fetch(buildUrl(), { headers: authHeader });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || 'Errore recupero audit logs');
+      throw new Error(data.userMessage || data.message || 'Errore recupero audit logs');
     }
     const logs = await res.json();
     renderRows(Array.isArray(logs) ? logs : []);

@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Errore: impossibile smettere di seguire il rifugio');
+    if (!res.ok) throw new Error(data.userMessage || data.message || 'Errore: impossibile smettere di seguire il rifugio');
     return data;
   }
 
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Errore svuotamento richieste');
+    if (!res.ok) throw new Error(data.userMessage || data.message || 'Errore svuotamento richieste');
     return data;
   }
 
@@ -735,7 +735,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       body: JSON.stringify({ replyMessage })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Errore risposta richiesta');
+    if (!res.ok) throw new Error(data.userMessage || data.message || 'Errore risposta richiesta');
     return data;
   }
 
@@ -925,7 +925,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.message || 'Errore salvataggio posizione');
+      alert(data.userMessage || data.message || 'Errore salvataggio posizione');
       return;
     }
 
@@ -997,7 +997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const json = await res.json().catch(() => ({}));
-      if (json?.message) return json.message;
+      if (json?.userMessage || json?.message) return json.userMessage || json.message;
     }
     return `${fallback} (${res.status})`;
   }
@@ -1266,7 +1266,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function openAdminAnnouncementModal(annId) {
     if (!annId) return;
     const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(annId)}`);
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Errore caricamento annuncio');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.userMessage || data.message || 'Errore caricamento annuncio');
+    }
     renderAdminAnnouncementModal(await res.json());
   }
 
@@ -1495,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
     const data = await res.json();
-    document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.message || 'Errore');
+    document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.userMessage || data.message || 'Errore');
     if (res.ok) setProfileEditing(false);
   });
 
@@ -1622,7 +1625,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           headers: authHeader,
           body: JSON.stringify({ reason: deleteReason })
         });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore eliminazione');
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.userMessage || data.message || 'Errore eliminazione');
+        }
       }
 
       if (action === 'block-user') {
@@ -1640,7 +1646,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           headers: authHeader,
           body: JSON.stringify({ status: 'DISMISSED', details: 'Archiviato da admin' })
         });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore archiviazione');
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.userMessage || data.message || 'Errore archiviazione');
+        }
       }
 
       if (action === 'approve-readmission' || action === 'reject-readmission') {
@@ -1665,7 +1674,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           headers: authHeader,
           body: JSON.stringify(body)
         });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore richiesta rifugio');
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.userMessage || data.message || 'Errore richiesta rifugio');
+        }
       }
 
       await loadAdminData();
@@ -1701,7 +1713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'DELETE', headers: authHeader });
     if (!res.ok) {
       const d = await res.json().catch(()=>({}));
-      alert(d.message || 'Errore eliminazione account');
+      alert(d.userMessage || d.message || 'Errore eliminazione account');
       return;
     }
     localStorage.removeItem('token');
@@ -1805,7 +1817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadMyAnnouncements();
       } else {
         const d = await res.json().catch(()=>({}));
-        alert(d.message || ('Errore eliminazione (' + res.status + ')'));
+        alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
       }
     } catch (err) {
       alert('Errore di rete: ' + (err.message || err));
@@ -1984,7 +1996,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newNote) payload.medicalNote = newNote;
         try {
           const upr = await fetch(`http://localhost:3000/api/v1/animals/${encodeURIComponent(animalId)}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (!upr.ok) throw new Error((await upr.json().catch(()=>({}))).message || 'Errore salvataggio');
+          if (!upr.ok) {
+            const data = await upr.json().catch(()=>({}));
+            throw new Error(data.userMessage || data.message || 'Errore salvataggio');
+          }
           document.getElementById('animal-modal-overlay').style.display = 'none';
           document.body.style.overflow = '';
           await loadMyAnimals();
@@ -2088,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
             if (!res.ok) {
               const d = await res.json().catch(()=>({}));
-              alert(d.message || ('Errore generazione volantino (' + res.status + ')'));
+              alert(d.userMessage || d.message || ('Errore generazione volantino (' + res.status + ')'));
               return;
             }
             const blob = await res.blob();

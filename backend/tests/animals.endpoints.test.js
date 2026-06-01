@@ -85,6 +85,27 @@ describe('animal endpoints', () => {
     expect(res.body.adoptable).toBe(true);
   });
 
+  test('POST /api/v1/animals returns standardized error body on persistence failure', async () => {
+    mockAnimalModel.mockImplementationOnce(function () {
+      this.save = jest.fn().mockRejectedValue(new Error('database down'));
+    });
+
+    const res = await request(app)
+      .post('/api/v1/animals')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Milo',
+        species: 'Dog'
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      developerMessage: 'database down',
+      userMessage: 'Errore nella creazione',
+      errorCode: 'ANIMAL_CREATE_ERROR'
+    });
+  });
+
   test('GET /api/v1/animals returns filtered list', async () => {
     const query = makeQuery([
       makeDoc({

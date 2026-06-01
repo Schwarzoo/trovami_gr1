@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Announcement = require('../models/Announcement');
 const { writeAuditLog } = require('../services/auditService');
 const mongoose = require('mongoose');
+const { sendError } = require('../utils/errorResponse');
 
 /**
  * Converts boolean-like request values to booleans.
@@ -40,7 +41,7 @@ exports.getMe = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
 };
 
@@ -89,7 +90,7 @@ exports.updateMe = async (req, res) => {
     await writeAuditLog({ actor: user, action: 'modificato profilo', target: null });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
 };
 
@@ -115,7 +116,7 @@ exports.getPublicUser = async (req, res) => {
       phoneNumber: showPhone ? user.phoneNumber : null
     });
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
 };
 
@@ -152,7 +153,7 @@ exports.getPublicRifugi = async (req, res) => {
       };
     }));
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero rifugi', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero rifugi', 'PUBLIC_SHELTERS_FETCH_ERROR');
   }
 };
 
@@ -196,7 +197,7 @@ exports.getFollowedShelters = async (req, res) => {
 
     res.json(followed);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero rifugi seguiti', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero rifugi seguiti', 'FOLLOWED_SHELTERS_FETCH_ERROR');
   }
 };
 
@@ -236,7 +237,7 @@ exports.followShelter = async (req, res) => {
     await writeAuditLog({ actor: me, action: 'seguito rifugio', target: shelter });
     res.json(formatShelterPayload(shelter, emailEnabled));
   } catch (err) {
-    res.status(500).json({ message: 'Errore follow rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore follow rifugio', 'SHELTER_FOLLOW_ERROR');
   }
 };
 
@@ -268,7 +269,7 @@ exports.unfollowShelter = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ message: 'Errore unfollow rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore unfollow rifugio', 'SHELTER_UNFOLLOW_ERROR');
   }
 };
 

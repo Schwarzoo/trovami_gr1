@@ -44,7 +44,7 @@ resendButton.addEventListener('click', async () => {
 
     if (!res.ok) {
       resendMessage.classList.add('error');
-      resendMessage.textContent = data.message || 'Errore durante l\'invio della mail';
+      resendMessage.textContent = data.userMessage || data.message || 'Errore durante l\'invio della mail';
       return;
     }
 
@@ -107,7 +107,7 @@ form.addEventListener('submit', async (e) => {
   const data = await res.json();
 
   if (!res.ok) {
-    errorBox.textContent = data.message || 'Errore durante la registrazione';
+    errorBox.textContent = data.userMessage || data.message || 'Errore durante la registrazione';
     return;
   }
 

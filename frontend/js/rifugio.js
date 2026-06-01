@@ -90,7 +90,7 @@ async function fetchJson(url) {
   const res = await fetch(url);
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json?.message || `HTTP ${res.status}`);
+    throw new Error(json?.userMessage || json?.message || `HTTP ${res.status}`);
   }
   return await res.json();
 }
@@ -113,7 +113,7 @@ async function fetchAuthJson(url, options = {}) {
   }
   const res = await fetch(url, { ...options, headers });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.message || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(json?.userMessage || json?.message || `HTTP ${res.status}`);
   return json;
 }
 
@@ -482,7 +482,7 @@ function renderContactRequestPanel(animal) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      status.textContent = data.message || 'Errore invio richiesta';
+      status.textContent = data.userMessage || data.message || 'Errore invio richiesta';
       return;
     }
 

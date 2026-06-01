@@ -7,6 +7,7 @@ const User = require('../models/User');
 const { removeAnnouncementCascade } = require('./announcementController');
 const { buildAuditQuery, writeAuditLog } = require('../services/auditService');
 const { sendAccountBlockedEmail } = require('../services/emailService');
+const { sendError } = require('../utils/errorResponse');
 
 /**
  * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
@@ -94,7 +95,7 @@ exports.getReports = async (req, res) => {
       return obj;
     }));
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero report', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero report', 'ADMIN_REPORTS_FETCH_ERROR');
   }
 };
 
@@ -115,7 +116,7 @@ exports.getUserDetails = async (req, res) => {
 
     res.json(await withPublishedAnnouncementsCount(user));
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero utente', 'ADMIN_USER_FETCH_ERROR');
   }
 };
 
@@ -133,7 +134,7 @@ exports.getUserAnnouncementCount = async (req, res) => {
 
     res.json({ publishedAnnouncementsCount: await getPublishedAnnouncementsCount(userId) });
   } catch (err) {
-    res.status(500).json({ message: 'Errore conteggio annunci utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore conteggio annunci utente', 'ADMIN_USER_ANNOUNCEMENT_COUNT_ERROR');
   }
 };
 
@@ -150,7 +151,7 @@ exports.getAuditLogs = async (req, res) => {
     const logs = await AuditLog.find(filter).sort(sort).limit(limit);
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero audit logs', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero audit logs', 'ADMIN_AUDIT_LOGS_FETCH_ERROR');
   }
 };
 
@@ -176,7 +177,7 @@ exports.updateReportStatus = async (req, res) => {
     }
     res.json(report);
   } catch (err) {
-    res.status(500).json({ message: 'Errore aggiornamento report', error: err.message });
+    sendError(res, 500, err.message, 'Errore aggiornamento report', 'ADMIN_REPORT_UPDATE_ERROR');
   }
 };
 
@@ -212,7 +213,7 @@ exports.deleteAnnouncementAsAdmin = async (req, res) => {
     await writeAudit(req.user.userId, 'eliminato annuncio', announcement.publisherId || null);
     res.json({ success: true, warnedUser: !!publisherId });
   } catch (err) {
-    res.status(500).json({ message: 'Errore eliminazione admin', error: err.message });
+    sendError(res, 500, err.message, 'Errore eliminazione admin', 'ADMIN_ANNOUNCEMENT_DELETE_ERROR');
   }
 };
 
@@ -278,7 +279,7 @@ exports.blockUser = async (req, res) => {
     responseUser.reviewedReportsCount = reviewedReports.modifiedCount || 0;
     res.json(responseUser);
   } catch (err) {
-    res.status(500).json({ message: 'Errore blocco utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore blocco utente', 'ADMIN_USER_BLOCK_ERROR');
   }
 };
 
@@ -299,7 +300,7 @@ exports.getPendingReadmissionRequests = async (req, res) => {
       .sort({ 'readmissionRequest.requestedAt': -1 });
     res.json(users);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero richieste riammissione', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero richieste riammissione', 'ADMIN_READMISSIONS_FETCH_ERROR');
   }
 };
 
@@ -353,7 +354,7 @@ exports.reviewReadmissionRequest = async (req, res) => {
     }
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore gestione riammissione', error: err.message });
+    sendError(res, 500, err.message, 'Errore gestione riammissione', 'ADMIN_READMISSION_UPDATE_ERROR');
   }
 };
 
@@ -395,7 +396,7 @@ exports.warnUser = async (req, res) => {
     await writeAudit(req.user.userId, 'ammonito utente', user);
     res.json(await withPublishedAnnouncementsCount(user));
   } catch (err) {
-    res.status(500).json({ message: 'Errore ammonimento utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore ammonimento utente', 'ADMIN_USER_WARN_ERROR');
   }
 };
 
@@ -417,7 +418,7 @@ exports.unblockUser = async (req, res) => {
     await writeAudit(req.user.userId, 'sbloccato utente', user);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore sblocco utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore sblocco utente', 'ADMIN_USER_UNBLOCK_ERROR');
   }
 };
 
@@ -436,7 +437,7 @@ exports.getPendingRifugi = async (req, res) => {
       .sort({ createdAt: -1 });
     res.json(rifugi);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero rifugi', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero rifugi', 'ADMIN_SHELTERS_FETCH_ERROR');
   }
 };
 
@@ -468,7 +469,7 @@ exports.approveRifugio = async (req, res) => {
     await writeAudit(req.user.userId, 'approvato rifugio', user);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore approvazione rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore approvazione rifugio', 'ADMIN_SHELTER_APPROVE_ERROR');
   }
 };
 
@@ -501,6 +502,6 @@ exports.rejectRifugio = async (req, res) => {
     await writeAudit(req.user.userId, 'rifiutato rifugio', user);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore rifiuto rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore rifiuto rifugio', 'ADMIN_SHELTER_REJECT_ERROR');
   }
 };

@@ -1,5 +1,6 @@
 const Animal = require('../models/Animal');
 const mongoose = require('mongoose');
+const { sendError } = require('../utils/errorResponse');
 
 /**
  * Handles the create animal API request and writes the HTTP response.
@@ -46,7 +47,7 @@ exports.createAnimal = async (req, res) => {
     await animal.save();
     res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${animal._id}`).status(201).json(animal);
   } catch (err) {
-    res.status(400).json({ message: 'Errore nella creazione', error: err.message });
+    sendError(res, 400, err.message, 'Errore nella creazione', 'ANIMAL_CREATE_ERROR');
   }
 };
 
@@ -89,7 +90,7 @@ exports.updateAnimal = async (req, res) => {
 
     res.json(animal);
   } catch (err) {
-    res.status(400).json({ message: 'Errore aggiornamento animal', error: err.message });
+    sendError(res, 400, err.message, 'Errore aggiornamento animal', 'ANIMAL_UPDATE_ERROR');
   }
 };
 
@@ -108,7 +109,7 @@ exports.getAnimalById = async (req, res) => {
     if (!animal) return res.status(404).json({ message: 'Animal non trovato' });
     res.json(animal);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero animal', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero animal', 'ANIMAL_FETCH_ERROR');
   }
 };
 
@@ -135,7 +136,7 @@ exports.deleteAnimal = async (req, res) => {
     res.json({ message: "Animal eliminato", id: deleted._id });
   } catch (err) {
     console.error("Errore in deleteAnimal:", err);
-    res.status(500).json({ message: "Errore eliminazione animal", error: err.message });
+    sendError(res, 500, err.message, "Errore eliminazione animal", 'ANIMAL_DELETE_ERROR');
   }
 };
 
@@ -201,6 +202,6 @@ exports.listAnimals = async (req, res) => {
       data: out
     });
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero animali', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero animali', 'ANIMALS_LIST_ERROR');
   }
 };
