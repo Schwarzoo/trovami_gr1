@@ -46,7 +46,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -89,7 +88,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -118,7 +116,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -142,7 +139,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'shelter1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({

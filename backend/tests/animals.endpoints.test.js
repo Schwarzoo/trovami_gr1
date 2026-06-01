@@ -41,7 +41,6 @@ describe('animal endpoints', () => {
   test('POST /api/v1/animals creates animal', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true,
       role: 'user'
     });
@@ -65,7 +64,6 @@ describe('animal endpoints', () => {
   test('POST /api/v1/animals lets shelters set adoptable', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'shelter1',
-      sessionToken: token,
       isActive: true,
       role: 'shelter'
     });
@@ -150,7 +148,6 @@ describe('animal endpoints', () => {
   test('PUT /api/v1/animals/:id updates animal', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
     mockAnimalModel.findByIdAndUpdate.mockResolvedValue(makeDoc({
@@ -170,7 +167,6 @@ describe('animal endpoints', () => {
   test('DELETE /api/v1/animals/:id deletes animal', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
     mockAnimalModel.findByIdAndDelete.mockResolvedValue({

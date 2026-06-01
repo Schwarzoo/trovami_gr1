@@ -60,10 +60,9 @@ describe('authMiddleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  test('200 when token valid and session matches', async () => {
+  test('200 when token valid', async () => {
     const mockUser = {
       _id: 'user1',
-      sessionToken: 'tok',
       isActive: true,
       role: 'user'
     };
@@ -77,7 +76,6 @@ describe('authMiddleware', () => {
     const res = createRes();
     const next = jest.fn();
     const token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
-    mockUser.sessionToken = token;
     req.headers.authorization = `Bearer ${token}`;
 
     await authMiddleware(req, res, next);
@@ -89,7 +87,6 @@ describe('authMiddleware', () => {
   test('uses current database role instead of stale token role', async () => {
     const mockUser = {
       _id: 'user1',
-      sessionToken: 'tok',
       isActive: true,
       role: 'shelter'
     };
@@ -103,7 +100,6 @@ describe('authMiddleware', () => {
     const res = createRes();
     const next = jest.fn();
     const token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
-    mockUser.sessionToken = token;
     req.headers.authorization = `Bearer ${token}`;
 
     await authMiddleware(req, res, next);

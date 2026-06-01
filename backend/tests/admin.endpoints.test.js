@@ -32,7 +32,6 @@ describe('admin endpoints', () => {
     token = jwt.sign({ userId: 'admin1', role: 'admin' }, process.env.JWT_SECRET);
     mockUserModel.findById.mockResolvedValue({
       _id: 'admin1',
-      sessionToken: token,
       isActive: true,
       role: 'admin'
     });

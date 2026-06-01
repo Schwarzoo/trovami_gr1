@@ -11,7 +11,6 @@ const bcrypt = require("bcryptjs");
  * @property {string|null} phoneNumber Numero di telefono opzionale.
  * @property {boolean} isActive Indica se l'account è attivo.
  * @property {boolean} isEmailVerified Indica se l'email è verificata.
- * @property {string|null} sessionToken Token di sessione corrente.
  * @property {Array<{ shelterId: mongoose.Types.ObjectId, emailEnabled: boolean, createdAt: Date }>} followedShelters Rifugi seguiti.
  */
 const userBaseSchema = new mongoose.Schema(
@@ -23,8 +22,6 @@ const userBaseSchema = new mongoose.Schema(
     phoneNumber: { type: String, default: null },
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
-    sessionToken: { type: String, default: null },
-
     contactVisibility: {
       showEmail: { type: Boolean, default: true },
       showPhone: { type: Boolean, default: true },

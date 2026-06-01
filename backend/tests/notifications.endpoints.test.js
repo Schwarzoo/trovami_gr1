@@ -27,7 +27,6 @@ describe('notification endpoints', () => {
     token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
   });

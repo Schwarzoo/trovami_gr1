@@ -79,10 +79,8 @@ describe('auth endpoints', () => {
     const token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
     mockUserModel.findById.mockResolvedValue(makeDoc({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     }));
-    mockUserModel.findByIdAndUpdate.mockResolvedValue({ ok: 1 });
 
     const res = await request(app)
       .delete('/api/v1/auth/sessions/current')
@@ -90,6 +88,7 @@ describe('auth endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Logout effettuato');
+    expect(mockUserModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   test('POST /api/v1/auth/readmission-requests stores request', async () => {

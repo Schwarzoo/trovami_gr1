@@ -153,7 +153,6 @@ describe('announcement endpoints', () => {
   test('POST /api/v1/announcements/:id/reports creates report', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
     mockAnnouncementModel.findById.mockReturnValue({

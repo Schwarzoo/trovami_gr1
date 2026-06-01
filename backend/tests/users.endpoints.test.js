@@ -44,7 +44,6 @@ describe('users endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockImplementationOnce(() => ({
@@ -66,7 +65,6 @@ describe('users endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockResolvedValueOnce({
@@ -113,7 +111,6 @@ describe('users endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -138,7 +135,6 @@ describe('users endpoints', () => {
   test('DELETE /api/v1/users/me deletes account', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
     mockAnnouncementModel.find.mockReturnValue(makeQuery([

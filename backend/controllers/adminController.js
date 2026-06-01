@@ -111,7 +111,7 @@ exports.getUserDetails = async (req, res) => {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
 
-    const user = await User.findById(userId).select('-passwordHash -sessionToken');
+    const user = await User.findById(userId).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     res.json(await withPublishedAnnouncementsCount(user));
@@ -241,7 +241,6 @@ exports.blockUser = async (req, res) => {
       userId,
       {
         isActive: false,
-        sessionToken: null,
         conductWarnings: [],
         readmissionRequest: {
           status: 'none',
@@ -252,7 +251,7 @@ exports.blockUser = async (req, res) => {
         }
       },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     await Promise.all(announcementIds.map(announcementId => removeAnnouncementCascade(announcementId)));
@@ -327,7 +326,7 @@ exports.reviewReadmissionRequest = async (req, res) => {
       update.isActive = true;
     }
 
-    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-passwordHash -sessionToken');
+    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     try {
@@ -384,7 +383,7 @@ exports.warnUser = async (req, res) => {
         }
       },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     await Notification.create({
@@ -412,7 +411,7 @@ exports.unblockUser = async (req, res) => {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
 
-    const user = await User.findByIdAndUpdate(userId, { isActive: true }, { new: true }).select('-passwordHash -sessionToken');
+    const user = await User.findByIdAndUpdate(userId, { isActive: true }, { new: true }).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     await writeAudit(req.user.userId, 'sbloccato utente', user);
@@ -433,7 +432,7 @@ exports.getPendingRifugi = async (req, res) => {
   try {
     const status = (req.query?.status || 'pending').toString().trim();
     const rifugi = await User.find({ role: 'shelter', rifugioStatus: status })
-      .select('-passwordHash -sessionToken')
+      .select('-passwordHash')
       .sort({ createdAt: -1 });
     res.json(rifugi);
   } catch (err) {
@@ -457,7 +456,7 @@ exports.approveRifugio = async (req, res) => {
       { _id: userId, role: 'shelter' },
       { rifugioStatus: 'approved', isActive: true },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Rifugio non trovato' });
 
     await Notification.create({
@@ -490,7 +489,7 @@ exports.rejectRifugio = async (req, res) => {
       { _id: userId, role: 'shelter' },
       { rifugioStatus: 'rejected' },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Rifugio non trovato' });
 
     await Notification.create({

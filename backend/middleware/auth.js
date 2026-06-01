@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 /**
- * Validates the JWT bearer token, checks the stored session, and attaches the authenticated user to the request.
+ * Validates the JWT bearer token and attaches the authenticated user to the request.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @param {Function} next - Express next middleware callback.
@@ -21,8 +21,8 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.userId);
-    if (!user || user.sessionToken !== token) {
-      return res.status(401).json({ message: 'Sessione non valida o scaduta' });
+    if (!user) {
+      return res.status(401).json({ message: 'Utente non trovato' });
     }
 
     if (!user.isActive) {

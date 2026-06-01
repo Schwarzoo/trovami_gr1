@@ -162,9 +162,6 @@ exports.login = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    user.sessionToken = token;
-    await user.save();
-
     res.json({ message: 'Login effettuato', token, role: user.role });
   } catch (err) {
     sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
@@ -227,8 +224,7 @@ exports.requestReadmission = async (req, res) => {
  */
 exports.logout = async (req, res) => {
   try {
-    await User.findByIdAndUpdate(req.user.userId, { sessionToken: null });
-    res.json({ message: 'Logout effettuato' });
+    res.status(200).json({ message: 'Logout effettuato' });
   } catch (err) {
     sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
@@ -357,7 +353,6 @@ exports.resetPassword = async (req, res) => {
     user.passwordHash = passwordHash;
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
-    user.sessionToken = null; 
     await user.save();
 
     res.json({ message: 'Password aggiornata con successo' });
