@@ -105,7 +105,7 @@ exports.getAnimalById = async (req, res) => {
   try {
     const id = req.params.id;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'ID animale non valido' });
-    const animal = await Animal.findById(id);
+    const animal = await Animal.findById(id).select('-imageEmbedding -__v');
     if (!animal) return res.status(404).json({ message: 'Animal non trovato' });
     res.json(animal);
   } catch (err) {
@@ -173,6 +173,7 @@ exports.listAnimals = async (req, res) => {
     const totalItems = await Animal.countDocuments(filter);
     const totalPages = Math.ceil(totalItems / limit);
     const animals = await Animal.find(filter)
+      .select('-imageEmbedding -__v')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

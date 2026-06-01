@@ -129,18 +129,21 @@ describe('animal endpoints', () => {
     });
     expect(query.skip).toHaveBeenCalledWith(5);
     expect(query.limit).toHaveBeenCalledWith(5);
+    expect(query.select).toHaveBeenCalledWith('-imageEmbedding -__v');
     expect(res.body.data[0].name).toBe('Milo');
   });
 
   test('GET /api/v1/animals/:id returns animal', async () => {
-    mockAnimalModel.findById.mockResolvedValue(makeDoc({
+    const select = jest.fn(() => Promise.resolve(makeDoc({
       _id: '507f1f77bcf86cd799439011',
       name: 'Milo'
-    }));
+    })));
+    mockAnimalModel.findById.mockReturnValue({ select });
 
     const res = await request(app).get('/api/v1/animals/507f1f77bcf86cd799439011');
 
     expect(res.status).toBe(200);
+    expect(select).toHaveBeenCalledWith('-imageEmbedding -__v');
     expect(res.body.name).toBe('Milo');
   });
 

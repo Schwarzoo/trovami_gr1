@@ -83,24 +83,27 @@ describe('announcement endpoints', () => {
     });
     expect(query.skip).toHaveBeenCalledWith(5);
     expect(query.limit).toHaveBeenCalledWith(5);
+    expect(query.select).toHaveBeenCalledWith('-photo -comments -imageEmbedding -__v');
     expect(res.body.data[0]._id).toBe('ann1');
   });
 
   test('GET /api/v1/announcements/:id returns one announcement', async () => {
-    mockAnnouncementModel.findById.mockReturnValue({
-      select: jest.fn(() => ({
-        populate: jest.fn(() => ({
-          populate: jest.fn(() => Promise.resolve(makeDoc({
-            _id: 'ann1',
-            publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
-          })))
-        }))
+    const select = jest.fn(() => ({
+      populate: jest.fn(() => ({
+        populate: jest.fn(() => Promise.resolve(makeDoc({
+          _id: 'ann1',
+          publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
+        })))
       }))
+    }));
+    mockAnnouncementModel.findById.mockReturnValue({
+      select
     });
 
     const res = await request(app).get('/api/v1/announcements/507f1f77bcf86cd799439011');
 
     expect(res.status).toBe(200);
+    expect(select).toHaveBeenCalledWith('-photo -imageEmbedding -__v');
     expect(res.body._id).toBe('ann1');
   });
 
