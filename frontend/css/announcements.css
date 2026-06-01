@@ -498,7 +498,7 @@ button#nearby-button:disabled {
     align-items: center;
     gap: 0.3rem;
     color: #fff;
-    background: var(--accent-2, #2D6FA3);
+    background: var(--accent);
     text-decoration: none;
     font-size: 0.78rem;
     font-weight: 700;
@@ -898,7 +898,7 @@ button#nearby-button:disabled {
     align-items: center;
     gap: 0.3rem;
     color: #fff;
-    background: var(--accent-2, #2D6FA3);
+    background: var(--accent);
     text-decoration: none;
     font-weight: 600;
     font-size: 0.82rem;
