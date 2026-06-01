@@ -4,7 +4,7 @@
   box-sizing: border-box;
 }
 
-:root {
+.auth-page {
   --warm-100: #FFF5EE;
   --warm-200: #FFE8D6;
   --warm-300: #F5C4B3;
@@ -26,8 +26,6 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  font-family: 'DM Sans', sans-serif;
-  color: var(--text-dark);
 }
 
 html {

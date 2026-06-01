@@ -297,7 +297,7 @@ exports.getAnnouncements = async (req, res) => {
         const totalItems = await Announcement.countDocuments(filter);
         const totalPages = Math.ceil(totalItems / limit);
         const announcements = await Announcement.find(filter)
-            .select('-photo -comments')
+            .select('-photo -comments -imageEmbedding -__v')
             .populate('animalId')
             .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData') // 'name' non esiste nel modello User
             .sort({ createdAt: -1 })
@@ -658,7 +658,7 @@ exports.reportAnnouncement = async (req, res) => {
 	exports.getAnnouncementById = async (req, res) => {
 	    try {
 	        const announcement = await Announcement.findById(req.params.id)
-	            .select('-photo')
+	            .select('-photo -imageEmbedding -__v')
 	            .populate('animalId')
 	            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData');
 
