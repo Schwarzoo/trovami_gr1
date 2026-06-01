@@ -6,64 +6,110 @@
   <link rel="stylesheet" href="../css/style.css" />
   <link rel="stylesheet" href="../css/header.css" />
   <link rel="stylesheet" href="../css/register.css" />
-  <title>Registrazione - TrovaMi</title>
+  <title>Registrazione - Trovami</title>
 </head>
 <body>
   <div data-include="header"></div>
 
   <main class="auth-page">
     <div class="auth-container">
+
       <form id="registerForm" class="auth-card">
+
+        <div class="auth-brand">
+          <div class="auth-brand-icon">🐾</div>
+          <span class="auth-brand-name">Trovami</span>
+        </div>
+
         <h1>Crea account</h1>
-        <p>Registrati per iniziare a usare Trovami.</p>
+        <p class="auth-subtitle">Registrati per iniziare a usare Trovami.</p>
 
-        <label for="username">Nome utente</label>
-        <input type="text" id="username" name="username" placeholder="Il tuo nome utente" required />
+        <div class="auth-divider"></div>
 
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" placeholder="nome@email.com" required />
+        <div class="field-group">
+          <label for="username">Nome utente</label>
+          <input type="text" id="username" name="username" placeholder="Il tuo nome utente" required />
+        </div>
 
-        <label for="phoneNumber">Telefono</label>
-        <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Facoltativo" />
+        <div class="field-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="nome@email.com" required />
+        </div>
 
-        <button type="button" id="becomeRifugio" class="secondary-action" aria-pressed="false">Diventa rifugio</button>
+        <div class="field-group">
+          <label for="phoneNumber">Telefono</label>
+          <input type="text" id="phoneNumber" name="phoneNumber" placeholder="Facoltativo" />
+        </div>
+
+        <button type="button" id="becomeRifugio" class="secondary-action" aria-pressed="false">
+          🏕️ Diventa rifugio
+        </button>
 
         <div id="rifugioFields" class="is-hidden">
-          <label for="rifugioName">Nome rifugio</label>
-          <input type="text" id="rifugioName" name="rifugioName" placeholder="Nome ufficiale del rifugio" />
+          <div class="field-group">
+            <label for="rifugioName">Nome rifugio</label>
+            <input type="text" id="rifugioName" name="rifugioName" placeholder="Nome ufficiale del rifugio" />
+          </div>
 
-          <label for="rifugioAddress">Indirizzo</label>
-          <input type="text" id="rifugioAddress" name="rifugioAddress" placeholder="Via e numero civico" />
+          <div class="field-group">
+            <label for="rifugioAddress">Indirizzo</label>
+            <input type="text" id="rifugioAddress" name="rifugioAddress" placeholder="Via e numero civico" />
+          </div>
 
-          <label for="rifugioCity">Citta</label>
-          <input type="text" id="rifugioCity" name="rifugioCity" placeholder="Es. Trento" />
+          <div class="field-group">
+            <label for="rifugioCity">Città</label>
+            <input type="text" id="rifugioCity" name="rifugioCity" placeholder="Es. Trento" />
+          </div>
 
-          <label for="rifugioDescription">Descrizione</label>
-          <textarea id="rifugioDescription" name="rifugioDescription" placeholder="Breve descrizione del rifugio"></textarea>
+          <div class="field-group">
+            <label for="rifugioDescription">Descrizione</label>
+            <textarea id="rifugioDescription" name="rifugioDescription" placeholder="Breve descrizione del rifugio"></textarea>
+          </div>
 
           <p class="form-hint">Gli account rifugio devono essere approvati da un admin prima di pubblicare annunci.</p>
         </div>
 
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="Minimo 8 caratteri" required />
+        <div class="field-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Minimo 8 caratteri" required />
+        </div>
 
-        <label for="confirmPassword">Conferma password</label>
-        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Ripeti la password" required />
+        <div class="field-group">
+          <label for="confirmPassword">Conferma password</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Ripeti la password" required />
+        </div>
 
         <div class="auth-actions">
           <button type="submit" id="registerSubmit">Registrati</button>
         </div>
+
         <p id="registerError" class="error"></p>
+
+        <div class="auth-footer-links">
+          <p>Hai già un account? <a href="login.html">Accedi</a></p>
+        </div>
+
       </form>
+
+      <!-- Success panel (shown after registration) -->
       <div id="registerSuccessPanel" class="auth-card is-hidden" aria-live="polite">
+
+        <div class="auth-brand">
+          <div class="auth-brand-icon">🐾</div>
+          <span class="auth-brand-name">TrovaMi</span>
+        </div>
+
         <h1>Registrazione completata</h1>
         <p id="registerSuccess" class="success"></p>
+
         <div class="auth-actions">
           <button type="button" id="goToLogin">Vai al login</button>
           <button type="button" id="resendVerification">Rinvia email di verifica</button>
         </div>
+
         <p id="resendMessage" class="success"></p>
       </div>
+
     </div>
   </main>
 
