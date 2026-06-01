@@ -21,6 +21,7 @@ describe('POST /api/v1/auth/users', () => {
       .send({ username: 'u', email: 'u@test.local', password: 'short' });
 
     expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body).toEqual({ message: 'Password deve avere almeno 8 caratteri' });
   });
 });
