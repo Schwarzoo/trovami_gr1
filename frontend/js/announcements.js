@@ -230,14 +230,15 @@ function buildCard(ann) {
             <h3 class="card-breed">${escapeHtml(primaryTitle)}</h3>
             ${animal?.name ? `<div class="card-distance">${escapeHtml(animal?.species || '')}${animal?.breed ? ` · ${escapeHtml(animal.breed)}` : ''}</div>` : ''}
             <p class="card-description">${escapeHtml(ann.description)}</p>
-            ${rifugioName ? `<div class="card-distance">Rifugio: ${escapeHtml(rifugioName)}</div>` : ''}
-            ${ann.isQuick ? `<div class="card-distance">Segnalazione veloce</div>` : ''}
+            ${rifugioName ? `<div class="card-distance">🏠 Rifugio: ${escapeHtml(rifugioName)}</div>` : ''}
+            ${ann.isQuick ? `<div class="card-distance">⚡ Segnalazione veloce</div>` : ''}
             ${distanceLabel}
             <div class="card-details">
                 <span class="card-detail-label">Colore</span><span>${displayValue(animal?.color)}</span>
                 <span class="card-detail-label">Salute</span><span>${displayValue(ann.healthCondition)}</span>
                 <span class="card-detail-label">Comportamento</span><span>${displayValue(ann.animalBehaviour)}</span>
             </div>
+            <button class="card-cta" type="button">Vedi dettagli →</button>
         </div>
     `;
 
@@ -293,7 +294,7 @@ async function openModal(ann) {
 
     if (coords?.length === 2) {
         const link = `map.html?highlight=${encodeURIComponent(data._id)}`;
-        locationInfo = `<dt>Posizione</dt><dd><a class="position-link" href="${link}"><em>trovami</em></a></dd>`;
+        locationInfo = `<dt>Posizione</dt><dd><a class="modal-map-btn" href="${link}">📍 Vedi sulla mappa</a></dd>`;
     }
 
     const rifugioAddress = [publisher?.rifugioData?.address, publisher?.rifugioData?.city]
@@ -448,7 +449,21 @@ async function openModal(ann) {
             <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
             <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
         </dl>
-        <p class="modal-description">${data.description}</p>
+        
+
+        <div class="modal-contact">
+            <div class="modal-contact-header">Contatti</div>
+            ${isLoggedIn
+                ? `<div class="modal-contact-name">${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
+                   <div class="modal-contact-links">
+                       ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
+                       ${publisher?.email ? `<a href="mailto:${publisher.email}">✉️ ${escapeHtml(publisher.email)}</a>` : ''}
+                   </div>
+                   ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
+                   ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
+                : `<span class="contact-locked">🔒 Accedi per vedere i contatti del segnalante</span>`
+            }
+        </div>
 
         <section class="comments-section" aria-label="Commenti">
             <div class="comments-header">
@@ -462,18 +477,6 @@ async function openModal(ann) {
         </section>
         ${reportBoxHtml}
         ${adminResolveBoxHtml}
-
-        <div class="modal-contact">
-            ${isLoggedIn
-                ? `<strong>Contatto:</strong>
-                   <span>${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</span>
-                   ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">${publisher.phoneNumber}</a>` : ''}
-                   ${publisher?.email ? `<a href="mailto:${publisher.email}">${publisher.email}</a>` : ''}
-                   ${rifugioLocationHtml}
-                   ${shelterAnimalLinkHtml}`
-                : `<span class="contact-locked">🔒 Accedi per vedere i contatti</span>`
-            }
-        </div>
     `;
 
     const form = document.querySelector('.comment-form');
