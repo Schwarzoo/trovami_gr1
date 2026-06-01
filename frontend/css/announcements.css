@@ -302,52 +302,60 @@ button#nearby-button:disabled {
 .badge--sighting { background: var(--sighting); color: #fff; }
 .badge--rifugio  { background: var(--accent-2); color: #fff; }
 
-.card-body { padding: 1rem 1.1rem 1.2rem; }
+.card-body { padding: 1rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 0; }
 
 .card-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.4rem;
-    gap: 0.6rem;
+    margin-bottom: 0.35rem;
+    gap: 0.5rem;
 }
 
 .card-species {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--accent);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
+    background: rgba(196, 82, 28, 0.08);
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
 }
 
-.card-date    { font-size: 0.78rem; color: var(--text-muted); }
+.card-date { font-size: 0.76rem; color: var(--text-muted); }
 
-.card-breed   {
+.card-breed {
     font-family: var(--font-display);
     font-size: 1.15rem;
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
     color: var(--text);
+    line-height: 1.25;
 }
 
 .card-description {
-    font-size: 0.87rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
     line-height: 1.55;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.7rem;
 }
 
 .card-details {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    gap: 0.25rem 0.7rem;
-    font-size: 0.8rem;
+    gap: 0.22rem 0.65rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
-    margin-top: 0.75rem;
+    margin-bottom: 0.9rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg);
+    border-radius: 10px;
+    border: 1px solid var(--border);
 }
 
 .card-detail-label {
@@ -360,6 +368,40 @@ button#nearby-button:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Card CTA button */
+.card-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: auto;
+    padding: 0.55rem 1rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    width: 100%;
+    text-align: center;
+}
+
+.card-cta:hover {
+    background: #A8411A;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(196, 82, 28, 0.22);
+}
+
+.card-distance {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
 }
 
 .card-tags {
@@ -450,6 +492,28 @@ button#nearby-button:disabled {
 }
 
 /* ── MODAL ── */
+.position-link,
+.modal-map-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #fff;
+    background: var(--accent-2, #2D6FA3);
+    text-decoration: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    transition: opacity 0.2s, transform 0.15s;
+}
+
+.modal-map-btn:hover,
+.position-link:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+/* ── MODAL OVERLAY ── */
 #modal-overlay {
     display: none;
     position: fixed; inset: 0;
@@ -591,8 +655,8 @@ button#nearby-button:disabled {
 }
 
 .comments-section {
-    margin-bottom: 1rem;
-    padding-top: .75rem;
+    margin-bottom: 1.25rem;
+    padding-top: 1rem;
     border-top: 1px solid var(--border);
 }
 
@@ -600,65 +664,74 @@ button#nearby-button:disabled {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: .6rem;
+    margin-bottom: 0.75rem;
 }
 
 .comments-header h3 {
     font-family: var(--font-display);
-    font-size: 1.05rem;
-    font-weight: 400;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .comments-count {
-    background: var(--bg);
-    border: 1px solid var(--border);
+    background: var(--accent);
+    color: #fff;
     border-radius: 999px;
-    padding: .15rem .55rem;
-    font-size: 0.82rem;
-    color: var(--text-muted);
+    padding: 0.1rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .comments-list {
     display: flex;
     flex-direction: column;
-    gap: .6rem;
+    gap: 0.55rem;
 }
 
 .comments-empty {
     color: var(--text-muted);
-    font-size: 0.9rem;
-    padding: .5rem 0;
+    font-size: 0.88rem;
+    padding: 0.75rem 0;
+    text-align: center;
+    font-style: italic;
 }
 
 .comments-locked {
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: .65rem .8rem;
+    border-radius: 10px;
+    padding: 0.65rem 0.9rem;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-bottom: .8rem;
+    font-size: 0.88rem;
+    margin-bottom: 0.8rem;
+    text-align: center;
 }
 
 .comment-item {
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: .7rem .8rem;
+    border-radius: 12px;
+    padding: 0.75rem 0.9rem;
+    transition: border-color 0.2s;
+}
+
+.comment-item:hover {
+    border-color: rgba(196, 82, 28, 0.2);
 }
 
 .comment-meta {
     display: flex;
-    gap: .6rem;
-    align-items: baseline;
+    gap: 0.6rem;
+    align-items: center;
     justify-content: space-between;
-    margin-bottom: .35rem;
+    margin-bottom: 0.4rem;
 }
 
 .comment-user {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
 }
 
 .comment-user-link {
@@ -668,24 +741,36 @@ button#nearby-button:disabled {
     margin: 0;
     cursor: pointer;
     text-align: left;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.88rem;
+    transition: opacity 0.2s;
 }
 
 .comment-user-link:hover {
+    opacity: 0.75;
     text-decoration: underline;
 }
 
 .comment-date {
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     white-space: nowrap;
 }
 
 .comment-text {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.5;
+    color: var(--text);
+    font-size: 0.88rem;
+    line-height: 1.55;
     white-space: pre-wrap;
     word-break: break-word;
+}
+
+/* Comment contact slot (shown on click) */
+.comment-contact-slot .modal-contact {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    padding: 0.7rem 0.9rem;
 }
 
 .comment-form {
@@ -776,25 +861,71 @@ button#nearby-button:disabled {
 }
 
 .modal-contact {
-    background: var(--bg);
-    border-radius: 8px;
-    padding: .85rem 1rem;
+    background: linear-gradient(135deg, rgba(196, 82, 28, 0.06), rgba(196, 82, 28, 0.02));
+    border: 1px solid rgba(196, 82, 28, 0.18);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
     font-size: 0.88rem;
     display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.modal-contact-header {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.1rem;
+}
+
+.modal-contact-name {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.modal-contact-links {
+    display: flex;
     flex-wrap: wrap;
-    gap: .5rem;
+    gap: 0.5rem;
+}
+
+.modal-contact a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #fff;
+    background: var(--accent-2, #2D6FA3);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    transition: opacity 0.2s, transform 0.15s;
+}
+
+.modal-contact a:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+
+.contact-locked {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.88rem;
+}
+
+.modal-contact-extra {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     align-items: center;
 }
-.modal-contact strong {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    margin-right: .25rem;
-}
-.modal-contact a { color: var(--accent-2); text-decoration: none; font-weight: 500; }
-.modal-contact a:hover { text-decoration: underline; }
-.contact-locked { color: var(--text-muted); font-style: italic; }
 
 /* ── FOOTER ── */
 .site-footer {
