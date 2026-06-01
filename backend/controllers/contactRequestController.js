@@ -9,6 +9,7 @@ const {
   canShelterManageRequest,
   normalizeReplyMessage
 } = require('../services/contactRequestService');
+const { sendError } = require('../utils/errorResponse');
 
 /**
  * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
@@ -82,7 +83,7 @@ exports.createContactRequest = async (req, res) => {
     res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${contactRequest._id}`).status(201).json(fullRequest);
   } catch (err) {
     const status = /obbligatorio|troppo lungo/i.test(err.message) ? 400 : 500;
-    res.status(status).json({ message: err.message || 'Errore invio richiesta adozione' });
+    sendError(res, status, err.message, err.message || 'Errore invio richiesta adozione', 'CONTACT_REQUEST_CREATE_ERROR');
   }
 };
 
@@ -107,7 +108,7 @@ exports.getContactRequests = async (req, res) => {
       .limit(200);
     res.json(list);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero richieste adozione', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero richieste adozione', 'CONTACT_REQUESTS_FETCH_ERROR');
   }
 };
 
@@ -142,7 +143,7 @@ exports.clearRepliedContactRequests = async (req, res) => {
 
     res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
   } catch (err) {
-    res.status(500).json({ message: 'Errore svuotamento richieste risposte', error: err.message });
+    sendError(res, 500, err.message, 'Errore svuotamento richieste risposte', 'CONTACT_REQUESTS_CLEAR_ERROR');
   }
 };
 
@@ -168,7 +169,7 @@ exports.clearRequesterRepliedContactRequests = async (req, res) => {
 
     res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
   } catch (err) {
-    res.status(500).json({ message: 'Errore eliminazione richieste risposte', error: err.message });
+    sendError(res, 500, err.message, 'Errore eliminazione richieste risposte', 'CONTACT_REQUESTS_DELETE_REPLIED_ERROR');
   }
 };
 
@@ -220,6 +221,6 @@ exports.replyToContactRequest = async (req, res) => {
     res.json(fullRequest);
   } catch (err) {
     const status = /obbligatoria|troppo lungo/i.test(err.message) ? 400 : 500;
-    res.status(status).json({ message: err.message || 'Errore risposta richiesta adozione' });
+    sendError(res, status, err.message, err.message || 'Errore risposta richiesta adozione', 'CONTACT_REQUEST_REPLY_ERROR');
   }
 };

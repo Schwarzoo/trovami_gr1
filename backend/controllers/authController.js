@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const Notification = require('../models/Notification');
 const { writeAuditLog } = require('../services/auditService');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
+const { sendError } = require('../utils/errorResponse');
 
 /**
  * Maps a MongoDB duplicate-key error to a user-facing account message.
@@ -113,9 +114,9 @@ exports.register = async (req, res) => {
     console.error('Register error:', err);
     const duplicateMessage = duplicateAccountMessage(err);
     if (duplicateMessage) {
-      return res.status(400).json({ message: duplicateMessage });
+      return sendError(res, 400, err.message, duplicateMessage, 'AUTH_DUPLICATE_ACCOUNT');
     }
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
@@ -166,7 +167,7 @@ exports.login = async (req, res) => {
 
     res.json({ message: 'Login effettuato', token, role: user.role });
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
@@ -213,7 +214,7 @@ exports.requestReadmission = async (req, res) => {
 
     res.json({ message: 'Richiesta di riammissione inviata' });
   } catch (err) {
-    res.status(500).json({ message: 'Errore richiesta riammissione', error: err.message });
+    sendError(res, 500, err.message, 'Errore richiesta riammissione', 'READMISSION_REQUEST_ERROR');
   }
 };
 
@@ -229,7 +230,7 @@ exports.logout = async (req, res) => {
     await User.findByIdAndUpdate(req.user.userId, { sessionToken: null });
     res.json({ message: 'Logout effettuato' });
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
@@ -266,7 +267,7 @@ exports.forgotPassword = async (req, res) => {
     res.json({ message: 'Email di recupero inviata' });
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
@@ -316,7 +317,7 @@ exports.verifyEmail = async (req, res) => {
     console.error('Verify email error:', err);
     const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      return res.status(500).json({ message: 'Errore server', error: err.message });
+      return sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
     }
     return res.redirect(`${baseUrl}/pages/verify-email.html?status=error`);
   }
@@ -362,7 +363,7 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: 'Password aggiornata con successo' });
   } catch (err) {
     console.error('Reset password error:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
@@ -402,6 +403,6 @@ exports.resendVerification = async (req, res) => {
     res.json({ message: 'Email di verifica reinviata' });
   } catch (err) {
     console.error('Resend verification error:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };

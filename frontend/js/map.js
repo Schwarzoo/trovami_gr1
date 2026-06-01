@@ -507,9 +507,9 @@ async function loadAnnouncements() {
   ]);
   if (!annRes.ok) { console.error('Errore fetch annunci'); return; }
 
-  const announcements = await annRes.json();
+  const announcementsPayload = await annRes.json();
   const rifugi = rifugiRes.ok ? await rifugiRes.json() : [];
-  allAnnouncements = Array.isArray(announcements) ? announcements : [];
+  allAnnouncements = Array.isArray(announcementsPayload) ? announcementsPayload : announcementsPayload.data || [];
   allRifugi = Array.isArray(rifugi) ? rifugi : [];
   populateFilterOptions(allAnnouncements);
   const filtered = getFilteredAnnouncements();

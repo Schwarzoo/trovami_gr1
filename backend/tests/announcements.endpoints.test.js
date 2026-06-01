@@ -63,20 +63,27 @@ describe('announcement endpoints', () => {
   });
 
   test('GET /api/v1/announcements returns list', async () => {
-    mockAnnouncementModel.find.mockReturnValue(
-      makeQuery([
-        makeDoc({
-          _id: 'ann1',
-          title: 'Test',
-          publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
-        })
-      ])
-    );
+    const query = makeQuery([
+      makeDoc({
+        _id: 'ann1',
+        title: 'Test',
+        publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
+      })
+    ]);
+    mockAnnouncementModel.find.mockReturnValue(query);
+    mockAnnouncementModel.countDocuments.mockResolvedValue(12);
 
-    const res = await request(app).get('/api/v1/announcements');
+    const res = await request(app).get('/api/v1/announcements?page=2&limit=5');
 
     expect(res.status).toBe(200);
-    expect(res.body[0]._id).toBe('ann1');
+    expect(res.body.meta).toEqual({
+      totalItems: 12,
+      totalPages: 3,
+      currentPage: 2
+    });
+    expect(query.skip).toHaveBeenCalledWith(5);
+    expect(query.limit).toHaveBeenCalledWith(5);
+    expect(res.body.data[0]._id).toBe('ann1');
   });
 
   test('GET /api/v1/announcements/:id returns one announcement', async () => {

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
+const { sendError } = require('../utils/errorResponse');
 
 /**
  * Handles the get notifications API request and writes the HTTP response.
@@ -20,7 +21,7 @@ exports.getNotifications = async (req, res) => {
 
     res.json(notifications);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero notifiche', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero notifiche', 'NOTIFICATIONS_FETCH_ERROR');
   }
 };
 
@@ -45,7 +46,7 @@ exports.markNotificationRead = async (req, res) => {
     if (!notif) return res.status(404).json({ message: 'Notifica non trovata' });
     res.json(notif);
   } catch (err) {
-    res.status(500).json({ message: 'Errore aggiornamento notifica', error: err.message });
+    sendError(res, 500, err.message, 'Errore aggiornamento notifica', 'NOTIFICATION_UPDATE_ERROR');
   }
 };
 
@@ -64,7 +65,7 @@ exports.markAllRead = async (req, res) => {
     );
     res.json({ success: true, modified: r.modifiedCount ?? r.nModified ?? 0 });
   } catch (err) {
-    res.status(500).json({ message: 'Errore aggiornamento notifiche', error: err.message });
+    sendError(res, 500, err.message, 'Errore aggiornamento notifiche', 'NOTIFICATIONS_UPDATE_ERROR');
   }
 };
 

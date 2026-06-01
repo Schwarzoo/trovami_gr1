@@ -231,7 +231,7 @@ async function submitQuickAnnounce(data) {
 
     if (!announcementRes.ok) {
       const errorData = await announcementRes.json().catch(() => ({}));
-      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message || announcementRes.status}`);
+      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.userMessage || errorData.message || announcementRes.status}`);
     }
 
     await announcementRes.json();

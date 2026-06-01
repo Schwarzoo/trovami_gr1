@@ -63,17 +63,21 @@ describe('users endpoints', () => {
   });
 
   test('PUT /api/v1/users/me updates profile', async () => {
-    mockUserModel.findById.mockResolvedValue({
-      _id: 'user1',
-      sessionToken: token,
-      isActive: true
-    });
-    mockUserModel.findByIdAndUpdate.mockReturnValue({
-      select: jest.fn(() => Promise.resolve(makeDoc({
+    mockUserModel.findById
+      .mockResolvedValueOnce({
         _id: 'user1',
-        username: 'luigi'
-      })))
-    });
+        sessionToken: token,
+        isActive: true
+      })
+      .mockResolvedValueOnce({
+        set: jest.fn(),
+        save: jest.fn().mockResolvedValue({
+          toObject: () => ({
+            _id: 'user1',
+            username: 'luigi'
+          })
+        })
+      });
 
     const res = await request(app)
       .put('/api/v1/users/me')

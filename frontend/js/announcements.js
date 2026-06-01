@@ -88,7 +88,7 @@ async function postAnnouncementComment(id, text) {
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-        const msg = json?.message || 'Errore invio commento';
+        const msg = json?.userMessage || json?.message || 'Errore invio commento';
         throw new Error(msg);
     }
     return json;
@@ -116,7 +116,7 @@ async function postAnnouncementReport(id, reason, details) {
     });
 
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.message || 'Errore invio segnalazione');
+    if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore invio segnalazione');
     return json;
 }
 
@@ -141,7 +141,7 @@ async function patchAnnouncementStatus(id, status) {
     });
 
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.message || 'Errore aggiornamento stato');
+    if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore aggiornamento stato');
     return json;
 }
 
@@ -158,7 +158,7 @@ async function fetchPublicUser(userId) {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.message || 'Errore caricamento contatti');
+    if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore caricamento contatti');
     return json;
 }
 

@@ -149,7 +149,7 @@ async function postHomeAnnouncementComment(id, text) {
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(json?.message || 'Errore invio commento');
+    throw new Error(json?.userMessage || json?.message || 'Errore invio commento');
   }
   return json;
 }
@@ -168,7 +168,7 @@ async function fetchHomePublicUser(userId) {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.message || 'Errore caricamento contatti');
+  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore caricamento contatti');
   return json;
 }
 

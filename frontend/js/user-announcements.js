@@ -78,7 +78,7 @@ async function fetchAnnouncementById(id) {
  */
 async function readResponseError(res, fallback) {
   const json = await res.json().catch(() => ({}));
-  return json?.message || `${fallback} (${res.status})`;
+  return json?.userMessage || json?.message || `${fallback} (${res.status})`;
 }
 
 /**
@@ -329,7 +329,8 @@ async function loadUserAnnouncements() {
   }
 
   const res = await fetch(`${API_BASE}?userId=${encodeURIComponent(userId)}&status=all`);
-  const data = await res.json().catch(() => []);
+  const payload = await res.json().catch(() => []);
+  const data = Array.isArray(payload) ? payload : payload.data || [];
   if (!res.ok || !Array.isArray(data)) {
     showError('Impossibile caricare gli annunci utente.');
     return;
