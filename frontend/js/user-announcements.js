@@ -110,7 +110,7 @@ async function blockUser(userId) {
   const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
   if (reason === null) return;
   const blockReason = reason.trim() || 'Account bloccato da admin';
-  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/status`, {
+  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`, {
     method: 'PATCH',
     headers: authHeader(),
     body: JSON.stringify({ status: 'blocked', reason: blockReason })

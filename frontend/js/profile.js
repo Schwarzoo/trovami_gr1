@@ -1003,16 +1003,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Fetches admin user announcement count data from the API.
+   * Fetches announcement count for a user through the announcements collection endpoint.
    * @param {string} userId - User identifier whose publication count should be loaded.
    * @returns {Promise<number>} Number of announcements published by the user.
-   * @throws {Error} When the admin API rejects the count request.
+   * @throws {Error} When the announcements API rejects the count request.
    */
   async function fetchAdminUserAnnouncementCount(userId) {
-    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/announcement-count`, { headers: authHeader });
+    const query = new URLSearchParams({ userId: String(userId), page: '1', limit: '1', status: 'all' }).toString();
+    const res = await fetch(`http://localhost:3000/api/v1/announcements?${query}`, { headers: authHeader });
     if (!res.ok) throw new Error(await readResponseError(res, 'Errore conteggio annunci'));
     const json = await res.json().catch(() => ({}));
-    return Number(json?.publishedAnnouncementsCount || 0);
+    return Number(json?.meta?.totalItems || 0);
   }
 
   /**
@@ -1145,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
     if (reason === null) return;
     const blockReason = reason.trim() || 'Account bloccato da admin';
-    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/status`, {
+    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}`, {
       method: 'PATCH',
       headers: authHeader,
       body: JSON.stringify({ status: 'blocked', reason: blockReason })
@@ -1641,7 +1642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (action === 'dismiss-report') {
         const reportId = button.dataset.reportId;
-        const res = await fetch(`http://localhost:3000/api/v1/admin/reports/${encodeURIComponent(reportId)}/status`, {
+        const res = await fetch(`http://localhost:3000/api/v1/admin/reports/${encodeURIComponent(reportId)}`, {
           method: 'PATCH',
           headers: authHeader,
           body: JSON.stringify({ status: 'DISMISSED', details: 'Archiviato da admin' })
@@ -1669,7 +1670,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const body = action === 'reject-rifugio'
           ? { rifugioStatus: 'rejected', reason: prompt('Motivo rifiuto:', 'Dati insufficienti') || 'Dati insufficienti' }
           : { rifugioStatus: 'approved' };
-        const res = await fetch(`http://localhost:3000/api/v1/admin/rifugi/${encodeURIComponent(userId)}/status`, {
+        const res = await fetch(`http://localhost:3000/api/v1/admin/rifugi/${encodeURIComponent(userId)}`, {
           method: 'PATCH',
           headers: authHeader,
           body: JSON.stringify(body)
@@ -1793,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       danger: false
     });
     if (!confirmed) return;
-    const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/status`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
+    const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
     if (res.ok) {
       loadMyAnnouncements();
       window.dispatchEvent(new Event('announcements:resolved-updated'));

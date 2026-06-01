@@ -121,24 +121,6 @@ exports.getUserDetails = async (req, res) => {
 };
 
 /**
- * Handles the get user announcement count API request and writes the HTTP response.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @returns {Promise<void>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
- */
-exports.getUserAnnouncementCount = async (req, res) => {
-  try {
-    const userId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
-
-    res.json({ publishedAnnouncementsCount: await getPublishedAnnouncementsCount(userId) });
-  } catch (err) {
-    sendError(res, 500, err.message, 'Errore conteggio annunci utente', 'ADMIN_USER_ANNOUNCEMENT_COUNT_ERROR');
-  }
-};
-
-/**
  * Handles the get audit logs API request and writes the HTTP response.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
@@ -218,13 +200,12 @@ exports.deleteAnnouncementAsAdmin = async (req, res) => {
 };
 
 /**
- * Handles the block user API request and writes the HTTP response.
+ * Applies account-block side effects to a target user.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
-exports.blockUser = async (req, res) => {
+async function blockUserOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
@@ -280,7 +261,7 @@ exports.blockUser = async (req, res) => {
   } catch (err) {
     sendError(res, 500, err.message, 'Errore blocco utente', 'ADMIN_USER_BLOCK_ERROR');
   }
-};
+}
 
 /**
  * Handles the get pending readmission requests API request and writes the HTTP response.
@@ -358,13 +339,12 @@ exports.reviewReadmissionRequest = async (req, res) => {
 };
 
 /**
- * Handles the warn user API request and writes the HTTP response.
+ * Applies warning side effects to a target user.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
-exports.warnUser = async (req, res) => {
+async function warnUserOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
@@ -397,16 +377,15 @@ exports.warnUser = async (req, res) => {
   } catch (err) {
     sendError(res, 500, err.message, 'Errore ammonimento utente', 'ADMIN_USER_WARN_ERROR');
   }
-};
+}
 
 /**
- * Handles the unblock user API request and writes the HTTP response.
+ * Applies account-unblock side effects to a target user.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
-exports.unblockUser = async (req, res) => {
+async function unblockUserOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
@@ -419,6 +398,28 @@ exports.unblockUser = async (req, res) => {
   } catch (err) {
     sendError(res, 500, err.message, 'Errore sblocco utente', 'ADMIN_USER_UNBLOCK_ERROR');
   }
+}
+
+/**
+ * Handles user status updates (block, unblock, warn) from a single RESTful endpoint.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+exports.updateUserStatus = async (req, res) => {
+  const actionFromBody = typeof req.body?.action === 'string' ? req.body.action.toLowerCase().trim() : '';
+  const statusFromBody = typeof req.body?.status === 'string' ? req.body.status.toLowerCase().trim() : '';
+
+  const normalizedAction = actionFromBody
+    || (statusFromBody === 'blocked' ? 'block' : '')
+    || (statusFromBody === 'active' ? 'unblock' : '')
+    || (req.body?.conductWarnings ? 'warn' : '');
+
+  if (normalizedAction === 'block') return blockUserOperation(req, res);
+  if (normalizedAction === 'unblock') return unblockUserOperation(req, res);
+  if (normalizedAction === 'warn') return warnUserOperation(req, res);
+
+  return res.status(400).json({ message: 'Status utente non valido' });
 };
 
 /**
@@ -441,13 +442,12 @@ exports.getPendingRifugi = async (req, res) => {
 };
 
 /**
- * Handles the approve rifugio API request and writes the HTTP response.
+ * Approves a shelter account and emits side effects.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
-exports.approveRifugio = async (req, res) => {
+async function approveRifugioOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID rifugio');
@@ -470,16 +470,15 @@ exports.approveRifugio = async (req, res) => {
   } catch (err) {
     sendError(res, 500, err.message, 'Errore approvazione rifugio', 'ADMIN_SHELTER_APPROVE_ERROR');
   }
-};
+}
 
 /**
- * Handles the reject rifugio API request and writes the HTTP response.
+ * Rejects a shelter account and emits side effects.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  * @returns {Promise<void>} Promise resolving when the operation completes.
- * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
  */
-exports.rejectRifugio = async (req, res) => {
+async function rejectRifugioOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID rifugio');
@@ -503,4 +502,21 @@ exports.rejectRifugio = async (req, res) => {
   } catch (err) {
     sendError(res, 500, err.message, 'Errore rifiuto rifugio', 'ADMIN_SHELTER_REJECT_ERROR');
   }
+}
+
+/**
+ * Handles shelter status updates (approved/rejected) from a single RESTful endpoint.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+exports.updateRifugioStatus = async (req, res) => {
+  const rifugioStatus = typeof req.body?.rifugioStatus === 'string'
+    ? req.body.rifugioStatus.toLowerCase().trim()
+    : '';
+
+  if (rifugioStatus === 'approved') return approveRifugioOperation(req, res);
+  if (rifugioStatus === 'rejected') return rejectRifugioOperation(req, res);
+
+  return res.status(400).json({ message: 'Status rifugio non valido' });
 };

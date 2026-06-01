@@ -141,7 +141,7 @@ router.post('/:id/comments', authMiddleware, addAnnouncementComment);
  */
 router.post('/:id/reports', authMiddleware, reportAnnouncement);
 router.put('/:id', authMiddleware, upload.single('photo'), updateAnnouncement);
-router.patch('/:id/status', authMiddleware, changeStatus);
+router.patch('/:id', authMiddleware, changeStatus);
 router.delete('/:id', authMiddleware, deleteAnnouncement);
 router.get('/:id/photo', getAnnouncementPhoto);
 router.get('/:id/flyer', authMiddleware, generateFlyer);

@@ -58,6 +58,7 @@ describe('users endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.username).toBe('mario');
   });
 
@@ -83,6 +84,7 @@ describe('users endpoints', () => {
       .send({ username: 'luigi' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.username).toBe('luigi');
   });
 
@@ -103,6 +105,7 @@ describe('users endpoints', () => {
     const res = await request(app).get('/api/v1/users/rifugi?isPublic=true');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0].rifugioData.rifugioName).toBe('Rifugio Uno');
   });
@@ -128,6 +131,7 @@ describe('users endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.email).toBeNull();
     expect(res.body.phoneNumber).toBe('987');
   });
@@ -149,6 +153,7 @@ describe('users endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.success).toBe(true);
     expect(mockRemoveAnnouncementCascade).toHaveBeenCalled();
   });

@@ -47,6 +47,7 @@ describe('notification endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body[0].message).toBe('hello');
   });
 
@@ -58,6 +59,7 @@ describe('notification endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.modified).toBe(3);
   });
 
@@ -72,6 +74,7 @@ describe('notification endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.isRead).toBe(true);
   });
 });

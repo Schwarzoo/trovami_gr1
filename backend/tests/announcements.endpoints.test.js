@@ -76,6 +76,7 @@ describe('announcement endpoints', () => {
     const res = await request(app).get('/api/v1/announcements?page=2&limit=5');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.meta).toEqual({
       totalItems: 12,
       totalPages: 3,
@@ -103,6 +104,7 @@ describe('announcement endpoints', () => {
     const res = await request(app).get('/api/v1/announcements/507f1f77bcf86cd799439011');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(select).toHaveBeenCalledWith('-photo -imageEmbedding -__v');
     expect(res.body._id).toBe('ann1');
   });
@@ -131,6 +133,7 @@ describe('announcement endpoints', () => {
     const res = await request(app).get('/api/v1/announcements/507f1f77bcf86cd799439011/similar');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.matches).toHaveLength(1);
   });
 
@@ -147,6 +150,7 @@ describe('announcement endpoints', () => {
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.status).toBe('ACTIVE');
   });
 
@@ -170,6 +174,7 @@ describe('announcement endpoints', () => {
       .send({ reason: 'altro', details: 'test' });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/Segnalazione inviata/);
   });
 });

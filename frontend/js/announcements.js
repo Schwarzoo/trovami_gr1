@@ -131,7 +131,7 @@ async function patchAnnouncementStatus(id, status) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
 
-    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}/status`, {
+    const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',

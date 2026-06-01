@@ -51,6 +51,7 @@ describe('auth endpoints', () => {
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.role).toBe('user');
     expect(mockUserModel.create).toHaveBeenCalledTimes(1);
   });
@@ -71,6 +72,7 @@ describe('auth endpoints', () => {
       .send({ email: 'mario@test.local', password: 'password123' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.token).toBeDefined();
     expect(jwt.verify(res.body.token, process.env.JWT_SECRET).userId).toBe('user1');
   });
@@ -87,6 +89,7 @@ describe('auth endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toBe('Logout effettuato');
     expect(mockUserModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
@@ -110,6 +113,7 @@ describe('auth endpoints', () => {
       });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/riammissione inviata/);
   });
 
@@ -125,6 +129,7 @@ describe('auth endpoints', () => {
       .send({ email: 'mario@test.local' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/recupero inviata/);
   });
 
@@ -139,6 +144,7 @@ describe('auth endpoints', () => {
       .send({ token: 'reset-token', newPassword: 'password123' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/Password aggiornata/);
   });
 
@@ -148,6 +154,7 @@ describe('auth endpoints', () => {
       .set('Accept', 'application/json');
 
     expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toBe('Token mancante');
   });
 
@@ -164,6 +171,7 @@ describe('auth endpoints', () => {
       .send({ email: 'mario@test.local' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/reinviata/);
   });
 });

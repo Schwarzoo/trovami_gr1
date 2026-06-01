@@ -57,6 +57,7 @@ describe('animal endpoints', () => {
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.name).toBe('Milo');
     expect(res.body.adoptable).toBe(false);
   });
@@ -80,6 +81,7 @@ describe('animal endpoints', () => {
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.adoptable).toBe(true);
   });
 
@@ -97,6 +99,7 @@ describe('animal endpoints', () => {
       });
 
     expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body).toEqual({
       developerMessage: 'database down',
       userMessage: 'Errore nella creazione',
@@ -120,6 +123,7 @@ describe('animal endpoints', () => {
       .query({ shelterId: '507f1f77bcf86cd799439011', page: 2, limit: 5 });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.meta).toEqual({
       totalItems: 12,
       totalPages: 3,
@@ -141,6 +145,7 @@ describe('animal endpoints', () => {
     const res = await request(app).get('/api/v1/animals/507f1f77bcf86cd799439011');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(select).toHaveBeenCalledWith('-imageEmbedding -__v');
     expect(res.body.name).toBe('Milo');
   });
@@ -161,6 +166,7 @@ describe('animal endpoints', () => {
       .send({ name: 'Milo 2' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.name).toBe('Milo 2');
   });
 
@@ -178,6 +184,7 @@ describe('animal endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/eliminato/);
   });
 });
