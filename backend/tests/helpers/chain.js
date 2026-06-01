@@ -1,13 +1,14 @@
 /**
  * Creates a Jest mock that behaves like a chainable Mongoose query.
  * @param {*} result - Value resolved by terminal query methods.
- * @returns {Object} Chainable query mock with `select`, `populate`, `sort`, `limit`, `exec`, and `then`.
+ * @returns {Object} Chainable query mock with `select`, `populate`, `sort`, `skip`, `limit`, `exec`, and `then`.
  */
 function makeQuery(result) {
   const query = {
     select: jest.fn(() => query),
     populate: jest.fn(() => query),
     sort: jest.fn(() => query),
+    skip: jest.fn(() => query),
     limit: jest.fn(() => Promise.resolve(result)),
     exec: jest.fn(() => Promise.resolve(result)),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject)

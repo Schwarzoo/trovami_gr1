@@ -1716,7 +1716,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadMyAnnouncements() {
   const res = await fetch('http://localhost:3000/api/v1/announcements');
   if (!res.ok) return;
-  const all = await res.json();
+  const payload = await res.json();
+  const all = Array.isArray(payload) ? payload : payload.data || [];
   const mine = all.filter(a => a.publisherId && ((a.publisherId._id || a.publisherId) == myUserId || (a.publisherId._id && a.publisherId._id == myUserId)));
 
   const grid = document.getElementById('announcements-grid');
@@ -1829,7 +1830,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(currentUser._id)}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
       if (!res.ok) throw new Error('Errore recupero animali');
-      const list = await res.json();
+      const payload = await res.json();
+      const list = Array.isArray(payload) ? payload : payload.data || [];
       counter.textContent = `${(list && list.length) || 0} animali`;
       if (!list || list.length === 0) {
         grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';

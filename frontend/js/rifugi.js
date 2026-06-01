@@ -462,8 +462,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const animals = await fetchJson(API_ANIMALS).catch(() => []);
 
     state.rifugi = Array.isArray(rifugi) ? rifugi : [];
-    state.announcements = Array.isArray(announcements) ? announcements : [];
-    state.animals = Array.isArray(animals) ? animals : [];
+    state.announcements = Array.isArray(announcements) ? announcements : announcements.data || [];
+    state.animals = Array.isArray(animals) ? animals : animals.data || [];
 
     updateCounters();
     renderRifugiGrid();

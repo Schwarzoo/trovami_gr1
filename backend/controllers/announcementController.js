@@ -269,6 +269,9 @@ async function notifyAdmins(payload) {
 exports.getAnnouncements = async (req, res) => {
     try {
         const { type, species, status, rifugioId, userId } = req.query;
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+        const skip = (page - 1) * limit;
         const filter = {};
         if (status !== 'all') filter.status = status || 'ACTIVE';
         if (type) filter.type = type;
@@ -290,11 +293,15 @@ exports.getAnnouncements = async (req, res) => {
             filter.animalId = { $in: animals.map(a => a._id) };
         }
 
+        const totalItems = await Announcement.countDocuments(filter);
+        const totalPages = Math.ceil(totalItems / limit);
         const announcements = await Announcement.find(filter)
             .select('-photo -comments')
             .populate('animalId')
             .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData') // 'name' non esiste nel modello User
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
         const masked = announcements.map(a => {
             const obj = a.toObject ? a.toObject() : a;
@@ -302,7 +309,14 @@ exports.getAnnouncements = async (req, res) => {
             return obj;
         });
 
-        res.json(masked);
+        res.json({
+            meta: {
+                totalItems,
+                totalPages,
+                currentPage: page
+            },
+            data: masked
+        });
     } catch (err) {
         res.status(500).json({ message: 'Errore nel recupero degli annunci', error: err.message });
     }

@@ -149,6 +149,9 @@ exports.deleteAnimal = async (req, res) => {
 exports.listAnimals = async (req, res) => {
   try {
     const { shelterId } = req.query;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
     const filter = {};
     if (shelterId) {
       if (!mongoose.isValidObjectId(shelterId)) return res.status(400).json({ message: 'ID rifugio non valido' });
@@ -156,10 +159,22 @@ exports.listAnimals = async (req, res) => {
     } else if (req.user && req.user.userId) {
       filter.shelterId = req.user.userId;
     } else {
-      return res.json([]);
+      return res.json({
+        meta: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page
+        },
+        data: []
+      });
     }
 
-    const animals = await Animal.find(filter).sort({ createdAt: -1 });
+    const totalItems = await Animal.countDocuments(filter);
+    const totalPages = Math.ceil(totalItems / limit);
+    const animals = await Animal.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const Announcement = require('../models/Announcement');
     const hostBase = req.protocol + '://' + req.get('host');
@@ -177,7 +192,14 @@ exports.listAnimals = async (req, res) => {
       return obj;
     }));
 
-    res.json(out);
+    res.json({
+      meta: {
+        totalItems,
+        totalPages,
+        currentPage: page
+      },
+      data: out
+    });
   } catch (err) {
     res.status(500).json({ message: 'Errore recupero animali', error: err.message });
   }

@@ -19,6 +19,7 @@ mockAnimalModel.find = jest.fn();
 mockAnimalModel.findById = jest.fn();
 mockAnimalModel.findByIdAndUpdate = jest.fn();
 mockAnimalModel.findByIdAndDelete = jest.fn();
+mockAnimalModel.countDocuments = jest.fn();
 mockAnimalModel.create = jest.fn();
 
 jest.mock('../models/User', () => mockUserModel);
@@ -85,22 +86,29 @@ describe('animal endpoints', () => {
   });
 
   test('GET /api/v1/animals returns filtered list', async () => {
-    mockAnimalModel.find.mockReturnValue(
-      makeQuery([
-        makeDoc({
-          _id: 'animal1',
-          name: 'Milo',
-          photos: ['http://localhost/photo.jpg']
-        })
-      ])
-    );
+    const query = makeQuery([
+      makeDoc({
+        _id: 'animal1',
+        name: 'Milo',
+        photos: ['http://localhost/photo.jpg']
+      })
+    ]);
+    mockAnimalModel.find.mockReturnValue(query);
+    mockAnimalModel.countDocuments.mockResolvedValue(12);
 
     const res = await request(app)
       .get('/api/v1/animals')
-      .query({ shelterId: '507f1f77bcf86cd799439011' });
+      .query({ shelterId: '507f1f77bcf86cd799439011', page: 2, limit: 5 });
 
     expect(res.status).toBe(200);
-    expect(res.body[0].name).toBe('Milo');
+    expect(res.body.meta).toEqual({
+      totalItems: 12,
+      totalPages: 3,
+      currentPage: 2
+    });
+    expect(query.skip).toHaveBeenCalledWith(5);
+    expect(query.limit).toHaveBeenCalledWith(5);
+    expect(res.body.data[0].name).toBe('Milo');
   });
 
   test('GET /api/v1/animals/:id returns animal', async () => {

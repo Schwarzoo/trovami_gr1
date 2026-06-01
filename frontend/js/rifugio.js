@@ -354,7 +354,8 @@ async function renderAnimalsForShelter(rifugioId) {
   try {
     const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugioId)}`);
     if (!res.ok) throw new Error('Errore recupero animali');
-    const list = await res.json();
+    const payload = await res.json();
+    const list = Array.isArray(payload) ? payload : payload.data || [];
     counter.textContent = `${(list && list.length) || 0} animali`;
     if (!list || list.length === 0) {
       grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
@@ -617,7 +618,8 @@ async function loadPage() {
   document.getElementById('shelter-name').textContent = name;
   document.getElementById('shelter-description').textContent = rifugio?.rifugioData?.description || 'Nessuna descrizione pubblica disponibile.';
   document.getElementById('shelter-map-link').href = '#scheda-rifugio';
-  const animals = await fetchJson(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugio._id)}`);
+  const animalsPayload = await fetchJson(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugio._id)}`);
+  const animals = Array.isArray(animalsPayload) ? animalsPayload : animalsPayload.data || [];
   renderStats(rifugio, animals);
   renderInfo(rifugio, animals);
   renderMap(rifugio);
