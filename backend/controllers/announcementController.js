@@ -12,10 +12,20 @@ const Notification = require('../models/Notification');
 const Report = require('../models/Report');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
-const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
+const { sendError } = require('../utils/errorResponse');
 const { writeAuditLog } = require('../services/auditService');
+const {
+    sendAnnouncementCommentEmail,
+    sendShelterAnnouncementEmail,
+    sendSmartMatchEmail
+} = require('../services/emailService');
 
+/**
+ * Applies publisher contact-visibility preferences to public publisher data.
+ * @param {Object|null} publisher - Populated publisher data attached to an announcement.
+ * @returns {Object|null} Publisher data with hidden email or phone fields set to null.
+ */
 function maskPublisherContacts(publisher) {
     if (!publisher) return publisher;
     const vis = publisher.contactVisibility || {};
@@ -28,82 +38,32 @@ function maskPublisherContacts(publisher) {
     };
 }
 
-function createTransporter() {
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: process.env.SMTP_PORT || 587,
-        secure: false,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS
-        }
-    });
-}
-
+/**
+ * Builds the frontend URL for opening a specific announcement.
+ * @param {string} announcementId - Announcement identifier to highlight in the frontend.
+ * @returns {string} Absolute frontend URL for the announcement detail view.
+ */
 function buildAnnouncementUrl(announcementId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
 }
 
+/**
+ * Builds the frontend URL for opening an animal inside a shelter page.
+ * @param {string} shelterId - Shelter identifier used by the shelter page.
+ * @param {string} animalId - Animal identifier to open inside the shelter page.
+ * @returns {string} Absolute frontend URL for the shelter animal detail view.
+ */
 function buildShelterAnimalUrl(shelterId, animalId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/rifugio.html?rifugioId=${shelterId}&animalId=${animalId}`;
 }
 
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-async function sendSmartMatchEmail(userId, subject, html) {
-    try {
-        const recipient = await User.findById(userId).select('email username');
-        if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
-
-        const transporter = createTransporter();
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: recipient.email,
-            subject,
-            html
-        });
-    } catch (err) {
-        console.error('Errore invio email smart match:', err);
-    }
-}
-
-async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
-    try {
-        if (!recipient?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
-
-        const animalName = animal?.name || 'un nuovo animale';
-        const breed = animal?.breed || 'Non specificata';
-        const age = animal?.age || 'Non specificata';
-        const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'un rifugio che segui';
-
-        const transporter = createTransporter();
-        await transporter.sendMail({
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: recipient.email,
-            subject: `Trovami - Nuovo annuncio da ${shelterName}`,
-            html: `
-                <p>Ciao ${escapeHtml(recipient.username || '')},</p>
-                <p>${escapeHtml(shelterName)} ha pubblicato un nuovo annuncio.</p>
-                <ul>
-                    <li><strong>Nome:</strong> ${escapeHtml(animalName)}</li>
-                    <li><strong>Età:</strong> ${escapeHtml(age)}</li>
-                    <li><strong>Razza:</strong> ${escapeHtml(breed)}</li>
-                </ul>
-                <p><a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#C85A2A;color:#ffffff;text-decoration:none;font-weight:700;">Apri scheda animale</a></p>
-            `
-        });
-    } catch (err) {
-        console.error('Errore invio email annuncio rifugio:', err);
-    }
-}
-
+/**
+ * Creates notifications for users following a shelter and optionally emails them.
+ * @param {Object} announcement - New shelter announcement used as notification context.
+ * @param {Object} animal - Animal document referenced by the announcement.
+ * @param {Object} shelter - Approved shelter user document that owns the announcement.
+ * @returns {Promise<void>} Promise resolving after follower notifications and emails are attempted.
+ */
 async function notifyShelterFollowers(announcement, animal, shelter) {
     try {
         if (!shelter || shelter.role !== 'shelter' || shelter.rifugioStatus !== 'approved') return;
@@ -146,6 +106,11 @@ async function notifyShelterFollowers(announcement, animal, shelter) {
     }
 }
 
+/**
+ * Normalizes coordinate input into GeoJSON longitude-latitude order.
+ * @param {Array<number>|string|Object} input - Coordinate array, comma-separated string, JSON string, or GeoJSON-like object.
+ * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when parsing fails.
+ */
 function normalizeCoordinates(input) {
     let parts = null;
     if (Array.isArray(input)) parts = input.map(Number);
@@ -173,6 +138,11 @@ function normalizeCoordinates(input) {
     return [a, b];
 }
 
+/**
+ * Normalizes an optional animal name while preserving undefined updates.
+ * @param {*} value - Raw animal name submitted by the client.
+ * @returns {string|null|undefined} Trimmed name, null for empty names, or undefined when no update was submitted.
+ */
 function normalizeOptionalName(value) {
     if (value === undefined) return undefined;
     if (value === null) return null;
@@ -180,12 +150,23 @@ function normalizeOptionalName(value) {
     return text || null;
 }
 
+/**
+ * Capitalizes the first character of a string value.
+ * @param {*} value - Value to display as a capitalized label.
+ * @returns {string} Trimmed string with an uppercase first character, or an empty string.
+ */
 function capitalizeFirst(value) {
     const text = String(value ?? '').trim();
     if (!text) return '';
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/**
+ * Downloads a remote URL and resolves its response body as a buffer.
+ * @param {string} url - HTTP or HTTPS URL to download.
+ * @returns {Promise<Buffer>} Response body as a Buffer.
+ * @throws {Error} When the request cannot be created or completed.
+ */
 async function fetchUrlBuffer(url) {
     return new Promise((resolve, reject) => {
         try {
@@ -202,7 +183,12 @@ async function fetchUrlBuffer(url) {
     });
 }
 
-// Helper interno per gestire il salvataggio dei match
+/**
+ * Stores smart-match notifications and sends related emails for matching announcements.
+ * @param {Object} announcement - Announcement that triggered smart matching.
+ * @param {Array<Object>} matches - Match results returned by the smart matching engine.
+ * @returns {Promise<void>} Promise resolving after notifications and emails are attempted.
+ */
 async function saveMatchNotification(announcement, matches) {
     try {
         if (!matches || matches.length === 0) return;
@@ -261,6 +247,11 @@ async function saveMatchNotification(announcement, matches) {
     }
 }
 
+/**
+ * Creates notifications for all active admin users.
+ * @param {Object} payload - Notification fields to copy onto each admin notification.
+ * @returns {Promise<void>} Promise resolving after all admin notifications are created.
+ */
 async function notifyAdmins(payload) {
     const admins = await User.find({ role: 'admin', isActive: true }).select('_id');
     await Promise.all(admins.map(admin => Notification.create({
@@ -269,9 +260,19 @@ async function notifyAdmins(payload) {
     })));
 }
 
+/**
+ * Handles the get announcements API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAnnouncements = async (req, res) => {
     try {
         const { type, species, status, rifugioId, userId } = req.query;
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+        const skip = (page - 1) * limit;
         const filter = {};
         if (status !== 'all') filter.status = status || 'ACTIVE';
         if (type) filter.type = type;
@@ -293,11 +294,15 @@ exports.getAnnouncements = async (req, res) => {
             filter.animalId = { $in: animals.map(a => a._id) };
         }
 
+        const totalItems = await Announcement.countDocuments(filter);
+        const totalPages = Math.ceil(totalItems / limit);
         const announcements = await Announcement.find(filter)
-            .select('-photo -comments')
+            .select('-photo -comments -imageEmbedding -__v')
             .populate('animalId')
             .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData') // 'name' non esiste nel modello User
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
         const masked = announcements.map(a => {
             const obj = a.toObject ? a.toObject() : a;
@@ -305,23 +310,44 @@ exports.getAnnouncements = async (req, res) => {
             return obj;
         });
 
-        res.json(masked);
+        res.json({
+            meta: {
+                totalItems,
+                totalPages,
+                currentPage: page
+            },
+            data: masked
+        });
     } catch (err) {
-        res.status(500).json({ message: 'Errore nel recupero degli annunci', error: err.message });
+        sendError(res, 500, err.message, 'Errore nel recupero degli annunci', 'ANNOUNCEMENTS_LIST_ERROR');
     }
 };
 
+/**
+ * Handles the get resolved announcements count API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getResolvedAnnouncementsCount = async (req, res) => {
     try {
-        const resolvedCount = await Announcement.countDocuments({ status: 'RESOLVED' });
-        res.json({ resolvedCount });
+        const requestedStatus = (req.query?.status || 'resolved').toString().trim().toUpperCase();
+        const count = await Announcement.countDocuments({ status: requestedStatus });
+        res.json({ count, resolvedCount: count });
     } catch (err) {
-        res.status(500).json({ message: 'Errore recupero conteggio annunci risolti', error: err.message });
+        sendError(res, 500, err.message, 'Errore recupero conteggio annunci risolti', 'ANNOUNCEMENTS_COUNT_ERROR');
     }
 };
 
 
-// POST /api/v1/announcements/:id/comments  (auth) - add comment
+/**
+ * Handles the add announcement comment API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.addAnnouncementComment = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -349,7 +375,6 @@ exports.addAnnouncementComment = async (req, res) => {
 
         const newComment = ann.comments[ann.comments.length - 1];
 
-        // notification for announcement owner (skip self-comments)
         try {
             const publisherId = (ann.publisherId && ann.publisherId._id) ? ann.publisherId._id : ann.publisherId;
             if (publisherId && publisherId.toString() !== user._id.toString()) {
@@ -363,37 +388,33 @@ exports.addAnnouncementComment = async (req, res) => {
                 });
 
                 const publisher = await User.findById(publisherId).select('email username notificationPrefs');
-                const emailOn = !!publisher?.notificationPrefs?.emailOnComment;
-                const canSend = emailOn && publisher?.email && process.env.SMTP_USER && process.env.SMTP_PASS;
-                if (canSend) {
-                    const transporter = createTransporter();
-                    const annUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${ann._id}`;
-                    await transporter.sendMail({
-                        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-                        to: publisher.email,
-                        subject: 'Trovami - Nuovo commento',
-                        html: `
-                            <h2>Nuovo commento su un tuo annuncio</h2>
-                            <p><strong>${user.username}</strong>: ${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
-                            <p><a href="${annUrl}">Vedi annuncio</a></p>
-                        `
-                    });
-                }
+                const annUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${ann._id}`;
+                await sendAnnouncementCommentEmail(publisher, user.username, text, annUrl);
             }
         } catch (e) {
-            // best-effort
         }
 
-        res.status(201).json({ comment: newComment, comments: ann.comments });
+        res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcementId}/comments/${newComment._id}`).status(201).json({ comment: newComment, comments: ann.comments });
     } catch (err) {
-        res.status(500).json({ message: 'Errore inserimento commento', error: err.message });
+        sendError(res, 500, err.message, 'Errore inserimento commento', 'ANNOUNCEMENT_COMMENT_CREATE_ERROR');
     }
 };
 
-// POST /api/v1/announcements
+/**
+ * Handles the create announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.createAnnouncement = async (req,res)=>{
-        
+
     try {
+        const isQuick = req.body?.isQuick === true || req.body?.isQuick === 'true' || req.body?.isQuick === 1 || req.body?.isQuick === '1';
+        if (isQuick) {
+            return createQuickAnnouncementInternal(req, res);
+        }
+
         const { type, animalId, description, coordinates, location, lastSeenDate, isCurrentlyThere, animalBehaviour, healthCondition } = req.body;
         const isCurrentlyThereBool = (typeof isCurrentlyThere === 'string') ? (isCurrentlyThere === 'true') : !!isCurrentlyThere;
 
@@ -451,7 +472,6 @@ exports.createAnnouncement = async (req,res)=>{
         await announcement.save();
         await writeAuditLog({ actor: publisher, action: 'creato annuncio', target: null });
 
-            // If announcement has a photo, add/update animal.photos with a URL to this announcement photo
             try {
                 if (announcement.photo && announcement._id) {
                     const base = req.protocol + '://' + req.get('host');
@@ -471,14 +491,20 @@ exports.createAnnouncement = async (req,res)=>{
 
         await notifyShelterFollowers(announcement, animal, publisher);
 
-        res.status(201).json(announcement);
+            res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcement._id}`).status(201).json(announcement);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        sendError(res, 500, err.message, 'Errore creazione annuncio', 'ANNOUNCEMENT_CREATE_ERROR');
     }
 };
 
-// POST /api/v1/announcements/quick
-exports.createQuickAnnouncement = async (req, res) => {
+/**
+ * Handles the quick announcement creation path and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
+async function createQuickAnnouncementInternal(req, res) {
     try {
         const {
             name,
@@ -552,7 +578,6 @@ exports.createQuickAnnouncement = async (req, res) => {
         }
 
         await announcement.save();
-        // if quick announcement has photo, update animal.photos
         try {
             if (announcement.photo && announcement._id) {
                 const base = req.protocol + '://' + req.get('host');
@@ -563,13 +588,20 @@ exports.createQuickAnnouncement = async (req, res) => {
             console.warn('Impossibile aggiornare foto animale (quick):', err.message || err);
         }
         await writeAuditLog({ actor: null, action: 'creato annuncio', target: null });
-        res.status(201).json(announcement);
+        res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcement._id}`).status(201).json(announcement);
     } catch (err) {
-        res.status(500).json({ message: 'Errore creazione annuncio veloce', error: err.message });
+        console.error('Errore creazione annuncio veloce:', err);
+        sendError(res, 500, err.message, 'Errore creazione annuncio veloce', 'QUICK_ANNOUNCEMENT_CREATE_ERROR');
     }
-};
+}
 
-// POST /api/v1/announcements/:id/reports
+/**
+ * Handles the report announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.reportAnnouncement = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -610,17 +642,23 @@ exports.reportAnnouncement = async (req, res) => {
             target: announcement.publisherId || null
         });
 
-        res.status(201).json({ message: 'Segnalazione inviata', report });
+        res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${announcementId}/reports/${report._id}`).status(201).json({ message: 'Segnalazione inviata', report });
     } catch (err) {
-        res.status(500).json({ message: 'Errore invio segnalazione', error: err.message });
+        sendError(res, 500, err.message, 'Errore invio segnalazione', 'ANNOUNCEMENT_REPORT_CREATE_ERROR');
     }
 };
 
-// GET /api/v1/announcements/:id
+	/**
+	 * Handles the get announcement by id API request and writes the HTTP response.
+	 * @param {Object} req - Express request object.
+	 * @param {Object} res - Express response object.
+	 * @returns {Promise<void>} Promise resolving when the operation completes.
+	 * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+	 */
 	exports.getAnnouncementById = async (req, res) => {
 	    try {
 	        const announcement = await Announcement.findById(req.params.id)
-	            .select('-photo')
+	            .select('-photo -imageEmbedding -__v')
 	            .populate('animalId')
 	            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData');
 
@@ -632,10 +670,17 @@ exports.reportAnnouncement = async (req, res) => {
 	        if (obj.publisherId) obj.publisherId = maskPublisherContacts(obj.publisherId);
 	        res.json(obj);
 	    } catch (err) {
-	        res.status(500).json({ message: "Errore nel recupero dell'annuncio", error: err.message });
+	        sendError(res, 500, err.message, "Errore nel recupero dell'annuncio", 'ANNOUNCEMENT_FETCH_ERROR');
 	    }
 	};
 
+/**
+ * Handles the get announcement photo API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAnnouncementPhoto = async (req, res) => {
     try {
         const announcement = await Announcement.findById(req.params.id).select('photo');
@@ -643,10 +688,17 @@ exports.getAnnouncementPhoto = async (req, res) => {
         res.contentType(announcement.photo.contentType || 'image/jpeg');
         res.send(announcement.photo.data);
     } catch (err) {
-        res.status(500).json({ message: 'Errore recupero foto', error: err.message });
+        sendError(res, 500, err.message, 'Errore recupero foto', 'ANNOUNCEMENT_PHOTO_FETCH_ERROR');
     }
 };
 
+/**
+ * Handles the generate flyer API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.generateFlyer = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -666,7 +718,6 @@ exports.generateFlyer = async (req, res) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
         doc.pipe(res);
 
-        // Add background image
         try {
             const bgPath = path.join(__dirname, '../assests/sfondo volantino.png');
             if (fs.existsSync(bgPath)) {
@@ -676,7 +727,6 @@ exports.generateFlyer = async (req, res) => {
             console.warn('Errore caricamento sfondo:', err);
         }
 
-        // Add semi-transparent white overlay
         doc.opacity(0.75);
         doc.fillColor('#ffffff').rect(0, 0, 595, 842).fill();
         doc.opacity(1);
@@ -694,7 +744,6 @@ exports.generateFlyer = async (req, res) => {
         if (announcement.photo && announcement.photo.data) {
             try {
                 const imageTop = doc.y;
-                // Draw rounded border (image slightly less tall)
                 const imgWidth = 450;
                 const imgHeight = 260;
                 const imgX = 75;
@@ -729,7 +778,6 @@ exports.generateFlyer = async (req, res) => {
         doc.font('Helvetica').fontSize(12).text(announcement.description || 'Nessuna descrizione', { align: 'center' });
         doc.moveDown(0.8);
 
-        // Contact info (owner)
         const publisher = announcement.publisherId || {};
         doc.fontSize(14).fillColor('#111827').font('Helvetica-Bold').text('In caso di ritrovamento contattare:', { align: 'center' });
         doc.font('Helvetica').fontSize(13);
@@ -761,16 +809,13 @@ exports.generateFlyer = async (req, res) => {
             const totalHeight = captionHeight + gap + qrSize + gap + genHeight;
             const topY = bottom - totalHeight;
 
-            // Didascalia (sopra il QR)
             doc.fontSize(captionFontSize).font('Helvetica-Bold').fillColor('#111827');
             doc.text("Scansiona per vedere l'annuncio completo", leftMargin, topY, { width: pageWidth - leftMargin - rightMargin, align: 'center' });
 
-            // QR centrato
             const qrX = (pageWidth - qrSize) / 2;
             const qrY = topY + captionHeight + gap;
             doc.image(qrBuf, qrX, qrY, { width: qrSize });
 
-            // Testo generato (sotto il QR), allineato al centro, ma partendo dal fondo
             const genY = qrY + qrSize + gap;
             doc.fontSize(genFontSize).fillColor('gray').font('Helvetica');
             doc.text('Generato da Trovami', leftMargin, genY, { width: pageWidth - leftMargin - rightMargin, align: 'center' });
@@ -783,11 +828,17 @@ exports.generateFlyer = async (req, res) => {
         doc.end();
     } catch (err) {
         console.error('Errore generazione volantino:', err);
-        if (!res.headersSent) res.status(500).json({ message: 'Errore generazione volantino', error: err.message });
+        if (!res.headersSent) sendError(res, 500, err.message, 'Errore generazione volantino', 'ANNOUNCEMENT_FLYER_ERROR');
     }
 };
 
-// GET /api/v1/announcements/:id/similar
+/**
+ * Handles the get similar announcements API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getSimilarAnnouncements = async (req, res) => {
     try {
         const announcementId = req.params.id;
@@ -822,10 +873,17 @@ exports.getSimilarAnnouncements = async (req, res) => {
 
         res.json({ matches: payload });
     } catch (err) {
-        res.status(500).json({ message: 'Errore recupero smart match', error: err.message });
+        sendError(res, 500, err.message, 'Errore recupero smart match', 'ANNOUNCEMENT_SIMILAR_FETCH_ERROR');
     }
 };
 
+/**
+ * Handles the update announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateAnnouncement = async (req, res) => {
     try {
         const ann = await Announcement.findById(req.params.id);
@@ -869,7 +927,6 @@ exports.updateAnnouncement = async (req, res) => {
                     .toBuffer();
                 ann.photo = { data: processed, contentType: 'image/jpeg' };
                 
-                // Rigeneriamo embedding se la foto cambia
                 const embedding = await smartMatchingEngine.generateImageEmbedding(processed);
                 if (embedding) {
                     ann.imageEmbedding = embedding;
@@ -888,7 +945,6 @@ exports.updateAnnouncement = async (req, res) => {
         await ann.save();
         await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
 
-        // If updated announcement has a new photo, update animal.photos
         try {
             if (ann.photo && ann._id) {
                 const base = req.protocol + '://' + req.get('host');
@@ -908,10 +964,17 @@ exports.updateAnnouncement = async (req, res) => {
 
         res.json(ann);
     } catch (err) {
-        res.status(500).json({ message: 'Errore aggiornamento', error: err.message });
+        sendError(res, 500, err.message, 'Errore aggiornamento', 'ANNOUNCEMENT_UPDATE_ERROR');
     }
 };
 
+/**
+ * Handles the change status API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.changeStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -932,10 +995,15 @@ exports.changeStatus = async (req, res) => {
         await writeAuditLog({ actor: req.user.userId, action: 'modificato annuncio', target: null });
         res.json(ann);
     } catch (err) {
-        res.status(500).json({ message: 'Errore cambio status', error: err.message });
+        sendError(res, 500, err.message, 'Errore cambio status', 'ANNOUNCEMENT_STATUS_UPDATE_ERROR');
     }
 };
 
+/**
+ * Deletes an announcement and its linked animal record as one cascade operation.
+ * @param {string} announcementId - Announcement identifier to remove with its animal.
+ * @returns {Promise<boolean>} True when an announcement was found and deleted, otherwise false.
+ */
 async function removeAnnouncementCascade(announcementId) {
     const announcement = await Announcement.findById(announcementId).populate('animalId');
     if (!announcement) return false;
@@ -947,6 +1015,13 @@ async function removeAnnouncementCascade(announcementId) {
 
 exports.removeAnnouncementCascade = removeAnnouncementCascade;
 
+/**
+ * Handles the delete announcement API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteAnnouncement = async (req, res) => {
     try {
         const announcement = await Announcement.findById(req.params.id);
@@ -956,6 +1031,6 @@ exports.deleteAnnouncement = async (req, res) => {
         await writeAuditLog({ actor: req.user.userId, action: 'eliminato annuncio', target: null });
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        sendError(res, 500, err.message, 'Errore eliminazione annuncio', 'ANNOUNCEMENT_DELETE_ERROR');
     }
 };

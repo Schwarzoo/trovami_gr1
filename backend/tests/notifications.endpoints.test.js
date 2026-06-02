@@ -27,7 +27,6 @@ describe('notification endpoints', () => {
     token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
   });
@@ -48,6 +47,7 @@ describe('notification endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body[0].message).toBe('hello');
   });
 
@@ -59,6 +59,7 @@ describe('notification endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.modified).toBe(3);
   });
 
@@ -73,6 +74,7 @@ describe('notification endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.isRead).toBe(true);
   });
 });

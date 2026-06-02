@@ -7,11 +7,24 @@ const { promisify } = require("util");
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Coordinates image embedding generation and announcement similarity matching.
+ * @returns {void} The class constructor initializes smart-matching instances.
+ */
 class SmartMatchingEngine {
+  /**
+   * Initializes smart-matching configuration.
+   * @returns {void} No return value.
+   */
   constructor() {
     this.similarityThreshold = 0.8;
   }
 
+  /**
+   * Generates an image embedding by delegating to the Python embedding script.
+   * @param {Buffer} photoBuffer - Image bytes to process.
+   * @returns {Promise<Array<number>|null>} Promise resolving to the embedding vector, or null when generation fails.
+   */
   async generateImageEmbedding(photoBuffer) {
     const tempDir = path.join(__dirname, "../temp");
     const tempFile = path.join(tempDir, `img_${Date.now()}.jpg`);
@@ -59,6 +72,12 @@ class SmartMatchingEngine {
     }
   }
 
+  /**
+   * Calculates cosine similarity between two numeric vectors.
+   * @param {Array<number>} vecA - First embedding vector.
+   * @param {Array<number>} vecB - Second embedding vector.
+   * @returns {number} Cosine similarity score between 0 and 1.
+   */
   calculateCosineSimilarity(vecA, vecB) {
     if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
 
@@ -77,6 +96,12 @@ class SmartMatchingEngine {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
+  /**
+   * Finds active opposite-type announcements of the same species that match an image embedding.
+   * @param {Object} newAnnouncement - Announcement containing the embedding to compare.
+   * @param {string} animalSpecies - Animal species used to limit candidate announcements.
+   * @returns {Promise<Array<Object>>} Promise resolving to ranked matching announcements with scores.
+   */
   async findMatches(newAnnouncement, animalSpecies) {
     if (!newAnnouncement.imageEmbedding) return [];
 

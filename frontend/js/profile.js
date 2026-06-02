@@ -1,3 +1,8 @@
+/**
+ * Decodes a JWT payload without verifying the signature for client-side UI decisions.
+ * @param {string} token - JWT string read from local storage.
+ * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
+ */
 function decodeJwt(token) {
   try {
     const payload = token.split('.')[1];
@@ -16,10 +21,17 @@ let currentEditIsCurrentlyThere = false;
 let currentUser = null;
 let isSavingAnnouncement = false;
 let selectedAdoptionRequest = null;
-const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
-const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
-const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-shelters';
+let notificationsRefreshTimer = null;
+let isRefreshingNotifications = false;
+const API_ANIMALS = '/api/v1/animals';
+const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
+const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
 
+/**
+ * Sets last seen mode.
+ * @param {string} mode - Selected last-seen mode, either `today` or `custom`.
+ * @returns {void}
+ */
 function setLastSeenMode(mode) {
   const todayBtn = document.getElementById('lastSeenTodayBtn');
   const customBtn = document.getElementById('lastSeenCustomBtn');
@@ -31,6 +43,11 @@ function setLastSeenMode(mode) {
   dateInput.style.display = isCustom ? 'block' : 'none';
 }
 
+/**
+ * Configures announcement type choices for normal users or shelter accounts.
+ * @param {string} defaultType - Type selected when the current account may choose between lost and sighting.
+ * @returns {void}
+ */
 function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
   const typeSelect = document.getElementById('modal-type');
   if (!typeSelect) return;
@@ -51,6 +68,10 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
   typeSelect.value = defaultType || 'LostAnimal';
 }
 
+/**
+ * Returns rifugio coordinates.
+ * @returns {number[]|null} Current shelter coordinates as `[longitude, latitude]`, or null when unavailable.
+ */
 function getRifugioCoordinates() {
   const coords = currentUser?.rifugioData?.location?.coordinates || currentUser?.shelterData?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
@@ -59,17 +80,25 @@ function getRifugioCoordinates() {
   return [lng, lat];
 }
 
+/**
+ * Adapts announcement modal labels and fields for the current account role.
+ * @returns {void}
+ */
 function configureModalLabelsForAccount() {
   const isRifugio = currentUser?.role === 'shelter';
   const dateLabel = document.getElementById('modal-lastSeenDate-label');
   const positionHint = document.getElementById('modal-position-hint');
   const positionSection = document.getElementById('modal-position-section');
   const microchipRow = document.getElementById('modal-microchip-row');
+  const adoptionRow = document.getElementById('modal-adoption-row');
+  const adoptionSelect = document.getElementById('modal-adoptionStatus');
   const animalNameRow = document.getElementById('modal-animal-name-row');
 
   if (dateLabel) dateLabel.textContent = isRifugio ? 'Data' : 'Ultima data vista';
   if (positionSection) positionSection.style.display = isRifugio ? 'none' : '';
   if (microchipRow) microchipRow.style.display = isRifugio ? '' : 'none';
+  if (adoptionRow) adoptionRow.style.display = isRifugio ? '' : 'none';
+  if (adoptionSelect) adoptionSelect.disabled = !isRifugio;
   if (animalNameRow) animalNameRow.style.display = '';
   if (positionHint) {
     positionHint.textContent = isRifugio
@@ -78,6 +107,44 @@ function configureModalLabelsForAccount() {
   }
 }
 
+/**
+ * Adapts animal-name requirements and helper text for the selected announcement type.
+ * @param {string} type - Announcement type selected in the modal.
+ * @returns {void}
+ */
+function configureModalFieldsForType(type) {
+  const isSighting = type === 'Sighting';
+  const animalNameRow = document.getElementById('modal-animal-name-row');
+  const animalNameLabel = document.getElementById('modal-animal-name-label');
+  const animalNameInput = document.getElementById('modal-animalName');
+  const animalNameHint = document.getElementById('modal-animal-name-hint');
+  const typeHint = document.getElementById('modal-type-hint');
+
+  if (animalNameRow) animalNameRow.style.display = '';
+  if (animalNameLabel) {
+    animalNameLabel.textContent = isSighting ? 'Nome animale (opzionale)' : 'Nome animale';
+  }
+  if (animalNameInput) {
+    animalNameInput.required = !isSighting;
+    animalNameInput.placeholder = isSighting ? 'Es. Luna, se lo sai' : 'Es. Luna';
+  }
+  if (animalNameHint) {
+    animalNameHint.textContent = isSighting
+      ? 'Se non conosci il nome puoi lasciarlo vuoto.'
+      : 'Se lo conosci, inseriscilo qui.';
+  }
+  if (typeHint) {
+    typeHint.textContent = isSighting
+      ? 'Avvistamento: compila solo i dati che conosci, il nome non è obbligatorio.'
+      : 'Smarrito: inserisci i dati dell animale che stai cercando.';
+  }
+}
+
+/**
+ * Sets announcement saving state.
+ * @param {boolean} isSaving - Whether the announcement form is currently being submitted.
+ * @returns {void}
+ */
 function setAnnouncementSavingState(isSaving) {
   isSavingAnnouncement = isSaving;
   const progress = document.getElementById('profile-modal-progress');
@@ -93,6 +160,15 @@ function setAnnouncementSavingState(isSaving) {
   if (cancelButton) cancelButton.disabled = isSaving;
 }
 
+  /**
+   * Shows a reusable confirmation modal and resolves with the user's choice.
+ * @param {Object} options - Confirmation dialog options.
+ * @param {string} options.title - Confirmation dialog title.
+ * @param {string} options.message - Confirmation dialog message.
+ * @param {string} [options.confirmLabel='Conferma'] - Label for the confirmation button.
+ * @param {boolean} [options.danger=true] - Whether to style the action as destructive.
+ * @returns {Promise<boolean>} Promise resolving to true when the user confirms.
+ */
 function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger = true }) {
   return new Promise((resolve) => {
     const overlay = document.getElementById('profile-confirm-overlay');
@@ -107,6 +183,10 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
       return;
     }
 
+    /**
+     * Hides the confirmation dialog and removes temporary event listeners.
+     * @returns {void}
+     */
     const cleanup = () => {
       overlay.style.display = 'none';
       overlay.removeEventListener('click', onOverlayClick);
@@ -116,20 +196,38 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
       document.removeEventListener('keydown', onEscape);
     };
 
+    /**
+     * Resolves the confirmation dialog as accepted.
+     * @returns {void}
+     */
     const onConfirm = () => {
       cleanup();
       resolve(true);
     };
 
+    /**
+     * Resolves the confirmation dialog as cancelled.
+     * @returns {void}
+     */
     const onCancel = () => {
       cleanup();
       resolve(false);
     };
 
+    /**
+     * Cancels the confirmation when the user clicks outside the dialog.
+     * @param {Event} event - Browser event object.
+     * @returns {void}
+     */
     const onOverlayClick = (event) => {
       if (event.target === overlay) onCancel();
     };
 
+    /**
+     * Cancels the confirmation when Escape is pressed.
+     * @param {Event} event - Browser event object.
+     * @returns {void}
+     */
     const onEscape = (event) => {
       if (event.key === 'Escape') onCancel();
     };
@@ -148,12 +246,18 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
   });
 }
 
+/**
+ * Initializes the authenticated profile page after the DOM is ready.
+ * @returns {Promise<void>} Promise resolving when the profile UI and event handlers are initialized.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('token');
   if (!token) {
     window.location.href = '/pages/login.html';
     return;
   }
+
+  const autoOpenNewAnnouncement = new URLSearchParams(window.location.search).get('newAnnouncement') === '1';
 
   const authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
   const mePayload = decodeJwt(token) || {};
@@ -169,6 +273,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveProfileButton = document.getElementById('saveProfileBtn');
   const adminUserLookup = new Map();
 
+  /**
+   * Sets profile editing.
+   * @param {boolean} enabled - Whether profile fields should be editable.
+   * @returns {void}
+   */
   function setProfileEditing(enabled) {
     editableProfileFields.forEach((id) => {
       const field = document.getElementById(id);
@@ -180,9 +289,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('profile-section').classList.toggle('is-editing', enabled);
   }
 
+  /**
+   * Logs out the current user and redirects to the login page.
+   * @returns {Promise<void>} Promise resolving after local session data is cleared.
+   */
   async function handleLogout() {
     try {
-      await fetch('http://localhost:3000/api/v1/auth/sessions/current', {
+      await fetch('/api/v1/auth/sessions/current', {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + token }
       });
@@ -195,19 +308,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/pages/login.html';
   }
 
+  /**
+   * Fetches me data from the API.
+   * @returns {Promise<Object|null>} Current user profile, or null when the session is invalid.
+   */
   async function fetchMe() {
-    const res = await fetch('http://localhost:3000/api/v1/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('/api/v1/users/me', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return null;
     return await res.json();
   }
 
+  /**
+   * Fetches notifications data from the API.
+   * @returns {Promise<Array<Object>>} Notifications for the current user.
+   */
   async function fetchNotifications() {
-    const res = await fetch('http://localhost:3000/api/v1/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('/api/v1/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Refreshes notifications while preventing overlapping refreshes.
+   * @returns {Promise<void>} Promise resolving after the notification list is rendered.
+   */
+  async function refreshNotifications() {
+    if (isRefreshingNotifications) return;
+    isRefreshingNotifications = true;
+    try {
+      const notifications = await fetchNotifications();
+      renderNotifications(notifications);
+    } finally {
+      isRefreshingNotifications = false;
+    }
+  }
+
+  /**
+   * Fetches contact requests data from the API.
+   * @returns {Promise<Array<Object>>} Contact requests visible to the current profile.
+   */
   async function fetchContactRequests() {
     const res = await fetch(API_CONTACT_REQUESTS, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
@@ -215,6 +355,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Fetches followed shelters data from the API.
+   * @returns {Promise<Array<Object>>} Shelters followed by the current user.
+   */
   async function fetchFollowedShelters() {
     const res = await fetch(API_FOLLOWED_SHELTERS, { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
@@ -222,41 +366,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Removes a shelter from the current user's followed list.
+   * @param {string} shelterId - Shelter identifier to unfollow.
+   * @returns {Promise<Object>} API response for the unfollow request.
+   * @throws {Error} When the API rejects the unfollow request.
+   */
   async function unfollowShelter(shelterId) {
     const res = await fetch(`${API_FOLLOWED_SHELTERS}/${encodeURIComponent(shelterId)}`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Errore: impossibile smettere di seguire il rifugio');
+    if (!res.ok) throw new Error(data.userMessage || data.message || 'Errore: impossibile smettere di seguire il rifugio');
     return data;
   }
 
+  /**
+   * Hides replied adoption requests for the current user role.
+   * @returns {Promise<Object>} API response with the number of hidden requests.
+   * @throws {Error} When the API rejects the clear request.
+   */
   async function clearRepliedAdoptionRequests() {
     const res = await fetch(`${API_CONTACT_REQUESTS}?status=replied`, {
       method: 'PATCH',
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Errore svuotamento richieste');
+    if (!res.ok) throw new Error(data.userMessage || data.message || 'Errore svuotamento richieste');
     return data;
   }
 
+  /**
+   * Fetches announcement by id data from the API.
+   * @param {string} id - Announcement identifier to load.
+   * @returns {Promise<Object|null>} Announcement payload, or null when it cannot be loaded.
+   */
   async function fetchAnnouncementById(id) {
-    const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(id)}`);
+    const res = await fetch(`/api/v1/announcements/${encodeURIComponent(id)}`);
     if (!res.ok) return null;
     return await res.json();
   }
 
+  /**
+   * Fetches similar announcements data from the API.
+   * @param {string} id - Announcement identifier used as the smart-match source.
+   * @param {number} limit - Maximum number of similar announcements to request.
+   * @returns {Promise<Array<Object>>} Smart-match results for the announcement.
+   */
   async function fetchSimilarAnnouncements(id, limit = 6) {
-    const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(id)}/similar?limit=${limit}`);
+    const res = await fetch(`/api/v1/announcements/${encodeURIComponent(id)}/similar?limit=${limit}`);
     if (!res.ok) return [];
     const json = await res.json().catch(() => ({}));
     return Array.isArray(json?.matches) ? json.matches : [];
   }
 
+  /**
+   * Marks a single notification as read and notifies shared navigation.
+   * @param {string} id - Notification identifier to update.
+   * @returns {Promise<void>} Promise resolving after the update request is sent.
+   */
   async function markNotificationRead(id) {
-    await fetch(`http://localhost:3000/api/v1/notifications/${encodeURIComponent(id)}`, {
+    await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: authHeader,
       body: JSON.stringify({ isRead: true })
@@ -264,8 +435,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.dispatchEvent(new Event('notifications:updated'));
   }
 
+  /**
+   * Marks every notification as read and refreshes profile/navigation notification UI.
+   * @returns {Promise<void>} Promise resolving after the update and refresh complete.
+   */
   async function markAllNotificationsRead() {
-    await fetch('http://localhost:3000/api/v1/notifications', {
+    await fetch('/api/v1/notifications', {
       method: 'PATCH',
       headers: authHeader,
       body: JSON.stringify({ isRead: true })
@@ -273,6 +448,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.dispatchEvent(new Event('notifications:updated'));
   }
 
+  /**
+   * Escapes HTML-sensitive characters before inserting text into markup.
+   * @param {*} input - Value that will be interpolated into profile markup.
+   * @returns {string} HTML-safe string representation of the value.
+   */
   function escapeHtml(input) {
     return String(input ?? '')
       .replaceAll('&', '&amp;')
@@ -282,11 +462,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replaceAll("'", '&#39;');
   }
 
+  /**
+   * Formats a value for UI display, replacing empty values with a placeholder.
+   * @param {*} value - Field value shown in profile, admin, or announcement details.
+   * @returns {string} Escaped display text or muted placeholder markup.
+   */
   function displayValue(value) {
     const text = String(value ?? '').trim();
     return text ? escapeHtml(text) : '<span class="muted">Non specificato</span>';
   }
 
+  /**
+   * Renders admin comments html into the current page.
+   * @param {Array<Object>} comments - Comment records attached to an announcement.
+   * @returns {string} HTML markup for the admin comment list or empty state.
+   */
   function renderAdminCommentsHtml(comments) {
     if (!Array.isArray(comments) || comments.length === 0) {
       return '<div class="comments-empty">Nessun commento</div>';
@@ -309,6 +499,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       .join('');
   }
 
+  /**
+   * Renders notifications into the current page.
+   * @param {Array<Object>} list - Notification records returned for the current user.
+   * @returns {void}
+   */
   function renderNotifications(list) {
     const empty = document.getElementById('notifications-empty');
     const container = document.getElementById('notifications-list');
@@ -364,6 +559,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Converts a contact-request status code into the label shown in the profile UI.
+   * @param {string} status - Contact-request status from the API.
+   * @returns {string} Localized status label.
+   */
   function formatContactRequestStatus(status) {
     const labels = {
       pending: currentUser?.role === 'user' ? 'In attesa di risposta' : 'Da rispondere',
@@ -373,6 +573,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return labels[status] || status || 'Da rispondere';
   }
 
+  /**
+   * Renders contact requests into the current page.
+   * @param {Array<Object>} list - Contact requests visible to the current user or shelter.
+   * @returns {void}
+   */
   function renderContactRequests(list) {
     const section = document.getElementById('contact-requests-section');
     const title = document.getElementById('contact-requests-title');
@@ -439,10 +644,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Returns rifugio name.
+   * @param {Object} rifugio - Followed shelter payload.
+   * @returns {string} Best available shelter display name.
+   */
   function getRifugioName(rifugio) {
     return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
   }
 
+  /**
+   * Renders followed shelters into the current page.
+   * @param {Array<Object>} list - Shelters followed by the current user.
+   * @returns {void}
+   */
   function renderFollowedShelters(list) {
     const section = document.getElementById('followed-shelters-section');
     const empty = document.getElementById('followed-shelters-empty');
@@ -485,6 +700,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Loads followed shelters data and updates the UI.
+   * @returns {Promise<void>} Promise resolving after followed shelters are rendered.
+   */
   async function loadFollowedShelters() {
     if (currentUser?.role !== 'user') {
       renderFollowedShelters([]);
@@ -493,11 +712,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderFollowedShelters(await fetchFollowedShelters());
   }
 
+  /**
+   * Loads contact requests data and updates the UI.
+   * @returns {Promise<void>} Promise resolving after contact requests are rendered.
+   */
   async function loadContactRequests() {
     if (!['shelter', 'user'].includes(currentUser?.role)) return;
     renderContactRequests(await fetchContactRequests());
   }
 
+  /**
+   * Sends a shelter reply for an adoption contact request.
+   * @param {string} requestId - Contact-request identifier to reply to.
+   * @param {string} replyMessage - Reply text entered by the shelter.
+   * @returns {Promise<Object>} Updated contact-request payload.
+   * @throws {Error} When the API rejects the reply.
+   */
   async function replyToContactRequest(requestId, replyMessage) {
     const res = await fetch(`${API_CONTACT_REQUESTS}/${encodeURIComponent(requestId)}/replies`, {
       method: 'POST',
@@ -505,10 +735,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       body: JSON.stringify({ replyMessage })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || 'Errore risposta richiesta');
+    if (!res.ok) throw new Error(data.userMessage || data.message || 'Errore risposta richiesta');
     return data;
   }
 
+  /**
+   * Closes the adoption reply modal UI.
+   * @returns {void}
+   */
   function closeAdoptionReplyModal() {
     const overlay = document.getElementById('adoption-reply-overlay');
     if (overlay) overlay.style.display = 'none';
@@ -518,6 +752,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (status) status.textContent = '';
   }
 
+  /**
+   * Opens the adoption reply modal UI.
+   * @param {Object} request - Contact request selected by the shelter for reply.
+   * @returns {void}
+   */
   function openAdoptionReplyModal(request) {
     selectedAdoptionRequest = request;
     const overlay = document.getElementById('adoption-reply-overlay');
@@ -546,6 +785,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     message.focus();
   }
 
+  /**
+   * Renders rifugio status into the current page.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
+   */
   function renderRifugioStatus(me) {
     const box = document.getElementById('rifugio-status-box');
     if (!box) return;
@@ -571,6 +815,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
   }
 
+  /**
+   * Renders rifugio position into the current page.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
+   */
   function renderRifugioPosition(me) {
     const box = document.getElementById('rifugio-position-box');
     const text = document.getElementById('rifugio-position-text');
@@ -592,6 +841,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa.';
   }
 
+  /**
+   * Ensures the shelter-position Leaflet map exists and is visible.
+   * @returns {Object|null} Leaflet map instance, or null when the map container is missing.
+   */
   function ensureRifugioMap() {
     const mapEl = document.getElementById('rifugio-position-map');
     if (!mapEl) return null;
@@ -609,6 +862,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return rifugioMapInstance;
   }
 
+  /**
+   * Sets pending rifugio location.
+   * @param {number} lng - Selected shelter longitude.
+   * @param {number} lat - Selected shelter latitude.
+   * @returns {void}
+   */
   function setPendingRifugioLocation(lng, lat) {
     pendingRifugioLocation = [lng, lat];
     const map = ensureRifugioMap();
@@ -623,6 +882,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('rifugio-position-message').textContent = 'Punto selezionato. Salva la posizione.';
   }
 
+  /**
+   * Opens the rifugio position editor UI.
+   * @returns {void}
+   */
   function openRifugioPositionEditor() {
     const map = ensureRifugioMap();
     const coords = getRifugioCoordinates();
@@ -636,6 +899,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     requestAnimationFrame(() => map && map.invalidateSize());
   }
 
+  /**
+   * Saves the pending shelter map position to the current user profile.
+   * @returns {Promise<void>} Promise resolving after the profile UI is updated or an error is shown.
+   */
   async function saveRifugioPosition() {
     if (!pendingRifugioLocation) {
       alert('Seleziona un punto sulla mappa');
@@ -643,9 +910,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const [lng, lat] = pendingRifugioLocation;
-    const res = await fetch('http://localhost:3000/api/v1/users/me', {
+    const res = await fetch('/api/v1/users/me', {
       method: 'PUT',
-      headers: authHeader,
+      headers: {
+        ...authHeader,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
         rifugioData: {
           location: { type: 'Point', coordinates: [lng, lat] }
@@ -655,7 +925,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.message || 'Errore salvataggio posizione');
+      alert(data.userMessage || data.message || 'Errore salvataggio posizione');
       return;
     }
 
@@ -672,52 +942,88 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('rifugio-position-message').textContent = 'Posizione salvata.';
   }
 
+  /**
+   * Fetches admin reports data from the API.
+   * @returns {Promise<Array<Object>>} Report records visible to admins.
+   */
   async function fetchAdminReports() {
-    const res = await fetch('http://localhost:3000/api/v1/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('/api/v1/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Fetches pending rifugi data from the API.
+   * @returns {Promise<Array<Object>>} Shelter account requests waiting for approval.
+   */
   async function fetchPendingRifugi() {
-    const res = await fetch('http://localhost:3000/api/v1/admin/rifugi/pending', { headers: { 'Authorization': 'Bearer ' + token } });
+    const res = await fetch('/api/v1/admin/rifugi?status=pending', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Fetches pending readmissions data from the API.
+   * @returns {Promise<Array<Object>>} Pending readmission requests for blocked users.
+   */
   async function fetchPendingReadmissions() {
-    const res = await fetch('http://localhost:3000/api/v1/admin/readmissions', { headers: authHeader });
+    const res = await fetch('/api/v1/admin/readmissions', { headers: authHeader });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Fetches audit logs data from the API.
+   * @param {number} limit - Maximum number of audit-log entries to load.
+   * @returns {Promise<Array<Object>>} Recent audit-log records.
+   */
   async function fetchAuditLogs(limit = 3) {
-    const res = await fetch(`http://localhost:3000/api/v1/admin/audit-logs?limit=${limit}`, { headers: authHeader });
+    const res = await fetch(`/api/v1/admin/audit-logs?limit=${limit}`, { headers: authHeader });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Reads a fetch error response and builds a displayable message.
+   * @param {Response} res - Failed fetch response.
+   * @param {string} fallback - Message prefix used when the response has no JSON message.
+   * @returns {Promise<string>} Error message for alerts or thrown errors.
+   */
   async function readResponseError(res, fallback) {
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const json = await res.json().catch(() => ({}));
-      if (json?.message) return json.message;
+      if (json?.userMessage || json?.message) return json.userMessage || json.message;
     }
     return `${fallback} (${res.status})`;
   }
 
+  /**
+   * Fetches announcement count for a user through the announcements collection endpoint.
+   * @param {string} userId - User identifier whose publication count should be loaded.
+   * @returns {Promise<number>} Number of announcements published by the user.
+   * @throws {Error} When the announcements API rejects the count request.
+   */
   async function fetchAdminUserAnnouncementCount(userId) {
-    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/announcement-count`, { headers: authHeader });
+    const query = new URLSearchParams({ userId: String(userId), page: '1', limit: '1', status: 'all' }).toString();
+    const res = await fetch(`/api/v1/announcements?${query}`, { headers: authHeader });
     if (!res.ok) throw new Error(await readResponseError(res, 'Errore conteggio annunci'));
     const json = await res.json().catch(() => ({}));
-    return Number(json?.publishedAnnouncementsCount || 0);
+    return Number(json?.meta?.totalItems || 0);
   }
 
+  /**
+   * Fetches admin user data from the API.
+   * @param {string} userId - User identifier to load for admin review.
+   * @returns {Promise<Object>} Admin user detail payload enriched with announcement count when available.
+   * @throws {Error} When the admin API rejects the user detail request.
+   */
   async function fetchAdminUser(userId) {
-    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}`, { headers: authHeader });
+    const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(userId)}`, { headers: authHeader });
     if (!res.ok) throw new Error(await readResponseError(res, 'Errore recupero account'));
     const user = await res.json();
     try {
@@ -728,18 +1034,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     return user;
   }
 
+  /**
+   * Closes the admin announcement modal UI.
+   * @returns {void}
+   */
   function closeAdminAnnouncementModal() {
     const overlay = document.getElementById('admin-announcement-overlay');
     if (overlay) overlay.style.display = 'none';
     document.body.style.overflow = '';
   }
 
+  /**
+   * Closes the admin user modal UI.
+   * @returns {void}
+   */
   function closeAdminUserModal() {
     const overlay = document.getElementById('admin-user-overlay');
     if (overlay) overlay.style.display = 'none';
     document.body.style.overflow = '';
   }
 
+  /**
+   * Renders admin user modal into the current page.
+   * @param {Object} user - User account details loaded for admin review.
+   * @returns {void}
+   */
   function renderAdminUserModal(user) {
     const overlay = document.getElementById('admin-user-overlay');
     const title = document.getElementById('admin-user-title');
@@ -772,6 +1091,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.style.overflow = 'hidden';
   }
 
+  /**
+   * Opens the admin user modal UI.
+   * @param {string} userId - User identifier to load or retrieve from the admin cache.
+   * @returns {Promise<void>} Promise resolving after the modal is rendered or an alert is shown.
+   * @throws {Error} When no cached data exists and the user fetch fails.
+   */
   async function openAdminUserModal(userId) {
     const key = String(userId || '');
     let user = adminUserLookup.get(key);
@@ -791,8 +1116,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAdminUserModal(user);
   }
 
+  /**
+   * Sends an admin warning from the report moderation modal.
+   * @param {string} userId - User identifier to warn.
+   * @returns {Promise<void>} Promise resolving after the warning is sent and cached user data is refreshed.
+   * @throws {Error} When the admin API rejects the warning.
+   */
   async function warnAdminUser(userId) {
-    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/warnings`, {
+    const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(userId)}/warnings`, {
       method: 'POST',
       headers: authHeader,
       body: JSON.stringify({ reason: 'Ammonimento da moderazione report' })
@@ -805,11 +1136,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  /**
+   * Blocks a user account from the admin moderation UI.
+   * @param {string} userId - User identifier to block.
+   * @returns {Promise<Object|undefined>} Blocked user payload, or undefined when the prompt is cancelled.
+   * @throws {Error} When the admin API rejects the block request.
+   */
   async function blockAdminUser(userId) {
     const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
     if (reason === null) return;
     const blockReason = reason.trim() || 'Account bloccato da admin';
-    const res = await fetch(`http://localhost:3000/api/v1/admin/users/${encodeURIComponent(userId)}/status`, {
+    const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(userId)}`, {
       method: 'PATCH',
       headers: authHeader,
       body: JSON.stringify({ status: 'blocked', reason: blockReason })
@@ -823,6 +1160,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return blockedUser;
   }
 
+  /**
+   * Renders admin announcement modal into the current page.
+   * @param {Object} ann - Announcement details loaded for admin moderation.
+   * @returns {void}
+   */
   function renderAdminAnnouncementModal(ann) {
     const overlay = document.getElementById('admin-announcement-overlay');
     const title = document.getElementById('admin-announcement-title');
@@ -839,7 +1181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateLabel = ann?.date
       ? new Date(ann.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : (ann?.lastSeenDate ? new Date(ann.lastSeenDate).toLocaleDateString('it-IT') : 'Non disponibile');
-    const photoUrl = ann?._id ? `http://localhost:3000/api/v1/announcements/${encodeURIComponent(ann._id)}/photo` : '';
+    const photoUrl = ann?._id ? `/api/v1/announcements/${encodeURIComponent(ann._id)}/photo` : '';
     const comments = Array.isArray(ann?.comments) ? ann.comments : [];
     const coords = ann?.location?.coordinates;
     const locationInfo = coords?.length === 2
@@ -916,13 +1258,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.style.overflow = 'hidden';
   }
 
+  /**
+   * Opens the admin announcement modal UI.
+   * @param {string} annId - Announcement identifier to load for admin review.
+   * @returns {Promise<void>} Promise resolving after the modal is rendered.
+   * @throws {Error} When the announcement cannot be loaded.
+   */
   async function openAdminAnnouncementModal(annId) {
     if (!annId) return;
-    const res = await fetch(`http://localhost:3000/api/v1/announcements/${encodeURIComponent(annId)}`);
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Errore caricamento annuncio');
+    const res = await fetch(`/api/v1/announcements/${encodeURIComponent(annId)}`);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.userMessage || data.message || 'Errore caricamento annuncio');
+    }
     renderAdminAnnouncementModal(await res.json());
   }
 
+  /**
+   * Renders admin reports into the current page.
+   * @param {Array<Object>} list - Report records returned by the admin API.
+   * @returns {void}
+   */
   function renderAdminReports(list) {
     const empty = document.getElementById('admin-reports-empty');
     const container = document.getElementById('admin-reports-list');
@@ -966,6 +1322,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Renders pending rifugi into the current page.
+   * @param {Array<Object>} list - Pending shelter accounts awaiting admin approval.
+   * @returns {void}
+   */
   function renderPendingRifugi(list) {
     const empty = document.getElementById('admin-rifugi-empty');
     const container = document.getElementById('admin-rifugi-list');
@@ -999,6 +1360,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Renders pending readmissions into the current page.
+   * @param {Array<Object>} list - Blocked users with pending readmission requests.
+   * @returns {void}
+   */
   function renderPendingReadmissions(list) {
     const empty = document.getElementById('admin-readmissions-empty');
     const container = document.getElementById('admin-readmissions-list');
@@ -1031,6 +1397,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Renders audit logs into the current page.
+   * @param {Array<Object>} list - Audit-log records returned by the admin API.
+   * @returns {void}
+   */
   function renderAuditLogs(list) {
     const section = document.getElementById('admin-audit-section');
     const empty = document.getElementById('admin-audit-empty');
@@ -1061,6 +1432,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  /**
+   * Loads all admin dashboard panels and renders their current data.
+   * @returns {Promise<void>} Promise resolving after admin panels are updated.
+   */
   async function loadAdminData() {
     if (currentUser?.role !== 'admin') return;
     const section = document.getElementById('admin-section');
@@ -1072,6 +1447,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAuditLogs(auditLogs);
   }
 
+  /**
+   * Loads the profile page data and renders role-specific sections.
+   * @returns {Promise<void>} Promise resolving after the profile view is initialized.
+   */
   async function load() {
     const me = await fetchMe();
     if (!me) { localStorage.removeItem('token'); window.location.href = '/pages/login.html'; return; }
@@ -1089,16 +1468,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     
 
-    const notifications = await fetchNotifications();
-    renderNotifications(notifications);
+    await refreshNotifications();
     window.dispatchEvent(new Event('notifications:updated'));
     await loadAdminData();
 
     await loadMyAnnouncements();
-    // if user is a shelter, load their animals
     await loadMyAnimals();
     await loadContactRequests();
     await loadFollowedShelters();
+
+    if (autoOpenNewAnnouncement) {
+      openModalForCreate();
+    }
   }
 
   document.getElementById('profileForm').addEventListener('submit', async (e) => {
@@ -1116,9 +1497,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         emailOnComment: !!document.getElementById('emailOnComment').checked
       }
     };
-    const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
+    const res = await fetch('/api/v1/users/me', { method: 'PUT', headers: authHeader, body: JSON.stringify(updates) });
     const data = await res.json();
-    document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.message || 'Errore');
+    document.getElementById('profileMessage').textContent = res.ok ? 'Profilo aggiornato' : (data.userMessage || data.message || 'Errore');
     if (res.ok) setProfileEditing(false);
   });
 
@@ -1132,10 +1513,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('notificationsReadAll')?.addEventListener('click', async () => {
     await markAllNotificationsRead();
-    const notifications = await fetchNotifications();
-    renderNotifications(notifications);
     window.dispatchEvent(new Event('notifications:updated'));
   });
+
+  window.removeEventListener('notifications:updated', refreshNotifications);
+  window.addEventListener('notifications:updated', refreshNotifications);
+  if (notificationsRefreshTimer) clearInterval(notificationsRefreshTimer);
+  notificationsRefreshTimer = setInterval(refreshNotifications, 15000);
 
   document.getElementById('contactRequestsRefresh')?.addEventListener('click', loadContactRequests);
   document.getElementById('followed-shelters-list')?.addEventListener('click', async (e) => {
@@ -1237,12 +1621,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const reason = prompt('Motivo rimozione annuncio:', 'annuncio falso/offensivo');
         if (reason === null) return;
         const deleteReason = reason.trim() || 'violazione delle regole';
-        const res = await fetch(`http://localhost:3000/api/v1/admin/announcements/${encodeURIComponent(annId)}`, {
+        const res = await fetch(`/api/v1/admin/announcements/${encodeURIComponent(annId)}`, {
           method: 'DELETE',
           headers: authHeader,
           body: JSON.stringify({ reason: deleteReason })
         });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore eliminazione');
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.userMessage || data.message || 'Errore eliminazione');
+        }
       }
 
       if (action === 'block-user') {
@@ -1255,18 +1642,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (action === 'dismiss-report') {
         const reportId = button.dataset.reportId;
-        const res = await fetch(`http://localhost:3000/api/v1/admin/reports/${encodeURIComponent(reportId)}/status`, {
+        const res = await fetch(`/api/v1/admin/reports/${encodeURIComponent(reportId)}`, {
           method: 'PATCH',
           headers: authHeader,
           body: JSON.stringify({ status: 'DISMISSED', details: 'Archiviato da admin' })
         });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore archiviazione');
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.userMessage || data.message || 'Errore archiviazione');
+        }
       }
 
       if (action === 'approve-readmission' || action === 'reject-readmission') {
         const userId = button.dataset.userId;
         const verb = action === 'approve-readmission' ? 'approve' : 'reject';
-        const res = await fetch(`http://localhost:3000/api/v1/admin/readmissions/${encodeURIComponent(userId)}`, {
+        const res = await fetch(`/api/v1/admin/readmissions/${encodeURIComponent(userId)}`, {
           method: 'PATCH',
           headers: authHeader,
           body: JSON.stringify({ status: verb === 'approve' ? 'approved' : 'rejected' })
@@ -1280,12 +1670,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const body = action === 'reject-rifugio'
           ? { rifugioStatus: 'rejected', reason: prompt('Motivo rifiuto:', 'Dati insufficienti') || 'Dati insufficienti' }
           : { rifugioStatus: 'approved' };
-        const res = await fetch(`http://localhost:3000/api/v1/admin/rifugi/${encodeURIComponent(userId)}/status`, {
+        const res = await fetch(`/api/v1/admin/rifugi/${encodeURIComponent(userId)}`, {
           method: 'PATCH',
           headers: authHeader,
           body: JSON.stringify(body)
         });
-        if (!res.ok) throw new Error((await res.json().catch(()=>({}))).message || 'Errore richiesta rifugio');
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.userMessage || data.message || 'Errore richiesta rifugio');
+        }
       }
 
       await loadAdminData();
@@ -1318,22 +1711,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       danger: true
     });
     if (!confirmed) return;
-    const res = await fetch('http://localhost:3000/api/v1/users/me', { method: 'DELETE', headers: authHeader });
+    const res = await fetch('/api/v1/users/me', { method: 'DELETE', headers: authHeader });
     if (!res.ok) {
       const d = await res.json().catch(()=>({}));
-      alert(d.message || 'Errore eliminazione account');
+      alert(d.userMessage || d.message || 'Errore eliminazione account');
       return;
     }
-    // cleanup local session and redirect
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     alert('Account eliminato');
     window.location.href = '/';
   });
+  /**
+   * Loads my announcements data and updates the UI.
+   * @returns {Promise<void>} Promise resolving after the current user's announcement grid is rendered.
+   */
   async function loadMyAnnouncements() {
-  const res = await fetch('http://localhost:3000/api/v1/announcements');
+  const res = await fetch('/api/v1/announcements');
   if (!res.ok) return;
-  const all = await res.json();
+  const payload = await res.json();
+  const all = Array.isArray(payload) ? payload : payload.data || [];
   const mine = all.filter(a => a.publisherId && ((a.publisherId._id || a.publisherId) == myUserId || (a.publisherId._id && a.publisherId._id == myUserId)));
 
   const grid = document.getElementById('announcements-grid');
@@ -1341,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   mine.forEach(a => {
     const div = document.createElement('div'); div.className = 'card';
     div.dataset.id = a._id;
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
       <div class="card-body">
@@ -1379,17 +1776,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
   });
 
-  // open card by clicking the card box (ignore clicks on buttons/links/inputs)
   grid.addEventListener('click', (e) => {
     const clickedCard = e.target.closest('.card');
     if (!clickedCard || !grid.contains(clickedCard)) return;
-    // if click was on an interactive control, do nothing (buttons/links/inputs)
     if (e.target.closest('button, a, input, select, textarea')) return;
     const id = clickedCard.dataset.id;
     if (id) openAnnouncementModal(id);
   });
 
-  // attach actions
 
   document.querySelectorAll('button.close').forEach(b => b.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
@@ -1400,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       danger: false
     });
     if (!confirmed) return;
-    const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/status`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
+    const res = await fetch(`/api/v1/announcements/${id}`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
     if (res.ok) {
       loadMyAnnouncements();
       window.dispatchEvent(new Event('announcements:resolved-updated'));
@@ -1419,12 +1813,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     if (!confirmed) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
+      const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
       if (res.ok) {
         loadMyAnnouncements();
       } else {
         const d = await res.json().catch(()=>({}));
-        alert(d.message || ('Errore eliminazione (' + res.status + ')'));
+        alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
       }
     } catch (err) {
       alert('Errore di rete: ' + (err.message || err));
@@ -1432,6 +1826,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }));
 }
 
+  /**
+   * Loads my animals data and updates the UI.
+   * @returns {Promise<void>} Promise resolving after the current shelter's animal grid is rendered.
+   */
   async function loadMyAnimals() {
     const section = document.getElementById('my-animals');
     const grid = document.getElementById('my-animals-grid');
@@ -1445,7 +1843,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(currentUser._id)}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
       if (!res.ok) throw new Error('Errore recupero animali');
-      const list = await res.json();
+      const payload = await res.json();
+      const list = Array.isArray(payload) ? payload : payload.data || [];
       counter.textContent = `${(list && list.length) || 0} animali`;
       if (!list || list.length === 0) {
         grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
@@ -1466,8 +1865,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           </article>
         `;
       }).join('');
-      // load photos for animals
-      // load photos for animals
       list.forEach(a => {
         const card = grid.querySelector(`.card[data-id="${a._id}"]`);
         if (!card) return;
@@ -1497,11 +1894,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         })();
       });
 
-      // attach click handler to open animal modal
       grid.addEventListener('click', (e) => {
         const clicked = e.target.closest('.card');
         if (!clicked || !grid.contains(clicked)) return;
-        // ignore clicks on buttons/inputs
         if (e.target.closest('button, a, input, textarea')) return;
         const id = clicked.dataset.id;
         if (id) openAnimalModal(id);
@@ -1512,12 +1907,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  /**
+   * Opens the animal modal UI.
+   * @param {string} animalId - Animal identifier to load for editing.
+   * @returns {Promise<void>} Promise resolving after the animal modal is populated or an error is shown.
+   */
   async function openAnimalModal(animalId) {
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/animals/${encodeURIComponent(animalId)}`, { headers: { 'Authorization': 'Bearer ' + token } });
+      const res = await fetch(`/api/v1/animals/${encodeURIComponent(animalId)}`, { headers: { 'Authorization': 'Bearer ' + token } });
       if (!res.ok) throw new Error('Animale non trovato');
       const a = await res.json();
-      // populate modal
       document.getElementById('animal-modal-title').textContent = a.name || (a.species || 'Animale');
       document.getElementById('animal-name').value = a.name || '';
       document.getElementById('animal-species').value = a.species || '';
@@ -1525,13 +1924,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('animal-dateArrived').value = a.dateArrived ? new Date(a.dateArrived).toISOString().slice(0,10) : '';
       document.getElementById('animal-age').value = a.age || '';
       document.getElementById('animal-otherInfo').value = a.otherInfo || '';
-      // adoptable segmented control
+      /**
+       * Sets segmented value.
+       * @param {string} segId - Id of the segmented control element.
+       * @param {boolean} boolVal - Boolean value to mark as active.
+       * @returns {void}
+       */
       function setSegmentedValue(segId, boolVal) {
         const seg = document.getElementById(segId);
         if (!seg) return;
         const buttons = Array.from(seg.querySelectorAll('button'));
         buttons.forEach(b => b.classList.toggle('is-active', String(b.dataset.value) === String(!!boolVal)));
       }
+      /**
+       * Returns segmented value.
+       * @param {string} segId - Id of the segmented control element.
+       * @returns {boolean} Active segmented-control value, defaulting to false.
+       */
       function getSegmentedValue(segId) {
         const seg = document.getElementById(segId);
         if (!seg) return false;
@@ -1539,7 +1948,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return active ? String(active.dataset.value) === 'true' : false;
       }
       setSegmentedValue('seg-animal-adoptable', !!a.adoptable);
-      // wire segmented control for adoptable only
       const seg = document.getElementById('seg-animal-adoptable');
       if (seg) {
         Array.from(seg.querySelectorAll('button')).forEach(btn => {
@@ -1561,7 +1969,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         notesContainer.appendChild(el);
       });
 
-      // gallery
       const gallery = document.getElementById('animal-modal-gallery');
       gallery.innerHTML = '';
       const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
@@ -1573,11 +1980,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         gallery.appendChild(img);
       }
 
-      // show modal
       document.getElementById('animal-modal-overlay').style.display = 'flex';
       document.body.style.overflow = 'hidden';
 
-      // wire buttons
       document.getElementById('animal-modal-close').onclick = () => { document.getElementById('animal-modal-overlay').style.display = 'none'; document.body.style.overflow = ''; };
 
       document.getElementById('animal-save').onclick = async () => {
@@ -1591,11 +1996,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newNote = document.getElementById('animal-newMedicalNote').value.trim();
         if (newNote) payload.medicalNote = newNote;
         try {
-          const upr = await fetch(`http://localhost:3000/api/v1/animals/${encodeURIComponent(animalId)}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          if (!upr.ok) throw new Error((await upr.json().catch(()=>({}))).message || 'Errore salvataggio');
+          const upr = await fetch(`/api/v1/animals/${encodeURIComponent(animalId)}`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!upr.ok) {
+            const data = await upr.json().catch(()=>({}));
+            throw new Error(data.userMessage || data.message || 'Errore salvataggio');
+          }
           document.getElementById('animal-modal-overlay').style.display = 'none';
           document.body.style.overflow = '';
-          // refresh animals list
           await loadMyAnimals();
         } catch (err) {
           alert(err.message || 'Errore salvataggio');
@@ -1610,6 +2017,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
+  /**
+   * Opens the announcement modal UI.
+   * @param {string} announcementId - Announcement identifier to load for viewing.
+   * @returns {Promise<void>} Promise resolving after the announcement modal is populated.
+   * @throws {Error} When the announcement cannot be loaded.
+   */
   async function openAnnouncementModal(announcementId) {
     const data = await fetchAnnouncementById(announcementId);
     if (!data) {
@@ -1634,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gallery = document.getElementById('view-modal-gallery');
     gallery.innerHTML = '<div class="view-modal-no-photo">Caricamento...</div>';
     (async () => {
-      const photoUrl = `http://localhost:3000/api/v1/announcements/${data._id}/photo`;
+      const photoUrl = `/api/v1/announcements/${data._id}/photo`;
       try {
         const res = await fetch(photoUrl, { method: 'GET' });
         if (!res.ok) throw new Error('no image');
@@ -1671,7 +2084,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       ${rifugioName ? `<div class="modal-contact"><strong>Rifugio:</strong><span>${escapeHtml(rifugioName)}</span></div>` : ''}
     `;
 
-    // add flyer button for owner inside modal
     try {
       const bodyEl = document.getElementById('view-modal-body');
       const isOwner = (publisher && ((publisher._id && String(publisher._id) === String(myUserId)) || (String(publisher) === String(myUserId))));
@@ -1689,10 +2101,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.addEventListener('click', async (e) => {
           const id = e.target.dataset.id;
           try {
-            const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
+            const res = await fetch(`/api/v1/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
             if (!res.ok) {
               const d = await res.json().catch(()=>({}));
-              alert(d.message || ('Errore generazione volantino (' + res.status + ')'));
+              alert(d.userMessage || d.message || ('Errore generazione volantino (' + res.status + ')'));
               return;
             }
             const blob = await res.blob();
@@ -1722,6 +2134,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSimilarAnnouncements(matches);
   }
 
+  /**
+   * Renders similar announcements into the current page.
+   * @param {Array<Object>} matches - Smart-match results containing announcement and score data.
+   * @returns {void}
+   */
   function renderSimilarAnnouncements(matches) {
     const grid = document.getElementById('view-similar-grid');
     grid.innerHTML = '';
@@ -1765,7 +2182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       (async () => {
         const container = card.querySelector('.card-image');
         try {
-          const res = await fetch(`http://localhost:3000/api/v1/announcements/${ann._id}/photo`, { method: 'GET' });
+          const res = await fetch(`/api/v1/announcements/${ann._id}/photo`, { method: 'GET' });
           if (!res.ok) throw new Error('no image');
           const ct = res.headers.get('content-type') || '';
           if (!ct.startsWith('image')) throw new Error('not image');
@@ -1790,7 +2207,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setProfileEditing(false);
   load();
 
-  // Modal and map picker related event listeners (must run after DOM loaded)
   document.getElementById('pickOnMap').addEventListener('click', () => {
     showMapPicker();
   });
@@ -1839,6 +2255,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('modal-close').addEventListener('click', ()=> showModal(false));
   document.getElementById('modal-cancel').addEventListener('click', ()=> showModal(false));
+  document.getElementById('modal-type')?.addEventListener('change', (event) => {
+    configureModalFieldsForType(event.target.value);
+  });
 
   document.getElementById('view-modal-close')?.addEventListener('click', () => {
     document.getElementById('view-modal-overlay').style.display = 'none';
@@ -1852,7 +2271,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Save from modal: create or update
   document.getElementById('modal-save').addEventListener('click', async () => {
     const type = document.getElementById('modal-type').value;
     const description = document.getElementById('modal-description').value.trim();
@@ -1870,6 +2288,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!type || !species || !color) {
       alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
+      return;
+    }
+
+    const modalForm = document.getElementById('modalForm');
+    if (modalForm && !modalForm.reportValidity()) {
+      return;
+    }
+
+    if (type === 'LostAnimal' && !animalName) {
+      alert('Per un annuncio di smarrimento il nome dell animale è obbligatorio se lo conosci.');
       return;
     }
 
@@ -1891,9 +2319,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         distinctiveFeatures,
         microchipId: currentUser?.role === 'shelter' ? microchipId : undefined
       };
-      // adoption status from modal
       const adoptionStatus = document.getElementById('modal-adoptionStatus')?.value || 'none';
-      animalPayload.adoptable = adoptionStatus === 'adoptable';
+      animalPayload.adoptable = currentUser?.role === 'shelter' && adoptionStatus === 'adoptable';
 
       const lastSeenMode = document.getElementById('lastSeenCustomBtn').classList.contains('is-selected') ? 'custom' : 'today';
       const customDate = document.getElementById('modal-lastSeenDate').value;
@@ -1915,7 +2342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (editingId) {
         if (animalIdToUse) {
-          const aRes = await fetch(`http://localhost:3000/api/v1/animals/${animalIdToUse}`, {
+          const aRes = await fetch(`/api/v1/animals/${animalIdToUse}`, {
             method: 'PUT',
             headers: animalHeaders,
             body: JSON.stringify(animalPayload)
@@ -1924,7 +2351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const aData = await aRes.json();
           animalIdToUse = aData._id;
         } else {
-          const animalRes = await fetch('http://localhost:3000/api/v1/animals', {
+          const animalRes = await fetch('/api/v1/animals', {
             method: 'POST',
             headers: animalHeaders,
             body: JSON.stringify(animalPayload)
@@ -1934,7 +2361,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           animalIdToUse = animal._id;
         }
       } else {
-        const animalRes = await fetch('http://localhost:3000/api/v1/animals', {
+        const animalRes = await fetch('/api/v1/animals', {
           method: 'POST',
           headers: animalHeaders,
           body: JSON.stringify(animalPayload)
@@ -1970,13 +2397,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (healthCondition) fd.append('healthCondition', healthCondition);
           fd.append('status', status);
           fd.append('photo', photoFile);
-          res = await fetch('http://localhost:3000/api/v1/announcements', {
+          res = await fetch('/api/v1/announcements', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + token },
             body: fd
           });
         } else {
-          res = await fetch('http://localhost:3000/api/v1/announcements', {
+          res = await fetch('/api/v1/announcements', {
             method: 'POST',
             headers: authHeader,
             body: JSON.stringify({ ...body, coordinates: loc.coordinates })
@@ -1994,14 +2421,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (healthCondition) fd.append('healthCondition', healthCondition);
         fd.append('status', status);
         fd.append('photo', photoFile);
-        res = await fetch(`http://localhost:3000/api/v1/announcements/${editingId}`, {
+        res = await fetch(`/api/v1/announcements/${editingId}`, {
           method: 'PUT',
           headers: { 'Authorization': 'Bearer ' + token },
           body: fd
         });
         if (!res.ok) throw new Error('Errore aggiornamento annuncio');
       } else {
-        res = await fetch(`http://localhost:3000/api/v1/announcements/${editingId}`, {
+        res = await fetch(`/api/v1/announcements/${editingId}`, {
           method: 'PUT',
           headers: authHeader,
           body: JSON.stringify({
@@ -2024,19 +2451,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // delegate edit buttons to open modal with data
   document.addEventListener('click', async (e) => {
     const el = e.target;
     if (el.classList.contains('edit')) {
       const id = el.dataset.id;
-      const res = await fetch(`http://localhost:3000/api/v1/announcements/${id}`);
+      const res = await fetch(`/api/v1/announcements/${id}`);
       if (!res.ok) { alert('Errore caricamento annuncio'); return; }
       const ann = await res.json();
       openModalForEdit(ann);
     }
   });
 
-  // note: opening by card click is handled above with delegated listener on grid
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -2049,11 +2474,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 });
 
-// Modal and map picker logic
 
+/**
+ * Parses modal coordinate text into GeoJSON coordinate order.
+ * @param {string} input - Coordinate input in decimal or DMS notation.
+ * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when parsing fails.
+ */
 function normalizeCoordsFromInput(input) {
   if (!input) return null;
-  // Try DMS parse first
+  /**
+   * Parses a DMS coordinate fragment while suppressing parser errors.
+   * @param {string} str - DMS latitude or longitude fragment.
+   * @returns {number|null} Decimal coordinate, or null when parsing fails.
+   */
   const tryDms = (str) => {
     try {
       return dmsToDecimal(str);
@@ -2061,7 +2494,6 @@ function normalizeCoordsFromInput(input) {
   };
 
   let a = null, b = null;
-  // If contains non-numeric chars like ° or N/S/E/W, attempt DMS parsing
   if (/[°'"NSWE]/i.test(input)) {
     const raw = input.split(',');
     if (raw.length !== 2) return null;
@@ -2074,27 +2506,25 @@ function normalizeCoordsFromInput(input) {
     if (parts.length !== 2) return null;
     [a, b] = parts;
   }
-  // Heuristic: latitude in Italy ~ 35..47, longitude ~ 6..18
   const isA_lat = a >= 35 && a <= 47;
   const isB_lat = b >= 35 && b <= 47;
-  // if a looks like lat and b like lng, swap to [lng, lat]
   if (isA_lat && !isB_lat) return [b, a];
   if (!isA_lat && isB_lat) return [a, b];
-  // fallback: assume input is [lng, lat]
   return [a, b];
 }
 
-// Parse a DMS component string like "46°04'00\"N" or "46 4 0 N" or "46.0667N"
+/**
+ * Converts a DMS or decimal coordinate string to a decimal number.
+ * @param {string} str - Coordinate string, optionally including hemisphere letters.
+ * @returns {number|null} Decimal coordinate, or null when the input cannot be parsed.
+ */
 function dmsToDecimal(str) {
   if (!str || typeof str !== 'string') return null;
   const s = str.trim();
-  // detect hemisphere
   let hemi = null;
   const m = s.match(/[NnSsEeWw]/);
   if (m) hemi = m[0].toUpperCase();
-  // remove letters
   const cleaned = s.replace(/[NnSsEeWw]/g, '').trim();
-  // try to parse degrees°minutes'seconds"
   const dmsMatch = cleaned.match(/(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"\s]*/);
   if (dmsMatch) {
     const deg = parseFloat(dmsMatch[1]);
@@ -2104,7 +2534,6 @@ function dmsToDecimal(str) {
     if (hemi === 'S' || hemi === 'W') dec = -dec;
     return dec;
   }
-  // try degrees and minutes only: "46° 4.5'"
   const dmMatch = cleaned.match(/(\d+)[°\s]+(\d+(?:\.\d+)?)[\'\s]*/);
   if (dmMatch) {
     const deg = parseFloat(dmMatch[1]);
@@ -2113,7 +2542,6 @@ function dmsToDecimal(str) {
     if (hemi === 'S' || hemi === 'W') dec = -dec;
     return dec;
   }
-  // try plain decimal degrees
   const num = parseFloat(cleaned);
   if (!isNaN(num)) {
     let dec = num;
@@ -2123,6 +2551,12 @@ function dmsToDecimal(str) {
   return null;
 }
 
+/**
+ * Converts a decimal coordinate to a DMS string with hemisphere suffix.
+ * @param {number} dec - Decimal coordinate value.
+ * @param {string} type - Coordinate axis, either `lat` or `lng`.
+ * @returns {string} DMS coordinate string, or an empty string for invalid values.
+ */
 function decimalToDMS(dec, type) {
   if (dec === null || dec === undefined || isNaN(dec)) return '';
   const abs = Math.abs(dec);
@@ -2136,6 +2570,10 @@ function decimalToDMS(dec, type) {
   return `${deg}°${min}'${sec}"${hemi}`;
 }
 
+/**
+ * Opens the modal for create UI.
+ * @returns {void}
+ */
 function openModalForCreate() {
   editingId = null;
   currentEditStatus = 'ACTIVE';
@@ -2162,12 +2600,20 @@ function openModalForCreate() {
   document.getElementById('modal-lastSeenDate').style.display = 'none';
   document.getElementById('modal-animalBehaviour').value = 'indifferente';
   document.getElementById('modal-healthCondition').value = 'in salute';
-  // default adoption status
+  configureModalFieldsForType(document.getElementById('modal-type')?.value || 'LostAnimal');
   const adoptionSelect = document.getElementById('modal-adoptionStatus');
-  if (adoptionSelect) adoptionSelect.value = 'none';
+  if (adoptionSelect) {
+    adoptionSelect.value = 'none';
+    adoptionSelect.disabled = currentUser?.role !== 'shelter';
+  }
   showModal(true);
 }
 
+/**
+ * Opens the modal for edit UI.
+ * @param {Object} ann - Announcement being edited.
+ * @returns {void}
+ */
 function openModalForEdit(ann) {
   editingId = ann._id;
   editingAnimalId = ann.animalId?._id || ann.animalId || null;
@@ -2187,7 +2633,6 @@ function openModalForEdit(ann) {
   document.getElementById('modal-distinctiveFeatures').value = ann.animalId?.distinctiveFeatures || '';
   document.getElementById('modal-microchipId').value = ann.animalId?.microchipId || '';
   const photo = ann.animalId?.photos?.[0] || '';
-  // existing announcement photo is not loaded into the edit file input; user can upload a new file to replace it
   document.getElementById('modal-photo-file').value = '';
   const preview = document.getElementById('modal-photo-preview');
   if (photo) {
@@ -2199,13 +2644,11 @@ function openModalForEdit(ann) {
   }
   const coords = ann.location?.coordinates;
   if (coords) {
-    // stored as [lng, lat] -> display as lat DMS, lng DMS
     const lng = coords[0]; const lat = coords[1];
     document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
   } else {
     document.getElementById('modal-coords').value = '';
   }
-  // populate the extra fields if present
   if (ann.lastSeenDate) {
     document.getElementById('modal-lastSeenDate').value = new Date(ann.lastSeenDate).toISOString().slice(0,10);
     setLastSeenMode('custom');
@@ -2215,15 +2658,20 @@ function openModalForEdit(ann) {
   }
   document.getElementById('modal-animalBehaviour').value = ann.animalBehaviour || 'indifferente';
   document.getElementById('modal-healthCondition').value = ann.healthCondition || 'in salute';
-  // adoption status from associated animal
+  configureModalFieldsForType(ann.type || 'LostAnimal');
   const adoptionSelectEdit = document.getElementById('modal-adoptionStatus');
   if (adoptionSelectEdit) {
-    if (ann.animalId?.adoptable) adoptionSelectEdit.value = 'adoptable';
-    else adoptionSelectEdit.value = 'none';
+    adoptionSelectEdit.value = ann.animalId?.adoptable && currentUser?.role === 'shelter' ? 'adoptable' : 'none';
+    adoptionSelectEdit.disabled = currentUser?.role !== 'shelter';
   }
   showModal(true);
 }
 
+/**
+ * Shows or hides the announcement editor modal.
+ * @param {boolean} visible - Whether the modal should be visible.
+ * @returns {void}
+ */
 function showModal(visible) {
   const overlay = document.getElementById('modal-overlay');
   overlay.style.display = visible ? 'flex' : 'none';
@@ -2231,6 +2679,10 @@ function showModal(visible) {
   if (!visible) destroyMapPicker();
 }
 
+/**
+ * Initializes the Leaflet map used to pick announcement coordinates.
+ * @returns {void}
+ */
 function initMapPicker() {
   if (mapInstance) return;
   mapInstance = L.map('modal-map').setView([46.0667,11.1333], 13);
@@ -2242,6 +2694,10 @@ function initMapPicker() {
   requestAnimationFrame(() => mapInstance.invalidateSize());
 }
 
+/**
+ * Destroys the announcement coordinate picker map and clears its marker.
+ * @returns {void}
+ */
 function destroyMapPicker() {
   if (!mapInstance) return;
   mapInstance.off();
@@ -2251,6 +2707,12 @@ function destroyMapPicker() {
   document.getElementById('modal-map').style.display = 'none';
 }
 
+/**
+ * Sets marker.
+ * @param {number} lng - Selected longitude.
+ * @param {number} lat - Selected latitude.
+ * @returns {void}
+ */
 function setMarker(lng, lat){
   if (!mapInstance) initMapPicker();
   if (mapMarker) mapMarker.setLatLng([lat,lng]); else mapMarker = L.marker([lat,lng]).addTo(mapInstance);
@@ -2259,12 +2721,21 @@ function setMarker(lng, lat){
   requestAnimationFrame(() => mapInstance && mapInstance.invalidateSize());
 }
 
+/**
+ * Sets coords from lat lng.
+ * @param {number} lat - Selected latitude.
+ * @param {number} lng - Selected longitude.
+ * @returns {void}
+ */
 function setCoordsFromLatLng(lat, lng) {
   setMarker(lng, lat);
-  // set coords in DMS format for user clarity
   document.getElementById('modal-coords').value = `${decimalToDMS(lat,'lat')}, ${decimalToDMS(lng,'lng')}`;
 }
 
+/**
+ * Shows the announcement coordinate picker map and refreshes its layout.
+ * @returns {void}
+ */
 function showMapPicker() {
   const mapEl = document.getElementById('modal-map');
   mapEl.style.display = 'block';

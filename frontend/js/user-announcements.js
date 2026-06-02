@@ -1,6 +1,11 @@
-const API_BASE = 'http://localhost:3000/api/v1/announcements';
-const ADMIN_BASE = 'http://localhost:3000/api/v1/admin';
+const API_BASE = '/api/v1/announcements';
+const ADMIN_BASE = '/api/v1/admin';
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {*} input - Value that will be interpolated into announcement markup.
+ * @returns {string} HTML-safe string representation of the value.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -10,15 +15,30 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Formats a value for UI display, replacing empty values with a placeholder.
+ * @param {*} value - Field value shown in the announcement details UI.
+ * @returns {string} Trimmed display text or the empty-value placeholder.
+ */
 function displayValue(value) {
   const text = String(value ?? '').trim();
   return text || '- -';
 }
 
+/**
+ * Reads a query-string parameter from the current page URL.
+ * @param {string} name - Query parameter name to read.
+ * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
+ */
 function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+/**
+ * Shows an error message in the page error area.
+ * @param {string} message - Error text displayed in the page banner.
+ * @returns {void}
+ */
 function showError(message) {
   const banner = document.getElementById('error-banner');
   if (!banner) return;
@@ -26,6 +46,10 @@ function showError(message) {
   banner.style.display = 'block';
 }
 
+/**
+ * Builds authorization headers for admin moderation requests.
+ * @returns {{'Content-Type': string, Authorization: string}} JSON request headers with the stored bearer token.
+ */
 function authHeader() {
   const token = localStorage.getItem('token');
   return {
@@ -34,17 +58,35 @@ function authHeader() {
   };
 }
 
+/**
+ * Fetches announcement by id data from the API.
+ * @param {string} id - Announcement identifier to load.
+ * @returns {Promise<Object>} Full announcement detail payload.
+ * @throws {Error} When the announcement cannot be loaded.
+ */
 async function fetchAnnouncementById(id) {
   const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
   if (!res.ok) throw new Error('Errore caricamento annuncio');
   return res.json();
 }
 
+/**
+ * Reads an API error message, falling back to a status-aware default.
+ * @param {Response} res - Failed fetch response.
+ * @param {string} fallback - Message prefix used when the response body has no message.
+ * @returns {Promise<string>} Error message suitable for display.
+ */
 async function readResponseError(res, fallback) {
   const json = await res.json().catch(() => ({}));
-  return json?.message || `${fallback} (${res.status})`;
+  return json?.userMessage || json?.message || `${fallback} (${res.status})`;
 }
 
+/**
+ * Sends an admin warning for the selected announcement publisher.
+ * @param {string} userId - User identifier to warn.
+ * @returns {Promise<void>} Promise resolving after the warning API call succeeds.
+ * @throws {Error} When the admin API rejects the warning.
+ */
 async function warnUser(userId) {
   const reason = prompt('Motivo avvertimento:', 'Ammonimento da moderazione account');
   if (reason === null) return;
@@ -58,11 +100,17 @@ async function warnUser(userId) {
   alert('Avvertimento inviato');
 }
 
+/**
+ * Blocks an account from the user announcements moderation page.
+ * @param {string} userId - User identifier to block.
+ * @returns {Promise<void>} Promise resolving after the account is blocked and the list reloads.
+ * @throws {Error} When the admin API rejects the block request.
+ */
 async function blockUser(userId) {
   const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
   if (reason === null) return;
   const blockReason = reason.trim() || 'Account bloccato da admin';
-  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/status`, {
+  const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`, {
     method: 'PATCH',
     headers: authHeader(),
     body: JSON.stringify({ status: 'blocked', reason: blockReason })
@@ -72,6 +120,11 @@ async function blockUser(userId) {
   await loadUserAnnouncements();
 }
 
+/**
+ * Renders announcement comments as HTML markup.
+ * @param {Array<Object>} comments - Comment records attached to the announcement.
+ * @returns {string} HTML markup for the comment list or empty state.
+ */
 function renderCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return '<div class="comments-empty">Nessun commento</div>';
@@ -94,11 +147,20 @@ function renderCommentsHtml(comments) {
     .join('');
 }
 
+/**
+ * Closes the current modal and restores page scrolling.
+ * @returns {void}
+ */
 function closeModal() {
   document.getElementById('modal-overlay')?.classList.remove('active');
   document.body.style.overflow = '';
 }
 
+/**
+ * Opens and populates the announcement detail modal.
+ * @param {Object} ann - Announcement summary used to open the modal.
+ * @returns {Promise<void>} Promise resolving after the modal is populated and shown.
+ */
 async function openModal(ann) {
   let data = ann;
   try {
@@ -192,6 +254,11 @@ async function openModal(ann) {
   document.body.style.overflow = 'hidden';
 }
 
+/**
+ * Builds a DOM card for an announcement and binds its interactions.
+ * @param {Object} ann - Announcement record to render in the grid.
+ * @returns {HTMLElement} Interactive announcement card element.
+ */
 function buildCard(ann) {
   const animal = ann.animalId || {};
   const publisher = ann.publisherId || {};
@@ -245,6 +312,10 @@ function buildCard(ann) {
   return card;
 }
 
+/**
+ * Loads user announcements data and updates the UI.
+ * @returns {Promise<void>} Promise resolving after the user's announcement grid is updated.
+ */
 async function loadUserAnnouncements() {
   const userId = getQueryParam('userId');
   const user = getQueryParam('user');
@@ -258,7 +329,8 @@ async function loadUserAnnouncements() {
   }
 
   const res = await fetch(`${API_BASE}?userId=${encodeURIComponent(userId)}&status=all`);
-  const data = await res.json().catch(() => []);
+  const payload = await res.json().catch(() => []);
+  const data = Array.isArray(payload) ? payload : payload.data || [];
   if (!res.ok || !Array.isArray(data)) {
     showError('Impossibile caricare gli annunci utente.');
     return;
@@ -276,6 +348,11 @@ async function loadUserAnnouncements() {
   data.forEach((ann) => grid.appendChild(buildCard(ann)));
 }
 
+/**
+ * Sets up admin actions.
+ * @param {string} userId - User identifier targeted by warn and block controls.
+ * @returns {void}
+ */
 function setupAdminActions(userId) {
   const warnButton = document.getElementById('warn-user');
   const blockButton = document.getElementById('block-user');

@@ -232,6 +232,7 @@
 											<option value="LostAnimal">Smarrito</option>
 											<option value="Sighting">Avvistamento</option>
 										</select>
+										<span id="modal-type-hint" class="form-hint">Scegli il tipo di annuncio.</span>
 									</div>
 								</div>
 								<div class="field">
@@ -240,8 +241,9 @@
 								</div>
 								<div class="form-grid">
 									<div id="modal-animal-name-row" class="field" style="display:none;">
-										<label>Nome animale</label>
+										<label id="modal-animal-name-label">Nome animale</label>
 										<input id="modal-animalName" placeholder="Es. Luna" />
+										<span id="modal-animal-name-hint" class="form-hint">Campo opzionale se non conosci il nome.</span>
 									</div>
 									<div class="field">
 										<label>Specie</label>
@@ -272,7 +274,7 @@
 									<input id="modal-microchipId" placeholder="Codice microchip" />
 								</div>
 
-								<div class="field">
+								<div id="modal-adoption-row" class="field">
 									<label>Disponibilità</label>
 									<select id="modal-adoptionStatus">
 											<option value="none">Non disponibile</option>

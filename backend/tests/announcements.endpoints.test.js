@@ -63,37 +63,49 @@ describe('announcement endpoints', () => {
   });
 
   test('GET /api/v1/announcements returns list', async () => {
-    mockAnnouncementModel.find.mockReturnValue(
-      makeQuery([
-        makeDoc({
-          _id: 'ann1',
-          title: 'Test',
-          publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
-        })
-      ])
-    );
+    const query = makeQuery([
+      makeDoc({
+        _id: 'ann1',
+        title: 'Test',
+        publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
+      })
+    ]);
+    mockAnnouncementModel.find.mockReturnValue(query);
+    mockAnnouncementModel.countDocuments.mockResolvedValue(12);
 
-    const res = await request(app).get('/api/v1/announcements');
+    const res = await request(app).get('/api/v1/announcements?page=2&limit=5');
 
     expect(res.status).toBe(200);
-    expect(res.body[0]._id).toBe('ann1');
+    expect(res.headers['content-type']).toMatch(/json/);
+    expect(res.body.meta).toEqual({
+      totalItems: 12,
+      totalPages: 3,
+      currentPage: 2
+    });
+    expect(query.skip).toHaveBeenCalledWith(5);
+    expect(query.limit).toHaveBeenCalledWith(5);
+    expect(query.select).toHaveBeenCalledWith('-photo -comments -imageEmbedding -__v');
+    expect(res.body.data[0]._id).toBe('ann1');
   });
 
   test('GET /api/v1/announcements/:id returns one announcement', async () => {
-    mockAnnouncementModel.findById.mockReturnValue({
-      select: jest.fn(() => ({
-        populate: jest.fn(() => ({
-          populate: jest.fn(() => Promise.resolve(makeDoc({
-            _id: 'ann1',
-            publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
-          })))
-        }))
+    const select = jest.fn(() => ({
+      populate: jest.fn(() => ({
+        populate: jest.fn(() => Promise.resolve(makeDoc({
+          _id: 'ann1',
+          publisherId: { _id: 'user1', username: 'mario', contactVisibility: {} }
+        })))
       }))
+    }));
+    mockAnnouncementModel.findById.mockReturnValue({
+      select
     });
 
     const res = await request(app).get('/api/v1/announcements/507f1f77bcf86cd799439011');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
+    expect(select).toHaveBeenCalledWith('-photo -imageEmbedding -__v');
     expect(res.body._id).toBe('ann1');
   });
 
@@ -121,28 +133,30 @@ describe('announcement endpoints', () => {
     const res = await request(app).get('/api/v1/announcements/507f1f77bcf86cd799439011/similar');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.matches).toHaveLength(1);
   });
 
-  test('POST /api/v1/announcements/quick creates quick announcement', async () => {
+  test('POST /api/v1/announcements with isQuick creates quick announcement', async () => {
     mockAnimalModel.create.mockResolvedValue(makeDoc({ _id: 'animal1' }));
 
     const res = await request(app)
-      .post('/api/v1/announcements/quick')
+      .post('/api/v1/announcements')
       .send({
+        isQuick: true,
         species: 'Dog',
         color: 'Brown',
         coordinates: [12.5, 41.9]
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.status).toBe('ACTIVE');
   });
 
   test('POST /api/v1/announcements/:id/reports creates report', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
     mockAnnouncementModel.findById.mockReturnValue({
@@ -160,6 +174,7 @@ describe('announcement endpoints', () => {
       .send({ reason: 'altro', details: 'test' });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/Segnalazione inviata/);
   });
 });

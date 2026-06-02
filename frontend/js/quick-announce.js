@@ -1,4 +1,3 @@
-// Quick Announcement Modal Management
 const QUICK_ANNOUNCE_MODAL = document.getElementById('quick-announce-modal');
 const QUICK_ANNOUNCE_FORM = document.getElementById('quick-announce-form');
 const QUICK_ANNOUNCE_BTN = document.getElementById('quick-announce-btn');
@@ -6,23 +5,37 @@ const QUICK_ANNOUNCE_CLOSE = document.getElementById('quick-announce-close');
 const QUICK_ANNOUNCE_CANCEL = document.getElementById('quick-announce-cancel');
 const QUICK_ANNOUNCE_PROGRESS = document.getElementById('qa-progress');
 const QUICK_ANNOUNCE_SUBMIT = document.querySelector('#quick-announce-form button[type="submit"]');
+const QUICK_ANNOUNCE_QUERY = 'quick-announce=1';
 
 let currentLocation = null;
 
-// Check Authentication
+/**
+ * Checks whether the browser has a stored authentication token.
+ * @returns {boolean} True when a JWT token is stored in local storage.
+ */
 function isUserLoggedIn() {
   return !!localStorage.getItem('token');
 }
 
-// Modal Control Functions
+/**
+ * Opens the quick-announcement modal.
+ * @returns {void}
+ */
 function openQuickAnnounceModal() {
+  if (!QUICK_ANNOUNCE_MODAL) {
+    window.location.href = '/?quick-announce=1';
+    return;
+  }
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   
-  // Request geolocation silently
   requestGeolocation();
 }
 
+/**
+ * Closes the quick-announcement modal.
+ * @returns {void}
+ */
 function closeQuickAnnounceModal() {
   QUICK_ANNOUNCE_MODAL.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
@@ -31,6 +44,11 @@ function closeQuickAnnounceModal() {
   setQuickAnnounceLoading(false);
 }
 
+/**
+ * Toggles loading state for the quick-announcement form.
+ * @param {boolean} isLoading - Whether submit, cancel, and close controls should be disabled.
+ * @returns {void}
+ */
 function setQuickAnnounceLoading(isLoading) {
   if (QUICK_ANNOUNCE_PROGRESS) {
     QUICK_ANNOUNCE_PROGRESS.classList.toggle('is-visible', isLoading);
@@ -41,7 +59,10 @@ function setQuickAnnounceLoading(isLoading) {
   if (QUICK_ANNOUNCE_CLOSE) QUICK_ANNOUNCE_CLOSE.disabled = isLoading;
 }
 
-// Geolocation Handler
+/**
+ * Requests the current browser geolocation coordinates.
+ * @returns {void}
+ */
 function requestGeolocation() {
   const locationDisplay = document.getElementById('qa-location-status');
   
@@ -89,18 +110,28 @@ function requestGeolocation() {
   );
 }
 
-// Form Submission Handler
+/**
+ * Handles quick-announcement form submission and API creation.
+ * @param {Event} e - Browser event object.
+ * @returns {Promise<void>} Promise resolving after validation and submission handling finish.
+ */
 async function handleQuickAnnounceSubmit(e) {
   e.preventDefault();
 
-  // Validate required fields
   const species = document.getElementById('qa-species').value.trim();
   const color = document.getElementById('qa-color').value.trim();
   const healthCondition = document.getElementById('qa-health').value;
   const type = document.getElementById('qa-type').value;
+  const contactEmail = document.getElementById('qa-contact-email')?.value.trim();
+  const contactPhone = document.getElementById('qa-contact-phone')?.value.trim();
 
   if (!species || !color || !healthCondition || !type) {
     alert('Per favore, compila i campi obbligatori: Specie, Colore, Condizioni di salute e Tipo di segnalazione.');
+    return;
+  }
+
+  if (!contactEmail && !contactPhone) {
+    alert('Per pubblicare una segnalazione rapida devi inserire almeno un contatto tra email e telefono.');
     return;
   }
 
@@ -109,7 +140,6 @@ async function handleQuickAnnounceSubmit(e) {
     return;
   }
 
-  // Collect form data
   const formData = new FormData(QUICK_ANNOUNCE_FORM);
   const data = {
     type: formData.get('type'),
@@ -122,6 +152,9 @@ async function handleQuickAnnounceSubmit(e) {
     description: formData.get('description') || 'Nessuna descrizione',
     healthCondition: formData.get('healthCondition'),
     animalBehaviour: formData.get('animalBehaviour') || 'indifferente',
+    contactName: formData.get('contactName') || '',
+    contactEmail: formData.get('contactEmail') || '',
+    contactPhone: formData.get('contactPhone') || '',
     coordinates: currentLocation.coordinates,
     photo: formData.get('photo')
   };
@@ -134,11 +167,17 @@ async function handleQuickAnnounceSubmit(e) {
   }
 }
 
-// API Call to Create Announcement
+/**
+ * Creates the animal and quick announcement records from form data.
+ * @param {Object} data - Quick-announcement form values, coordinates, and optional photo file.
+ * @returns {Promise<void>} Promise resolving after the announcement is created and redirect is scheduled.
+ * @throws {Error} When the API rejects creation or the response cannot be submitted.
+ */
 async function submitQuickAnnounce(data) {
   setQuickAnnounceLoading(true);
 
   const announcementPayload = {
+    isQuick: true,
     type: data.type,
     species: data.species,
     breed: data.breed,
@@ -150,6 +189,9 @@ async function submitQuickAnnounce(data) {
     coordinates: data.coordinates,
     healthCondition: data.healthCondition,
     animalBehaviour: data.animalBehaviour,
+    contactName: data.contactName,
+    contactEmail: data.contactEmail,
+    contactPhone: data.contactPhone,
     lastSeenDate: new Date().toISOString()
   };
 
@@ -158,6 +200,7 @@ async function submitQuickAnnounce(data) {
     if (data.photo && data.photo.size > 0) {
       const announcementForm = new FormData();
       announcementForm.append('type', announcementPayload.type);
+      announcementForm.append('isQuick', 'true');
       announcementForm.append('species', announcementPayload.species);
       announcementForm.append('breed', announcementPayload.breed);
       announcementForm.append('gender', announcementPayload.gender);
@@ -165,18 +208,21 @@ async function submitQuickAnnounce(data) {
       if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
       if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
       announcementForm.append('description', announcementPayload.description);
+      if (announcementPayload.contactName) announcementForm.append('contactName', announcementPayload.contactName);
+      if (announcementPayload.contactEmail) announcementForm.append('contactEmail', announcementPayload.contactEmail);
+      if (announcementPayload.contactPhone) announcementForm.append('contactPhone', announcementPayload.contactPhone);
       announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
       announcementForm.append('healthCondition', announcementPayload.healthCondition);
       announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
       announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
       announcementForm.append('photo', data.photo);
 
-      announcementRes = await fetch('http://localhost:3000/api/v1/announcements/quick', {
+      announcementRes = await fetch('/api/v1/announcements', {
         method: 'POST',
         body: announcementForm
       });
     } else {
-      announcementRes = await fetch('http://localhost:3000/api/v1/announcements/quick', {
+      announcementRes = await fetch('/api/v1/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(announcementPayload)
@@ -185,7 +231,7 @@ async function submitQuickAnnounce(data) {
 
     if (!announcementRes.ok) {
       const errorData = await announcementRes.json().catch(() => ({}));
-      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.message || announcementRes.status}`);
+      throw new Error(`Errore nella creazione dell'annuncio: ${errorData.userMessage || errorData.message || announcementRes.status}`);
     }
 
     await announcementRes.json();
@@ -200,27 +246,37 @@ async function submitQuickAnnounce(data) {
   }
 }
 
-// Event Listeners
+/**
+ * Binds quick-announcement modal controls after the DOM is ready.
+ * @returns {void} No return value.
+ */
 document.addEventListener('DOMContentLoaded', () => {
-  // Modal open/close events
   QUICK_ANNOUNCE_BTN?.addEventListener('click', openQuickAnnounceModal);
   QUICK_ANNOUNCE_CLOSE?.addEventListener('click', closeQuickAnnounceModal);
   QUICK_ANNOUNCE_CANCEL?.addEventListener('click', closeQuickAnnounceModal);
 
-  // Close modal on overlay click (outside content)
   QUICK_ANNOUNCE_MODAL?.addEventListener('click', (e) => {
     if (e.target === QUICK_ANNOUNCE_MODAL) {
       closeQuickAnnounceModal();
     }
   });
 
-  // Form submission
   QUICK_ANNOUNCE_FORM?.addEventListener('submit', handleQuickAnnounceSubmit);
 
-  // Keyboard shortcut: Escape to close
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && QUICK_ANNOUNCE_MODAL?.getAttribute('aria-hidden') === 'false') {
       closeQuickAnnounceModal();
     }
   });
+
+  if (QUICK_ANNOUNCE_MODAL && new URLSearchParams(window.location.search).get('quick-announce') === '1') {
+    openQuickAnnounceModal();
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest?.('[data-quick-announce]');
+  if (!trigger) return;
+  event.preventDefault();
+  openQuickAnnounceModal();
 });

@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
 const Announcement = require('../models/Announcement');
 const AuditLog = require('../models/AuditLog');
 const Notification = require('../models/Notification');
@@ -7,62 +6,57 @@ const Report = require('../models/Report');
 const User = require('../models/User');
 const { removeAnnouncementCascade } = require('./announcementController');
 const { buildAuditQuery, writeAuditLog } = require('../services/auditService');
+const { sendAccountBlockedEmail } = require('../services/emailService');
+const { sendError } = require('../utils/errorResponse');
 
+/**
+ * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
+ * @param {Object} res - Express response object.
+ * @param {string} label - Human-readable name of the invalid identifier.
+ * @returns {import('express').Response} Express response with the validation error body.
+ */
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
 }
 
+/**
+ * Writes an admin audit entry without exposing audit persistence details to handlers.
+ * @param {string} actorId - Authenticated admin user identifier.
+ * @param {string} action - Audit action label to store.
+ * @param {Object|string|null} target - User, announcement owner, or identifier affected by the action.
+ * @returns {Promise<void>} Promise resolving after the audit write attempt finishes.
+ */
 async function writeAudit(actorId, action, target) {
   await writeAuditLog({ actor: actorId, action, target });
 }
 
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-}
-
-async function sendAccountBlockedEmail(user, reason) {
-  if (!user?.email || !process.env.SMTP_USER || !process.env.SMTP_PASS) return;
-  const transporter = createTransporter();
-  const safeReason = escapeHtml(reason);
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: user.email,
-    subject: 'Account bloccato - Trovami',
-    html: `
-      <h2>Account bloccato</h2>
-      <p>Il tuo account Trovami e stato bloccato da un admin.</p>
-      <p><strong>Motivo:</strong> ${safeReason}</p>
-    `
-  });
-}
-
+/**
+ * Returns published announcements count.
+ * @param {string} userId - Publisher user identifier.
+ * @returns {Promise<number>} Number of announcements published by the user.
+ */
 async function getPublishedAnnouncementsCount(userId) {
   return Announcement.countDocuments({ publisherId: userId });
 }
 
+/**
+ * Adds the published-announcement count to a user payload.
+ * @param {Object} user - Mongoose user document or plain user object.
+ * @returns {Promise<Object>} User payload with `publishedAnnouncementsCount`.
+ */
 async function withPublishedAnnouncementsCount(user) {
   const obj = user.toObject ? user.toObject() : user;
   obj.publishedAnnouncementsCount = await getPublishedAnnouncementsCount(obj._id);
   return obj;
 }
 
+/**
+ * Handles the get reports API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getReports = async (req, res) => {
   try {
     const status = req.query.status || 'OPEN';
@@ -101,45 +95,55 @@ exports.getReports = async (req, res) => {
       return obj;
     }));
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero report', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero report', 'ADMIN_REPORTS_FETCH_ERROR');
   }
 };
 
+/**
+ * Handles the get user details API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getUserDetails = async (req, res) => {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
 
-    const user = await User.findById(userId).select('-passwordHash -sessionToken');
+    const user = await User.findById(userId).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     res.json(await withPublishedAnnouncementsCount(user));
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero utente', 'ADMIN_USER_FETCH_ERROR');
   }
 };
 
-exports.getUserAnnouncementCount = async (req, res) => {
-  try {
-    const userId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
-
-    res.json({ publishedAnnouncementsCount: await getPublishedAnnouncementsCount(userId) });
-  } catch (err) {
-    res.status(500).json({ message: 'Errore conteggio annunci utente', error: err.message });
-  }
-};
-
+/**
+ * Handles the get audit logs API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getAuditLogs = async (req, res) => {
   try {
     const { filter, sort, limit } = buildAuditQuery(req.query);
     const logs = await AuditLog.find(filter).sort(sort).limit(limit);
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero audit logs', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero audit logs', 'ADMIN_AUDIT_LOGS_FETCH_ERROR');
   }
 };
 
+/**
+ * Handles the update report status API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateReportStatus = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return invalidId(res, 'ID report');
@@ -155,10 +159,17 @@ exports.updateReportStatus = async (req, res) => {
     }
     res.json(report);
   } catch (err) {
-    res.status(500).json({ message: 'Errore aggiornamento report', error: err.message });
+    sendError(res, 500, err.message, 'Errore aggiornamento report', 'ADMIN_REPORT_UPDATE_ERROR');
   }
 };
 
+/**
+ * Handles the delete announcement as admin API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteAnnouncementAsAdmin = async (req, res) => {
   try {
     const announcementId = req.params.id;
@@ -184,11 +195,17 @@ exports.deleteAnnouncementAsAdmin = async (req, res) => {
     await writeAudit(req.user.userId, 'eliminato annuncio', announcement.publisherId || null);
     res.json({ success: true, warnedUser: !!publisherId });
   } catch (err) {
-    res.status(500).json({ message: 'Errore eliminazione admin', error: err.message });
+    sendError(res, 500, err.message, 'Errore eliminazione admin', 'ADMIN_ANNOUNCEMENT_DELETE_ERROR');
   }
 };
 
-exports.blockUser = async (req, res) => {
+/**
+ * Applies account-block side effects to a target user.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+async function blockUserOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
@@ -205,7 +222,6 @@ exports.blockUser = async (req, res) => {
       userId,
       {
         isActive: false,
-        sessionToken: null,
         conductWarnings: [],
         readmissionRequest: {
           status: 'none',
@@ -216,7 +232,7 @@ exports.blockUser = async (req, res) => {
         }
       },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     await Promise.all(announcementIds.map(announcementId => removeAnnouncementCascade(announcementId)));
@@ -243,10 +259,17 @@ exports.blockUser = async (req, res) => {
     responseUser.reviewedReportsCount = reviewedReports.modifiedCount || 0;
     res.json(responseUser);
   } catch (err) {
-    res.status(500).json({ message: 'Errore blocco utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore blocco utente', 'ADMIN_USER_BLOCK_ERROR');
   }
-};
+}
 
+/**
+ * Handles the get pending readmission requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPendingReadmissionRequests = async (req, res) => {
   try {
     const users = await User.find({
@@ -257,10 +280,17 @@ exports.getPendingReadmissionRequests = async (req, res) => {
       .sort({ 'readmissionRequest.requestedAt': -1 });
     res.json(users);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero richieste riammissione', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero richieste riammissione', 'ADMIN_READMISSIONS_FETCH_ERROR');
   }
 };
 
+/**
+ * Handles the review readmission request API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.reviewReadmissionRequest = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -277,7 +307,7 @@ exports.reviewReadmissionRequest = async (req, res) => {
       update.isActive = true;
     }
 
-    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-passwordHash -sessionToken');
+    const user = await User.findByIdAndUpdate(userId, update, { new: true }).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     try {
@@ -304,11 +334,17 @@ exports.reviewReadmissionRequest = async (req, res) => {
     }
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore gestione riammissione', error: err.message });
+    sendError(res, 500, err.message, 'Errore gestione riammissione', 'ADMIN_READMISSION_UPDATE_ERROR');
   }
 };
 
-exports.warnUser = async (req, res) => {
+/**
+ * Applies warning side effects to a target user.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+async function warnUserOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
@@ -327,7 +363,7 @@ exports.warnUser = async (req, res) => {
         }
       },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     await Notification.create({
@@ -339,37 +375,79 @@ exports.warnUser = async (req, res) => {
     await writeAudit(req.user.userId, 'ammonito utente', user);
     res.json(await withPublishedAnnouncementsCount(user));
   } catch (err) {
-    res.status(500).json({ message: 'Errore ammonimento utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore ammonimento utente', 'ADMIN_USER_WARN_ERROR');
   }
-};
+}
 
-exports.unblockUser = async (req, res) => {
+/**
+ * Applies account-unblock side effects to a target user.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+async function unblockUserOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID utente');
 
-    const user = await User.findByIdAndUpdate(userId, { isActive: true }, { new: true }).select('-passwordHash -sessionToken');
+    const user = await User.findByIdAndUpdate(userId, { isActive: true }, { new: true }).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
 
     await writeAudit(req.user.userId, 'sbloccato utente', user);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore sblocco utente', error: err.message });
+    sendError(res, 500, err.message, 'Errore sblocco utente', 'ADMIN_USER_UNBLOCK_ERROR');
   }
+}
+
+/**
+ * Handles user status updates (block, unblock, warn) from a single RESTful endpoint.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+exports.updateUserStatus = async (req, res) => {
+  const actionFromBody = typeof req.body?.action === 'string' ? req.body.action.toLowerCase().trim() : '';
+  const statusFromBody = typeof req.body?.status === 'string' ? req.body.status.toLowerCase().trim() : '';
+
+  const normalizedAction = actionFromBody
+    || (statusFromBody === 'blocked' ? 'block' : '')
+    || (statusFromBody === 'active' ? 'unblock' : '')
+    || (req.body?.conductWarnings ? 'warn' : '');
+
+  if (normalizedAction === 'block') return blockUserOperation(req, res);
+  if (normalizedAction === 'unblock') return unblockUserOperation(req, res);
+  if (normalizedAction === 'warn') return warnUserOperation(req, res);
+
+  return res.status(400).json({ message: 'Status utente non valido' });
 };
 
+/**
+ * Handles the get pending rifugi API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPendingRifugi = async (req, res) => {
   try {
-    const rifugi = await User.find({ role: 'shelter', rifugioStatus: 'pending' })
-      .select('-passwordHash -sessionToken')
+    const status = (req.query?.status || 'pending').toString().trim();
+    const rifugi = await User.find({ role: 'shelter', rifugioStatus: status })
+      .select('-passwordHash')
       .sort({ createdAt: -1 });
     res.json(rifugi);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero rifugi', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero rifugi', 'ADMIN_SHELTERS_FETCH_ERROR');
   }
 };
 
-exports.approveRifugio = async (req, res) => {
+/**
+ * Approves a shelter account and emits side effects.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+async function approveRifugioOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID rifugio');
@@ -378,7 +456,7 @@ exports.approveRifugio = async (req, res) => {
       { _id: userId, role: 'shelter' },
       { rifugioStatus: 'approved', isActive: true },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Rifugio non trovato' });
 
     await Notification.create({
@@ -390,11 +468,17 @@ exports.approveRifugio = async (req, res) => {
     await writeAudit(req.user.userId, 'approvato rifugio', user);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore approvazione rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore approvazione rifugio', 'ADMIN_SHELTER_APPROVE_ERROR');
   }
-};
+}
 
-exports.rejectRifugio = async (req, res) => {
+/**
+ * Rejects a shelter account and emits side effects.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+async function rejectRifugioOperation(req, res) {
   try {
     const userId = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(userId)) return invalidId(res, 'ID rifugio');
@@ -404,7 +488,7 @@ exports.rejectRifugio = async (req, res) => {
       { _id: userId, role: 'shelter' },
       { rifugioStatus: 'rejected' },
       { new: true }
-    ).select('-passwordHash -sessionToken');
+    ).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'Rifugio non trovato' });
 
     await Notification.create({
@@ -416,6 +500,23 @@ exports.rejectRifugio = async (req, res) => {
     await writeAudit(req.user.userId, 'rifiutato rifugio', user);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore rifiuto rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore rifiuto rifugio', 'ADMIN_SHELTER_REJECT_ERROR');
   }
+}
+
+/**
+ * Handles shelter status updates (approved/rejected) from a single RESTful endpoint.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ */
+exports.updateRifugioStatus = async (req, res) => {
+  const rifugioStatus = typeof req.body?.rifugioStatus === 'string'
+    ? req.body.rifugioStatus.toLowerCase().trim()
+    : '';
+
+  if (rifugioStatus === 'approved') return approveRifugioOperation(req, res);
+  if (rifugioStatus === 'rejected') return rejectRifugioOperation(req, res);
+
+  return res.status(400).json({ message: 'Status rifugio non valido' });
 };

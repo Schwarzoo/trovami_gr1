@@ -1,5 +1,14 @@
 const mongoose = require('mongoose');
 
+/**
+ * @typedef {Object} AuditLog
+ * @description Rappresenta una voce di audit log nel database.
+ * @property {mongoose.Types.ObjectId|null} actorId Utente che ha eseguito l'azione.
+ * @property {string} actorName Nome visualizzato dell'operatore.
+ * @property {string} action Azione registrata nel log.
+ * @property {mongoose.Types.ObjectId|null} targetId Utente target dell'azione.
+ * @property {string|null} targetUsername Nome utente del target, se disponibile.
+ */
 const auditLogSchema = new mongoose.Schema({
     actorId: {
         type: mongoose.Schema.Types.ObjectId,

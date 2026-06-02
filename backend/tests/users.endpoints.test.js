@@ -44,7 +44,6 @@ describe('users endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockImplementationOnce(() => ({
@@ -59,21 +58,25 @@ describe('users endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.username).toBe('mario');
   });
 
   test('PUT /api/v1/users/me updates profile', async () => {
-    mockUserModel.findById.mockResolvedValue({
-      _id: 'user1',
-      sessionToken: token,
-      isActive: true
-    });
-    mockUserModel.findByIdAndUpdate.mockReturnValue({
-      select: jest.fn(() => Promise.resolve(makeDoc({
+    mockUserModel.findById
+      .mockResolvedValueOnce({
         _id: 'user1',
-        username: 'luigi'
-      })))
-    });
+        isActive: true
+      })
+      .mockResolvedValueOnce({
+        set: jest.fn(),
+        save: jest.fn().mockResolvedValue({
+          toObject: () => ({
+            _id: 'user1',
+            username: 'luigi'
+          })
+        })
+      });
 
     const res = await request(app)
       .put('/api/v1/users/me')
@@ -81,10 +84,11 @@ describe('users endpoints', () => {
       .send({ username: 'luigi' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.username).toBe('luigi');
   });
 
-  test('GET /api/v1/users/rifugi/public returns shelters', async () => {
+  test('GET /api/v1/users/rifugi?isPublic=true returns shelters', async () => {
     mockUserModel.find.mockReturnValue(
       makeQuery([
         makeDoc({
@@ -98,9 +102,10 @@ describe('users endpoints', () => {
       ])
     );
 
-    const res = await request(app).get('/api/v1/users/rifugi/public');
+    const res = await request(app).get('/api/v1/users/rifugi?isPublic=true');
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0].rifugioData.rifugioName).toBe('Rifugio Uno');
   });
@@ -109,7 +114,6 @@ describe('users endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -127,6 +131,7 @@ describe('users endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.email).toBeNull();
     expect(res.body.phoneNumber).toBe('987');
   });
@@ -134,7 +139,6 @@ describe('users endpoints', () => {
   test('DELETE /api/v1/users/me deletes account', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     });
     mockAnnouncementModel.find.mockReturnValue(makeQuery([
@@ -149,6 +153,7 @@ describe('users endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.success).toBe(true);
     expect(mockRemoveAnnouncementCascade).toHaveBeenCalled();
   });

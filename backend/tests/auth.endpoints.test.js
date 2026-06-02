@@ -51,6 +51,7 @@ describe('auth endpoints', () => {
       });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.role).toBe('user');
     expect(mockUserModel.create).toHaveBeenCalledTimes(1);
   });
@@ -71,6 +72,7 @@ describe('auth endpoints', () => {
       .send({ email: 'mario@test.local', password: 'password123' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.token).toBeDefined();
     expect(jwt.verify(res.body.token, process.env.JWT_SECRET).userId).toBe('user1');
   });
@@ -79,17 +81,17 @@ describe('auth endpoints', () => {
     const token = jwt.sign({ userId: 'user1', role: 'user' }, process.env.JWT_SECRET);
     mockUserModel.findById.mockResolvedValue(makeDoc({
       _id: 'user1',
-      sessionToken: token,
       isActive: true
     }));
-    mockUserModel.findByIdAndUpdate.mockResolvedValue({ ok: 1 });
 
     const res = await request(app)
       .delete('/api/v1/auth/sessions/current')
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toBe('Logout effettuato');
+    expect(mockUserModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   test('POST /api/v1/auth/readmission-requests stores request', async () => {
@@ -111,6 +113,7 @@ describe('auth endpoints', () => {
       });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/riammissione inviata/);
   });
 
@@ -126,6 +129,7 @@ describe('auth endpoints', () => {
       .send({ email: 'mario@test.local' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/recupero inviata/);
   });
 
@@ -140,6 +144,7 @@ describe('auth endpoints', () => {
       .send({ token: 'reset-token', newPassword: 'password123' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/Password aggiornata/);
   });
 
@@ -149,6 +154,7 @@ describe('auth endpoints', () => {
       .set('Accept', 'application/json');
 
     expect(res.status).toBe(400);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toBe('Token mancante');
   });
 
@@ -165,6 +171,7 @@ describe('auth endpoints', () => {
       .send({ email: 'mario@test.local' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/reinviata/);
   });
 });

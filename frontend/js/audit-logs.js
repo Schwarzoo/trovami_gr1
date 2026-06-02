@@ -1,3 +1,8 @@
+/**
+ * Decodes a JWT payload without verifying the signature for client-side UI decisions.
+ * @param {string} token - JWT string read from local storage.
+ * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
+ */
 function decodeJwt(token) {
   try {
     const payload = token.split('.')[1];
@@ -25,6 +30,11 @@ const body = document.getElementById('auditTableBody');
 const statusEl = document.getElementById('auditStatus');
 const searchInput = document.getElementById('auditSearch');
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {*} input - Value that will be interpolated into table markup.
+ * @returns {string} HTML-safe string representation of the value.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -34,6 +44,10 @@ function escapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Builds the audit-log API URL from the current filter and sort state.
+ * @returns {string} Admin audit-log endpoint URL including search, sort, and limit parameters.
+ */
 function buildUrl() {
   const params = new URLSearchParams({
     limit: '200',
@@ -41,9 +55,14 @@ function buildUrl() {
     sortDir: state.sortDir
   });
   if (state.search) params.set('search', state.search);
-  return `http://localhost:3000/api/v1/admin/audit-logs?${params.toString()}`;
+  return `/api/v1/admin/audit-logs?${params.toString()}`;
 }
 
+/**
+ * Renders audit-log rows into the current table body.
+ * @param {Array<Object>} logs - Audit-log records returned by the admin API.
+ * @returns {void}
+ */
 function renderRows(logs) {
   body.innerHTML = '';
   if (!logs.length) {
@@ -65,13 +84,17 @@ function renderRows(logs) {
   });
 }
 
+/**
+ * Loads audit logs from the API and updates the table UI.
+ * @returns {Promise<void>} Promise resolving after the audit table or error state is updated.
+ */
 async function loadAuditLogs() {
   statusEl.textContent = 'Caricamento...';
   try {
     const res = await fetch(buildUrl(), { headers: authHeader });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || 'Errore recupero audit logs');
+      throw new Error(data.userMessage || data.message || 'Errore recupero audit logs');
     }
     const logs = await res.json();
     renderRows(Array.isArray(logs) ? logs : []);
@@ -81,6 +104,10 @@ async function loadAuditLogs() {
   }
 }
 
+/**
+ * Updates the active state of audit-log sort controls.
+ * @returns {void}
+ */
 function updateSortButtons() {
   document.querySelectorAll('[data-sort]').forEach((button) => {
     const isActive = button.dataset.sort === state.sortBy;

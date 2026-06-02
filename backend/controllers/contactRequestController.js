@@ -9,11 +9,23 @@ const {
   canShelterManageRequest,
   normalizeReplyMessage
 } = require('../services/contactRequestService');
+const { sendError } = require('../utils/errorResponse');
 
+/**
+ * Sends a standardized HTTP 400 response for an invalid MongoDB identifier.
+ * @param {Object} res - Express response object.
+ * @param {string} label - Human-readable name of the invalid identifier.
+ * @returns {import('express').Response} Express response with the validation error body.
+ */
 function invalidId(res, label) {
   return res.status(400).json({ message: `${label} non valido` });
 }
 
+/**
+ * Applies the standard population chain to a contact-request query.
+ * @param {Object} query - Mongoose query for one or more contact requests.
+ * @returns {Object} The same Mongoose query with requester, shelter, and animal references populated.
+ */
 function populateRequest(query) {
   return query
     .populate('requesterId', 'username email phoneNumber')
@@ -21,6 +33,13 @@ function populateRequest(query) {
     .populate('animalId', 'name species breed photos adoptable');
 }
 
+/**
+ * Handles the create contact request API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.createContactRequest = async (req, res) => {
   try {
     const animalId = req.body?.animalId;
@@ -61,13 +80,20 @@ exports.createContactRequest = async (req, res) => {
     });
 
     const fullRequest = await populateRequest(ContactRequest.findById(contactRequest._id));
-    res.status(201).json(fullRequest);
+    res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${contactRequest._id}`).status(201).json(fullRequest);
   } catch (err) {
     const status = /obbligatorio|troppo lungo/i.test(err.message) ? 400 : 500;
-    res.status(status).json({ message: err.message || 'Errore invio richiesta adozione' });
+    sendError(res, status, err.message, err.message || 'Errore invio richiesta adozione', 'CONTACT_REQUEST_CREATE_ERROR');
   }
 };
 
+/**
+ * Handles the get contact requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getContactRequests = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('role rifugioStatus');
@@ -82,10 +108,17 @@ exports.getContactRequests = async (req, res) => {
       .limit(200);
     res.json(list);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero richieste adozione', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero richieste adozione', 'CONTACT_REQUESTS_FETCH_ERROR');
   }
 };
 
+/**
+ * Handles the clear replied contact requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.clearRepliedContactRequests = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('role rifugioStatus');
@@ -110,10 +143,17 @@ exports.clearRepliedContactRequests = async (req, res) => {
 
     res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
   } catch (err) {
-    res.status(500).json({ message: 'Errore svuotamento richieste risposte', error: err.message });
+    sendError(res, 500, err.message, 'Errore svuotamento richieste risposte', 'CONTACT_REQUESTS_CLEAR_ERROR');
   }
 };
 
+/**
+ * Handles the clear requester replied contact requests API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.clearRequesterRepliedContactRequests = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('role');
@@ -129,10 +169,17 @@ exports.clearRequesterRepliedContactRequests = async (req, res) => {
 
     res.json({ success: true, hidden: result.modifiedCount ?? result.nModified ?? 0 });
   } catch (err) {
-    res.status(500).json({ message: 'Errore eliminazione richieste risposte', error: err.message });
+    sendError(res, 500, err.message, 'Errore eliminazione richieste risposte', 'CONTACT_REQUESTS_DELETE_REPLIED_ERROR');
   }
 };
 
+/**
+ * Handles the reply to contact request API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.replyToContactRequest = async (req, res) => {
   try {
     const requestId = req.params.id;
@@ -174,6 +221,6 @@ exports.replyToContactRequest = async (req, res) => {
     res.json(fullRequest);
   } catch (err) {
     const status = /obbligatoria|troppo lungo/i.test(err.message) ? 400 : 500;
-    res.status(status).json({ message: err.message || 'Errore risposta richiesta adozione' });
+    sendError(res, status, err.message, err.message || 'Errore risposta richiesta adozione', 'CONTACT_REQUEST_REPLY_ERROR');
   }
 };

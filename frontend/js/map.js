@@ -1,4 +1,3 @@
-// Initialize map centered on Trento (approx) and clamp to world bounds to avoid repeated worlds when zooming out
 const europeBounds = L.latLngBounds(
   [34.0, -25.0],
   [72.0, 45.0]
@@ -17,7 +16,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const highlightId = urlParams.get('highlight');
 const highlightRifugioId = urlParams.get('rifugioId');
 
-// Disable tile wrapping (noWrap: true) to prevent seeing multiple copies of the world
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors',
@@ -77,34 +75,64 @@ const rifugioIcon = L.divIcon({
 let allAnnouncements = [];
 let allRifugi = [];
 
-// Keep track of current visible markers bounds so we can restrict zoom/pan
 let _visibleBounds = null;
 
+/**
+ * Normalizes a value for case-insensitive map filtering.
+ * @param {*} value - Raw filter value or announcement field.
+ * @returns {string} Lowercase trimmed text.
+ */
 function normalizeText(value) {
   return (value || '').toString().toLowerCase().trim();
 }
 
+/**
+ * Checks whether unknown value.
+ * @param {*} value - Animal field value to inspect.
+ * @returns {boolean} True when the value is blank or marked as unknown.
+ */
 function isUnknownValue(value) {
   const text = normalizeText(value);
   return text === '' || text.startsWith('sconosciut') || text === 'unknown';
 }
 
+/**
+ * Splits a search query into normalized tokens.
+ * @param {*} query - Raw search query entered in a filter field.
+ * @returns {string[]} Non-empty normalized query tokens.
+ */
 function tokenizeQuery(query) {
   return normalizeText(query).split(/\s+/).filter(Boolean);
 }
 
+/**
+ * Checks whether a value contains every search token.
+ * @param {*} value - Text value to search.
+ * @param {string[]} tokens - Normalized tokens that must all be present.
+ * @returns {boolean} True when all tokens match the normalized value.
+ */
 function matchesTokens(value, tokens) {
   if (tokens.length === 0) return true;
   const hay = normalizeText(value);
   return tokens.every(token => hay.includes(token));
 }
 
+/**
+ * Parses a date filter input value.
+ * @param {*} value - Raw value from a date input.
+ * @returns {Date|null} Parsed date, or null when empty or invalid.
+ */
 function parseDateInput(value) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+/**
+ * Expands a date filter to the last millisecond of that day.
+ * @param {Date|null} date - Date selected as the upper bound.
+ * @returns {Date|null} End-of-day date, or null when no date was provided.
+ */
 function endOfDay(date) {
   if (!date) return null;
   const end = new Date(date);
@@ -112,6 +140,10 @@ function endOfDay(date) {
   return end;
 }
 
+/**
+ * Returns announcements filtered by the current UI controls.
+ * @returns {Array<Object>} Announcements matching the active map filters.
+ */
 function getFilteredAnnouncements() {
   const typeInput = document.getElementById('filter-type');
   const speciesInput = document.getElementById('filter-species');
@@ -182,17 +214,26 @@ function getFilteredAnnouncements() {
   });
 }
 
+/**
+ * Updates the visible result counter.
+ * @param {number} n - Number of currently visible announcements.
+ * @returns {void}
+ */
 function updateCount(n) {
   const count = document.getElementById('result-count');
   if (!count) return;
   count.textContent = `${n} ${n === 1 ? 'annuncio trovato' : 'annunci trovati'}`;
 }
 
+/**
+ * Renders announcements into the current list view.
+ * @param {Array<Object>} announcements - Filtered announcements to place on the Leaflet map.
+ * @returns {void}
+ */
 function renderAnnouncements(announcements) {
   let highlightedMarker = null;
   let highlightedRifugioMarker = null;
 
-  // remove existing markers
   if (window._tm_markers) { window._tm_markers.forEach(m => map.removeLayer(m)); }
   if (window._tm_rifugio_markers) { window._tm_rifugio_markers.forEach(m => map.removeLayer(m)); }
   window._tm_markers = [];
@@ -205,7 +246,6 @@ function renderAnnouncements(announcements) {
   const isLost = a.type === 'LostAnimal';
   const date = new Date(a.date).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
 
-  // media placeholder (we'll try to fetch announcement photo and replace if present)
   const emoji = animal?.species?.toLowerCase().includes('gatt') ? '🐈' : '🐕';
   const mediaBlock = `
     <div class="popup-media" data-ann-id="${a._id}" style="width:100%;height:110px;overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:42px;">
@@ -254,9 +294,8 @@ function renderAnnouncements(announcements) {
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
-  // try to load announcement photo and update popup content if found
   (async () => {
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
     try {
       const res = await fetch(photoUrl, { method: 'GET' });
       if (!res.ok) throw new Error('no image');
@@ -264,23 +303,17 @@ function renderAnnouncements(announcements) {
       if (!ct.startsWith('image')) throw new Error('not image');
       const blob = await res.blob();
       const imgUrl = URL.createObjectURL(blob);
-      // build a new media block with the image
       const imgBlock = `<img src="${imgUrl}" style="width:100%;height:110px;object-fit:cover;display:block;"/>`;
-      // replace media block in popup HTML
       const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
       marker.getPopup().setContent(newPopup);
-      // store image url on marker for later revoke
       marker._imgUrl = imgUrl;
-      // revoke object URL when popup closes to free memory
       marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
     } catch (err) {
-      // leave emoji placeholder
     }
   })();
 
-  // ensure we (re)fetch the image every time the popup opens (handles revoke on close)
   marker.on('popupopen', async () => {
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
     try {
       const res = await fetch(photoUrl, { method: 'GET' });
       if (!res.ok) throw new Error('no image');
@@ -293,10 +326,8 @@ function renderAnnouncements(announcements) {
       marker.getPopup().setContent(newPopup);
       if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); }
       marker._imgUrl = imgUrl;
-      // revoke when closed
       marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
     } catch (err) {
-      // keep placeholder
     }
   });
 
@@ -360,29 +391,13 @@ function renderAnnouncements(announcements) {
     }
   }
 
-  // // If we have markers, fit map to them but do not constrain user movement
-  // if (window._tm_markers.length > 0 && bounds.isValid()) {
-  //   if (highlightedMarker) {
-  //     const { lat, lng } = highlightedMarker.getLatLng();
-  //     map.setView([lat, lng], 16, { animate: false });
-  //     map.panBy([0, -140], { animate: false });
-  //     highlightedMarker.openPopup();
-  //   } else {
-  //     map.fitBounds(bounds, {
-  //       paddingTopLeft: [120, 120],
-  //       paddingBottomRight: [120, 120],
-  //       animate: true,
-  //       maxZoom: 12
-  //     });
-  //   }
-  // }
-  // try {
-  //   map.setMinZoom(2);
-  // } catch (err) {
-  //   console.warn('Could not set min zoom', err);
-  // }
 }
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {*} input - Value interpolated into popup markup.
+ * @returns {string} HTML-safe string representation of the value.
+ */
 function escapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -393,6 +408,13 @@ function escapeHtml(input) {
 }
 
 
+/**
+ * Builds select options from unique filter values.
+ * @param {HTMLSelectElement|null} selectEl - Filter select element to populate.
+ * @param {string[]} values - Sorted option labels to insert.
+ * @param {string} placeholder - Placeholder label for the empty option.
+ * @returns {void}
+ */
 function buildSelectOptions(selectEl, values, placeholder) {
   if (!selectEl) return;
   const current = selectEl.value;
@@ -415,6 +437,11 @@ function buildSelectOptions(selectEl, values, placeholder) {
   }
 }
 
+/**
+ * Formats a filter value as a human-readable label.
+ * @param {string} value - Raw unique value collected from announcements.
+ * @returns {string} Title-cased label for a select option.
+ */
 function formatLabel(value) {
   return value
     .split(' ')
@@ -423,6 +450,12 @@ function formatLabel(value) {
     .join(' ');
 }
 
+/**
+ * Adds a normalized option value to a map of unique values.
+ * @param {Map<string,string>} map - Destination map keyed by normalized option value.
+ * @param {string} value - Raw value from an announcement animal field.
+ * @returns {void}
+ */
 function addUniqueOption(map, value) {
   if (!value) return;
   const trimmed = value.trim();
@@ -433,6 +466,11 @@ function addUniqueOption(map, value) {
   }
 }
 
+/**
+ * Populates all filter controls from announcement data.
+ * @param {Array<Object>} announcements - Announcements used to derive species, breed, and color filters.
+ * @returns {void}
+ */
 function populateFilterOptions(announcements) {
   const speciesSelect = document.getElementById('filter-species');
   const breedSelect = document.getElementById('filter-breed');
@@ -458,16 +496,20 @@ function populateFilterOptions(announcements) {
   buildSelectOptions(colorSelect, sortedColors, 'Tutti');
 }
 
+/**
+ * Loads announcements for the current frontend view.
+ * @returns {Promise<void>} Promise resolving after map data, filters, and markers are refreshed.
+ */
 async function loadAnnouncements() {
   const [annRes, rifugiRes] = await Promise.all([
-    fetch('http://localhost:3000/api/v1/announcements'),
-    fetch('http://localhost:3000/api/v1/users/rifugi/public')
+    fetch('/api/v1/announcements'),
+    fetch('/api/v1/users/rifugi?isPublic=true')
   ]);
   if (!annRes.ok) { console.error('Errore fetch annunci'); return; }
 
-  const announcements = await annRes.json();
+  const announcementsPayload = await annRes.json();
   const rifugi = rifugiRes.ok ? await rifugiRes.json() : [];
-  allAnnouncements = Array.isArray(announcements) ? announcements : [];
+  allAnnouncements = Array.isArray(announcementsPayload) ? announcementsPayload : announcementsPayload.data || [];
   allRifugi = Array.isArray(rifugi) ? rifugi : [];
   populateFilterOptions(allAnnouncements);
   const filtered = getFilteredAnnouncements();
@@ -475,6 +517,10 @@ async function loadAnnouncements() {
   renderAnnouncements(filtered);
 }
 
+/**
+ * Binds filter controls to map/list rendering.
+ * @returns {void}
+ */
 function wireFilters() {
   const typeInput = document.getElementById('filter-type');
   const speciesInput = document.getElementById('filter-species');
@@ -483,6 +529,10 @@ function wireFilters() {
   const dateFromInput = document.getElementById('filter-date-from');
   const dateToInput = document.getElementById('filter-date-to');
   const includeUnknownInput = document.getElementById('filter-include-unknown');
+  /**
+   * Recomputes filtered announcements and redraws the map after a filter change.
+   * @returns {void}
+   */
   const handler = () => {
     const filtered = getFilteredAnnouncements();
     updateCount(filtered.length);
@@ -501,17 +551,21 @@ function wireFilters() {
 wireFilters();
 loadAnnouncements();
 
-// Listen for updates from other pages (profile) and refresh
 window.addEventListener('storage', (e) => {
   if (e.key === 'announcements:update') {
     loadAnnouncements();
   }
 });
 
-// --- User locate button: geolocation, marker and centering ---
 const locateBtn = document.getElementById('locate-btn');
 let _userMarker = null;
 
+/**
+ * Shows the user location marker on the map.
+ * @param {number} lat - User latitude from the browser geolocation API.
+ * @param {number} lng - User longitude from the browser geolocation API.
+ * @returns {void}
+ */
 function showUserLocation(lat, lng) {
   try {
     if (_userMarker) {
@@ -555,5 +609,4 @@ if (locateBtn) {
   });
 }
 
-// Also refresh when tab becomes visible (helpful after redirect)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAnnouncements(); });

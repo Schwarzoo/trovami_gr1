@@ -1,6 +1,11 @@
 const form = document.getElementById('readmissionForm');
 const statusBox = document.getElementById('readmissionStatus');
 
+/**
+ * Reads a query-string parameter from the current page URL.
+ * @param {string} name - Query parameter name to read.
+ * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
+ */
 function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
@@ -22,7 +27,7 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  const res = await fetch('http://localhost:3000/api/v1/auth/readmission-requests', {
+  const res = await fetch('/api/v1/auth/readmission-requests', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, message })
@@ -30,10 +35,10 @@ form.addEventListener('submit', async (event) => {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    statusBox.textContent = data.message || 'Errore invio richiesta';
+    statusBox.textContent = data.userMessage || data.message || 'Errore invio richiesta';
     return;
   }
 
-  statusBox.textContent = data.message || 'Richiesta inviata. Attendi approvazione admin.';
+  statusBox.textContent = data.userMessage || data.message || 'Richiesta inviata. Attendi approvazione admin.';
   form.querySelector('button[type="submit"]').disabled = true;
 });

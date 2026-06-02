@@ -1,6 +1,11 @@
 const form = document.getElementById('loginForm');
 const errorBox = document.getElementById('loginError');
 
+/**
+ * Reads a query-string parameter from the current page URL.
+ * @param {string} name - Query parameter name to read.
+ * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
+ */
 function getQueryParam(name) {
   const params = new URLSearchParams(window.location.search);
   return params.get(name);
@@ -19,7 +24,7 @@ form.addEventListener('submit', async (e) => {
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
 
-  const res = await fetch('http://localhost:3000/api/v1/auth/sessions', {
+  const res = await fetch('/api/v1/auth/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -32,7 +37,7 @@ form.addEventListener('submit', async (e) => {
       window.location.href = `./readmission.html?userId=${encodeURIComponent(data.userId)}&status=${encodeURIComponent(data.readmissionStatus || 'none')}`;
       return;
     }
-    errorBox.textContent = data.message || 'Errore di login';
+    errorBox.textContent = data.userMessage || data.message || 'Errore di login';
     return;
   }
 

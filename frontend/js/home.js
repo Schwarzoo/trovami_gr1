@@ -1,14 +1,25 @@
-const HOME_API = 'http://localhost:3000/api/v1/announcements';
+const HOME_API = '/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
-const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/resolved/count';
+const HOME_RESOLVED_API = '/api/v1/announcements/count?status=resolved';
+const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/rifugi?isPublic=true';
 
+/**
+ * Formats a value for the home-page announcement UI.
+ * @param {*} value - Announcement field value to display.
+ * @returns {string} Trimmed display text or the home empty-value placeholder.
+ */
 function homeDisplayValue(value) {
   if (value === null || value === undefined) return HOME_EMPTY_VALUE;
   const text = String(value).trim();
   return text ? text : HOME_EMPTY_VALUE;
 }
 
+/**
+ * Escapes HTML-sensitive characters before inserting text into home markup.
+ * @param {*} input - Value that will be interpolated into HTML.
+ * @returns {string} HTML-safe string representation of the value.
+ */
 function homeEscapeHtml(input) {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -18,6 +29,10 @@ function homeEscapeHtml(input) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * Fetches home announcements data from the API.
+ * @returns {Promise<Array<Object>>} Announcement list for the home page, or an empty array on failure.
+ */
 async function fetchHomeAnnouncements() {
   try {
     const res = await fetch(HOME_API);
@@ -30,6 +45,11 @@ async function fetchHomeAnnouncements() {
   }
 }
 
+/**
+ * Fetches home announcement by id data from the API.
+ * @param {string} id - Announcement identifier to load.
+ * @returns {Promise<Object|null>} Announcement detail payload, or null when loading fails.
+ */
 async function fetchHomeAnnouncementById(id) {
   try {
     const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}`);
@@ -40,18 +60,80 @@ async function fetchHomeAnnouncementById(id) {
   }
 }
 
+/**
+ * Fetches public rifugi count data from the API.
+ * @returns {Promise<number>} Number of public shelters returned by the API, or 0 on failure.
+ */
+async function fetchPublicRifugiCount() {
+  try {
+    const res = await fetch(HOME_PUBLIC_RIFUGI_API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return Array.isArray(json) ? json.length : 0;
+  } catch (err) {
+    console.error('Errore fetch rifugi pubblici', err);
+    return 0;
+  }
+}
+
+/**
+ * Fetches resolved announcements count data from the API.
+ * @returns {Promise<number>} Total resolved-announcement count, or 0 on failure.
+ */
 async function fetchResolvedAnnouncementsCount() {
   try {
     const res = await fetch(HOME_RESOLVED_API);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    return Number(json?.resolvedCount || 0);
+    return Number(json?.count ?? json?.resolvedCount ?? 0);
   } catch (err) {
     console.error('Errore fetch annunci risolti', err);
     return 0;
   }
 }
 
+/**
+ * Returns home announcement date.
+ * @param {Object} announcement - Announcement record that may contain date fields.
+ * @returns {Date|null} Parsed announcement date, or null when no valid date exists.
+ */
+function getHomeAnnouncementDate(announcement) {
+  const rawDate = announcement?.createdAt || announcement?.date || announcement?.updatedAt;
+  if (!rawDate) return null;
+  const date = new Date(rawDate);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Checks whether same day.
+ * @param {Date|null} left - First date to compare.
+ * @param {Date|null} right - Second date to compare.
+ * @returns {boolean} True when both dates fall on the same calendar day.
+ */
+function isSameDay(left, right) {
+  if (!left || !right) return false;
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
+}
+
+/**
+ * Checks whether within last24 hours.
+ * @param {Date|null} date - Date to compare with the current time.
+ * @returns {boolean} True when the date is within the last 24 hours.
+ */
+function isWithinLast24Hours(date) {
+  if (!date) return false;
+  return Date.now() - date.getTime() <= 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Posts a new comment for an announcement shown on the home page.
+ * @param {string} id - Announcement identifier receiving the comment.
+ * @param {string} text - Comment text submitted by the user.
+ * @returns {Promise<Object>} API response containing the new comment and updated comment list.
+ * @throws {Error} When the user is not logged in or the API rejects the comment.
+ */
 async function postHomeAnnouncementComment(id, text) {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('not logged in');
@@ -67,28 +149,38 @@ async function postHomeAnnouncementComment(id, text) {
 
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(json?.message || 'Errore invio commento');
+    throw new Error(json?.userMessage || json?.message || 'Errore invio commento');
   }
   return json;
 }
 
+/**
+ * Fetches home public user data from the API.
+ * @param {string} userId - User identifier whose public contact data should be loaded.
+ * @returns {Promise<Object>} Public user payload containing visible contact fields.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
 async function fetchHomePublicUser(userId) {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('not logged in');
 
-  const res = await fetch(`http://localhost:3000/api/v1/users/${encodeURIComponent(userId)}/public`, {
+  const res = await fetch(`/api/v1/users/${encodeURIComponent(userId)}/public`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.message || 'Errore caricamento contatti');
+  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore caricamento contatti');
   return json;
 }
 
+/**
+ * Builds a home-page announcement card and wires detail-opening interactions.
+ * @param {Object} ann - Announcement record to render.
+ * @returns {HTMLElement} Interactive card element for the home announcement grid.
+ */
 function buildHomeCard(ann) {
   const animal = ann.animalId;
   const isLost = ann.type === 'LostAnimal';
-  // try to use announcement-specific photo endpoint, fallback to placeholder
-  const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
+  const photoUrl = `/api/v1/announcements/${ann._id}/photo`;
   const date = new Date(ann.date).toLocaleDateString('it-IT', {
     day: '2-digit',
     month: 'short',
@@ -102,6 +194,10 @@ function buildHomeCard(ann) {
   card.setAttribute('role', 'button');
   card.setAttribute('aria-label', `Vedi dettagli annuncio ${animal?.species || 'animale'}`);
 
+  /**
+   * Opens the details UI.
+   * @returns {void}
+   */
   const openDetails = () => openHomeModal(ann);
 
   card.addEventListener('click', openDetails);
@@ -154,6 +250,11 @@ function buildHomeCard(ann) {
   return card;
 }
 
+/**
+ * Opens the home modal UI.
+ * @param {Object} ann - Announcement summary used to seed the modal while details load.
+ * @returns {Promise<void>} Promise resolving after the modal is populated and shown.
+ */
 async function openHomeModal(ann) {
   const isLoggedIn = !!localStorage.getItem('token');
   const full = await fetchHomeAnnouncementById(ann._id);
@@ -242,6 +343,12 @@ async function openHomeModal(ann) {
   document.body.style.overflow = 'hidden';
 }
 
+/**
+ * Loads home modal photo data and updates the UI.
+ * @param {HTMLElement} gallery - Modal gallery element that receives the image or empty state.
+ * @param {string} id - Announcement identifier whose photo should be loaded.
+ * @returns {Promise<void>} Promise resolving after the gallery is updated.
+ */
 async function loadHomeModalPhoto(gallery, id) {
   try {
     const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}/photo`, { method: 'GET' });
@@ -260,6 +367,11 @@ async function loadHomeModalPhoto(gallery, id) {
   }
 }
 
+/**
+ * Renders home comments html into the current page.
+ * @param {Array<Object>} comments - Comment records attached to the announcement.
+ * @returns {string} HTML markup for the comments list or empty state.
+ */
 function renderHomeCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return `<div class="comments-empty">Nessun commento</div>`;
@@ -285,6 +397,11 @@ function renderHomeCommentsHtml(comments) {
   }).join('');
 }
 
+/**
+ * Binds the comment form inside the currently open home announcement modal.
+ * @param {string} announcementId - Announcement identifier used when submitting the comment.
+ * @returns {void}
+ */
 function bindHomeCommentForm(announcementId) {
   const form = document.querySelector('#modal-body .comment-form');
   if (!form) return;
@@ -320,6 +437,10 @@ function bindHomeCommentForm(announcementId) {
   });
 }
 
+/**
+ * Binds click handlers that reveal public contact data for comment authors.
+ * @returns {void}
+ */
 function bindHomeCommentContacts() {
   const modalBody = document.getElementById('modal-body');
   if (!modalBody || modalBody.dataset.homeCommentContactsBound === 'true') return;
@@ -362,18 +483,75 @@ function bindHomeCommentContacts() {
   });
 }
 
+/**
+ * Closes the home modal UI.
+ * @returns {void}
+ */
 function closeHomeModal() {
   document.getElementById('modal-overlay').classList.remove('active');
   document.body.style.overflow = '';
 }
 
-async function renderResolvedCounter() {
-  const counter = document.getElementById('resolved-announcements-count');
-  if (!counter) return;
-  const count = await fetchResolvedAnnouncementsCount();
-  counter.textContent = String(count);
+/**
+ * Renders hero stats into the current page.
+ * @returns {Promise<void>} Promise resolving after hero counters are refreshed.
+ */
+async function renderHeroStats() {
+  const resolvedCounter = document.getElementById('resolved-announcements-count');
+  const activeCounter = document.getElementById('active-announcements-count');
+  const rifugiCounter = document.getElementById('public-rifugi-count');
+  if (!resolvedCounter && !activeCounter && !rifugiCounter) return;
+
+  const [announcements, rifugiCount] = await Promise.all([
+    fetchHomeAnnouncements(),
+    fetchPublicRifugiCount()
+  ]);
+
+  const activeCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => announcement?.status === 'ACTIVE').length
+    : 0;
+  const resolvedCount = await fetchResolvedAnnouncementsCount();
+
+  if (resolvedCounter) resolvedCounter.textContent = String(resolvedCount);
+  if (activeCounter) activeCounter.textContent = String(activeCount);
+  if (rifugiCounter) rifugiCounter.textContent = String(rifugiCount);
 }
 
+/**
+ * Renders home stats strip into the current page.
+ * @returns {Promise<void>} Promise resolving after the home stats strip is refreshed.
+ */
+async function renderHomeStatsStrip() {
+  const last24hCounter = document.getElementById('home-last-24h-count');
+  const createdTodayCounter = document.getElementById('home-created-today-count');
+  const resolvedTotalCounter = document.getElementById('home-resolved-total-count');
+  const resolvedTotalInline = document.getElementById('home-resolved-total-inline');
+  if (!last24hCounter && !createdTodayCounter && !resolvedTotalCounter && !resolvedTotalInline) return;
+
+  const [announcements, resolvedTotalCount] = await Promise.all([
+    fetchHomeAnnouncements(),
+    fetchResolvedAnnouncementsCount()
+  ]);
+  const now = new Date();
+
+  const last24hCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => isWithinLast24Hours(getHomeAnnouncementDate(announcement))).length
+    : 0;
+
+  const createdTodayCount = Array.isArray(announcements)
+    ? announcements.filter((announcement) => isSameDay(getHomeAnnouncementDate(announcement), now)).length
+    : 0;
+
+  if (last24hCounter) last24hCounter.textContent = String(last24hCount);
+  if (createdTodayCounter) createdTodayCounter.textContent = String(createdTodayCount);
+  if (resolvedTotalCounter) resolvedTotalCounter.textContent = String(resolvedTotalCount);
+  if (resolvedTotalInline) resolvedTotalInline.textContent = String(resolvedTotalCount);
+}
+
+/**
+ * Loads the home announcement grid and binds modal controls.
+ * @returns {Promise<void>} Promise resolving after initial home announcements are rendered.
+ */
 async function initHomeAnnouncements() {
   const grid = document.getElementById('home-announcements-grid');
   const empty = document.getElementById('home-empty');
@@ -399,8 +577,12 @@ async function initHomeAnnouncements() {
   trimmed.forEach((ann) => grid.appendChild(buildHomeCard(ann)));
 }
 
+/**
+ * Initializes home page data and recurring stats refresh after the DOM is ready.
+ * @returns {Promise<void>} Promise resolving when the initial home widgets are loaded.
+ */
 document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([initHomeAnnouncements(), renderResolvedCounter()]);
-  window.addEventListener('announcements:resolved-updated', renderResolvedCounter);
-  setInterval(renderResolvedCounter, 30000);
+  await Promise.all([initHomeAnnouncements(), renderHeroStats(), renderHomeStatsStrip()]);
+  window.addEventListener('announcements:resolved-updated', renderHeroStats);
+  setInterval(renderHeroStats, 30000);
 });

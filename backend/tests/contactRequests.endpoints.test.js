@@ -46,7 +46,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -81,6 +80,7 @@ describe('contact request endpoints', () => {
       .send({ animalId: '507f1f77bcf86cd799439011', message: 'voglio info' });
 
     expect(res.status).toBe(201);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body._id).toBe('req1');
   });
 
@@ -89,7 +89,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -110,6 +109,7 @@ describe('contact request endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body[0].message).toBe('hello');
   });
 
@@ -118,7 +118,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'user1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -134,6 +133,7 @@ describe('contact request endpoints', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.hidden).toBe(2);
   });
 
@@ -142,7 +142,6 @@ describe('contact request endpoints', () => {
     mockUserModel.findById
       .mockResolvedValueOnce({
         _id: 'shelter1',
-        sessionToken: token,
         isActive: true
       })
       .mockReturnValueOnce({
@@ -168,6 +167,7 @@ describe('contact request endpoints', () => {
       .send({ replyMessage: 'ok' });
 
     expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body._id).toBe('req1');
   });
 });

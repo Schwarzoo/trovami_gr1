@@ -1,44 +1,18 @@
 const User = require('../models/User');
+const ShelterUser = User.ShelterUser || User;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const Notification = require('../models/Notification');
 const { writeAuditLog } = require('../services/auditService');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
+const { sendError } = require('../utils/errorResponse');
 
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-}
-
-async function sendVerificationEmail(user, rawToken) {
-  const transporter = createTransporter();
-  const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/auth/email-verifications?token=${rawToken}`;
-
-  const mailOptions = {
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: user.email,
-    subject: 'Verifica Email - Trovami',
-    html: `
-      <h1>Trovami! - Verifica Email</h1>
-      <p>Per attivare il tuo account, clicca il link qui sotto:</p>
-      <a href="${verifyUrl}" style="background-color:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
-        Verifica Email
-      </a>
-      <p>Questo link scade tra 24 ore.</p>
-    `
-  };
-
-  await transporter.sendMail(mailOptions);
-}
-
+/**
+ * Maps a MongoDB duplicate-key error to a user-facing account message.
+ * @param {Object} err - Error thrown by MongoDB/Mongoose during account creation.
+ * @returns {string|null} Localized duplicate-account message, or null when the error is unrelated.
+ */
 function duplicateAccountMessage(err) {
   if (err?.code !== 11000) return null;
   if (err.keyPattern?.email || err.keyValue?.email) return 'Email gia registrata';
@@ -46,10 +20,22 @@ function duplicateAccountMessage(err) {
   return 'Account gia esistente';
 }
 
+/**
+ * Normalizes an account role value to the format stored in the database.
+ * @param {string} role - Role value received from a user document or token payload.
+ * @returns {string} Lowercase role when the input is a string; otherwise the original value.
+ */
 function normalizeAccountRole(role) {
   return typeof role === 'string' ? role.toLowerCase() : role;
 }
 
+/**
+ * Handles the register API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.register = async (req, res) => {
   try {
     const { username, email, password, phoneNumber, accountType, role, rifugioData } = req.body;
@@ -73,7 +59,9 @@ exports.register = async (req, res) => {
     const verifyTokenHash = crypto.createHash('sha256').update(verifyToken).digest('hex');
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const user = await User.create({
+    const AccountModel = wantsRifugio ? ShelterUser : User;
+
+    const user = await AccountModel.create({
       username,
       email,
       passwordHash,
@@ -114,23 +102,31 @@ exports.register = async (req, res) => {
       });
     }
 
-    res.status(201).json({
+    res.location(`${req.protocol}://${req.get('host')}/api/v1/users/${user._id}`).status(201).json({
       message: wantsRifugio
         ? 'Account rifugio creato. Controlla la mail e attendi approvazione admin'
         : 'Account creato. Controlla la mail per verificare l\'account',
       userId: user._id,
       role: user.role,
-      rifugioStatus: user.rifugioStatus
+      rifugioStatus: user.rifugioStatus || 'none'
     });
   } catch (err) {
+    console.error('Register error:', err);
     const duplicateMessage = duplicateAccountMessage(err);
     if (duplicateMessage) {
-      return res.status(400).json({ message: duplicateMessage });
+      return sendError(res, 400, err.message, duplicateMessage, 'AUTH_DUPLICATE_ACCOUNT');
     }
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the login API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -166,15 +162,19 @@ exports.login = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    user.sessionToken = token;
-    await user.save();
-
     res.json({ message: 'Login effettuato', token, role: user.role });
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the request readmission API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.requestReadmission = async (req, res) => {
   try {
     const { userId, email, message } = req.body;
@@ -211,19 +211,32 @@ exports.requestReadmission = async (req, res) => {
 
     res.json({ message: 'Richiesta di riammissione inviata' });
   } catch (err) {
-    res.status(500).json({ message: 'Errore richiesta riammissione', error: err.message });
+    sendError(res, 500, err.message, 'Errore richiesta riammissione', 'READMISSION_REQUEST_ERROR');
   }
 };
 
+/**
+ * Handles the logout API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.logout = async (req, res) => {
   try {
-    await User.findByIdAndUpdate(req.user.userId, { sessionToken: null });
-    res.json({ message: 'Logout effettuato' });
+    res.status(200).json({ message: 'Logout effettuato' });
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the forgot password API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -245,36 +258,22 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpires = resetExpires;
     await user.save();
 
-    
-    const transporter = createTransporter();
-
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/reset-password.html?token=${resetToken}`;
-
-    const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: email,
-      subject: 'Recupero Password - Trovami',
-      html: `
-        <h1>Trovami! - Recupero Password</h1>
-        <h2>Hai richiesto il recupero della password</h2>
-        <p>Clicca il link qui sotto per impostare una nuova password:</p>
-        <a href="${resetUrl}" style="background-color:#007bff;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
-          Reimposta Password
-        </a>
-        <p>Questo link scade tra 15 minuti.</p>
-        <p>Se non hai richiesto il recupero della password, ignora questo email.</p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
+    await sendPasswordResetEmail(email, resetToken);
 
     res.json({ message: 'Email di recupero inviata' });
   } catch (err) {
     console.error('Forgot password error:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the verify email API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
@@ -314,12 +313,19 @@ exports.verifyEmail = async (req, res) => {
     console.error('Verify email error:', err);
     const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || 'http://localhost:3000';
     if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      return res.status(500).json({ message: 'Errore server', error: err.message });
+      return sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
     }
     return res.redirect(`${baseUrl}/pages/verify-email.html?status=error`);
   }
 };
 
+/**
+ * Handles the reset password API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -347,16 +353,22 @@ exports.resetPassword = async (req, res) => {
     user.passwordHash = passwordHash;
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
-    user.sessionToken = null; 
     await user.save();
 
     res.json({ message: 'Password aggiornata con successo' });
   } catch (err) {
     console.error('Reset password error:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the resend verification API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.resendVerification = async (req, res) => {
   try {
     const { email } = req.body;
@@ -386,6 +398,6 @@ exports.resendVerification = async (req, res) => {
     res.json({ message: 'Email di verifica reinviata' });
   } catch (err) {
     console.error('Resend verification error:', err);
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'AUTH_SERVER_ERROR');
   }
 };

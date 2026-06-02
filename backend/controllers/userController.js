@@ -2,13 +2,24 @@ const User = require('../models/User');
 const Announcement = require('../models/Announcement');
 const { writeAuditLog } = require('../services/auditService');
 const mongoose = require('mongoose');
+const { sendError } = require('../utils/errorResponse');
 
+/**
+ * Converts boolean-like request values to booleans.
+ * @param {boolean|string} v - Request value received from JSON or form data.
+ * @returns {boolean|undefined} Parsed boolean, or undefined when the value cannot be interpreted.
+ */
 function toBool(v) {
   if (typeof v === 'boolean') return v;
   if (typeof v === 'string') return v.toLowerCase() === 'true';
   return undefined;
 }
 
+/**
+ * Validates and normalizes a GeoJSON point location payload.
+ * @param {Object} input - Object expected to contain a two-number `coordinates` array.
+ * @returns {{type: string, coordinates: number[]}|null} GeoJSON Point payload, or null for invalid coordinates.
+ */
 function normalizeLocation(input) {
   const coords = input?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
@@ -17,16 +28,30 @@ function normalizeLocation(input) {
   return { type: 'Point', coordinates: normalized };
 }
 
+/**
+ * Handles the get me API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-passwordHash -__v');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the update me API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.updateMe = async (req, res) => {
   try {
     const updates = {};
@@ -52,20 +77,30 @@ exports.updateMe = async (req, res) => {
       updates['rifugioData.location'] = location;
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.user.userId,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).select('-passwordHash -__v');
+    const userDoc = await User.findById(req.user.userId);
+    if (!userDoc) return res.status(404).json({ message: 'Utente non trovato' });
+
+    userDoc.set(updates);
+    const savedUser = await userDoc.save();
+    const user = savedUser.toObject();
+    delete user.passwordHash;
+    delete user.__v;
+
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
     await writeAuditLog({ actor: user, action: 'modificato profilo', target: null });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
 };
 
-// GET /api/v1/users/:id/public  (auth) - masked contacts by user prefs
+/**
+ * Handles the get public user API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPublicUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('username email phoneNumber contactVisibility');
@@ -81,12 +116,24 @@ exports.getPublicUser = async (req, res) => {
       phoneNumber: showPhone ? user.phoneNumber : null
     });
   } catch (err) {
-    res.status(500).json({ message: 'Errore server', error: err.message });
+    sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
 };
 
+/**
+ * Handles the get public rifugi API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getPublicRifugi = async (req, res) => {
   try {
+    const isPublic = req.query?.isPublic;
+    if (isPublic !== undefined && String(isPublic).toLowerCase() !== 'true') {
+      return res.json([]);
+    }
+
     const rifugi = await User.find({
       role: 'shelter',
       rifugioStatus: 'approved',
@@ -106,10 +153,16 @@ exports.getPublicRifugi = async (req, res) => {
       };
     }));
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero rifugi', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero rifugi', 'PUBLIC_SHELTERS_FETCH_ERROR');
   }
 };
 
+/**
+ * Formats a followed shelter for API responses while honoring contact visibility.
+ * @param {Object} shelter - Shelter user document included in the follower list.
+ * @param {boolean} emailEnabled - Whether the follower wants email notifications for this shelter.
+ * @returns {Object} Public shelter payload enriched with the follower email preference.
+ */
 function formatShelterPayload(shelter, emailEnabled) {
   const showEmail = shelter.contactVisibility?.showEmail !== false;
   const showPhone = shelter.contactVisibility?.showPhone !== false;
@@ -123,6 +176,13 @@ function formatShelterPayload(shelter, emailEnabled) {
   };
 }
 
+/**
+ * Handles the get followed shelters API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.getFollowedShelters = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId)
@@ -137,10 +197,17 @@ exports.getFollowedShelters = async (req, res) => {
 
     res.json(followed);
   } catch (err) {
-    res.status(500).json({ message: 'Errore recupero rifugi seguiti', error: err.message });
+    sendError(res, 500, err.message, 'Errore recupero rifugi seguiti', 'FOLLOWED_SHELTERS_FETCH_ERROR');
   }
 };
 
+/**
+ * Handles the follow shelter API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.followShelter = async (req, res) => {
   try {
     const shelterId = req.params.shelterId;
@@ -170,10 +237,17 @@ exports.followShelter = async (req, res) => {
     await writeAuditLog({ actor: me, action: 'seguito rifugio', target: shelter });
     res.json(formatShelterPayload(shelter, emailEnabled));
   } catch (err) {
-    res.status(500).json({ message: 'Errore follow rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore follow rifugio', 'SHELTER_FOLLOW_ERROR');
   }
 };
 
+/**
+ * Handles the unfollow shelter API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.unfollowShelter = async (req, res) => {
   try {
     const shelterId = req.params.shelterId;
@@ -195,7 +269,7 @@ exports.unfollowShelter = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ message: 'Errore unfollow rifugio', error: err.message });
+    sendError(res, 500, err.message, 'Errore unfollow rifugio', 'SHELTER_UNFOLLOW_ERROR');
   }
 };
 
@@ -204,6 +278,13 @@ const {
    removeAnnouncementCascade
 } = require('./announcementController');
 
+/**
+ * Handles the delete me API request and writes the HTTP response.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the operation completes.
+ * @throws {Error} Returns or propagates an error when validation, authorization, or persistence fails.
+ */
 exports.deleteMe = async(req,res)=>{
 
     try{
