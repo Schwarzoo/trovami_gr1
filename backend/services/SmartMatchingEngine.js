@@ -26,6 +26,15 @@ class SmartMatchingEngine {
    * @returns {Promise<Array<number>|null>} Promise resolving to the embedding vector, or null when generation fails.
    */
   async generateImageEmbedding(photoBuffer) {
+    if (process.env.RENDER) {
+        console.log("[SMART MATCHING] Ambiente Cloud Render rilevato.");
+        console.log("[SMART MATCHING] Generazione di un finto vettore IA a 512 dimensioni per bypassare i limiti di RAM.");
+        
+        // Il modello clip-ViT-B-32 genera vettori lunghi esattamente 512 elementi.
+        // Generiamo un array di 512 numeri casuali per simulare il modello senza bloccare il server di Render.
+        const mockEmbedding = Array.from({ length: 512 }, () => Math.random());
+        return mockEmbedding;
+    }
     const tempDir = path.join(__dirname, "../temp");
     const tempFile = path.join(tempDir, `img_${Date.now()}.jpg`);
 
@@ -36,7 +45,7 @@ class SmartMatchingEngine {
 
       fs.writeFileSync(tempFile, photoBuffer);
 
-      // Se c'è nel .env usalo (es. locale), altrimenti usa 'python' su Windows e 'python3' su Linux (Render)
+      // Rilevamento dinamico di python per Windows vs Linux
       const pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
 
       const { stdout, stderr } = await execFileAsync(
