@@ -1,5 +1,5 @@
-const API_BASE = 'http://localhost:3000/api/v1/announcements';
-const ADMIN_BASE = 'http://localhost:3000/api/v1/admin';
+const API_BASE = '/api/v1/announcements';
+const ADMIN_BASE = '/api/v1/admin';
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.

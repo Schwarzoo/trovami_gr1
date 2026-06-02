@@ -1,6 +1,6 @@
-const API_RIFUGI = 'http://localhost:3000/api/v1/users/rifugi?isPublic=true';
-const API_ANNOUNCEMENTS = 'http://localhost:3000/api/v1/announcements';
-const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
+const API_RIFUGI = '/api/v1/users/rifugi?isPublic=true';
+const API_ANNOUNCEMENTS = '/api/v1/announcements';
+const API_ANIMALS = '/api/v1/animals';
 
 const state = {
   rifugi: [],
@@ -315,7 +315,7 @@ function renderAdoptions() {
     const media = card.querySelector('.adoption-media');
     const placeholder = media?.querySelector('.adoption-media-placeholder');
     const animal = announcement.animalId || {};
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${announcement._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${announcement._id}/photo`;
 
     (async () => {
       try {

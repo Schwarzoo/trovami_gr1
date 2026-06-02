@@ -22,8 +22,11 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 mongoose.connect(process.env.DB_URL)
   .then(() => {
     console.log('Connesso al database!');
-    app.listen(process.env.PORT || 3000, () => {
-      console.log('Server avviato sulla porta 3000');
+    
+    const port = process.env.PORT || 3000; 
+    
+    app.listen(port, () => {
+      console.log(`Server avviato sulla porta ${port}`); 
     });
   })
   .catch(err => console.error('Errore connessione:', err));

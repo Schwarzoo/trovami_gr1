@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api/v1/announcements';
+const API_BASE = '/api/v1/announcements';
 const CURRENT_ROLE = localStorage.getItem('role') || '';
 
 let allAnnouncements = [];
@@ -154,7 +154,7 @@ async function patchAnnouncementStatus(id, status) {
 async function fetchPublicUser(userId) {
     const token = localStorage.getItem('token');
     if (!token) throw new Error('not logged in');
-    const res = await fetch(`http://localhost:3000/api/v1/users/${encodeURIComponent(userId)}/public`, {
+    const res = await fetch(`/api/v1/users/${encodeURIComponent(userId)}/public`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const json = await res.json().catch(() => ({}));
@@ -206,7 +206,7 @@ function buildCard(ann) {
         ? `<div class="card-distance">${ann._distance < 1000 ? `${Math.round(ann._distance)} m` : `${(ann._distance / 1000).toFixed(1)} km`} da te</div>`
         : '';
 
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${ann._id}/photo`;
     const date = new Date(ann.date).toLocaleDateString('it-IT', {
         day: '2-digit', month: 'short', year: 'numeric'
     });
@@ -327,7 +327,7 @@ async function openModal(ann) {
         const gallery = document.getElementById('modal-gallery');
         gallery.innerHTML = '<div class="modal-spinner">…</div>';
         (async () => {
-            const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
+            const photoUrl = `/api/v1/announcements/${ann._id}/photo`;
             try {
                 const res = await fetch(photoUrl, { method: 'GET' });
                 if (!res.ok) throw new Error('no image');

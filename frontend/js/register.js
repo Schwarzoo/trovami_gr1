@@ -34,7 +34,7 @@ resendButton.addEventListener('click', async () => {
   }
 
   try {
-    const res = await fetch('http://localhost:3000/api/v1/auth/email-verifications', {
+    const res = await fetch('/api/v1/auth/email-verifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: lastRegisteredEmail })
@@ -86,7 +86,7 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  const res = await fetch('http://localhost:3000/api/v1/auth/users', {
+  const res = await fetch('/api/v1/auth/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

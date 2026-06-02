@@ -27,7 +27,7 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  const res = await fetch('http://localhost:3000/api/v1/auth/readmission-requests', {
+  const res = await fetch('/api/v1/auth/readmission-requests', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, message })

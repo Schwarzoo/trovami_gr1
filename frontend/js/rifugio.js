@@ -1,8 +1,8 @@
-const API_RIFUGI = 'http://localhost:3000/api/v1/users/rifugi?isPublic=true';
-const API_ANNOUNCEMENTS = 'http://localhost:3000/api/v1/announcements';
-const API_ANIMALS = 'http://localhost:3000/api/v1/animals';
-const API_CONTACT_REQUESTS = 'http://localhost:3000/api/v1/contact-requests';
-const API_FOLLOWED_SHELTERS = 'http://localhost:3000/api/v1/users/me/followed-shelters';
+const API_RIFUGI = '/api/v1/users/rifugi?isPublic=true';
+const API_ANNOUNCEMENTS = '/api/v1/announcements';
+const API_ANIMALS = '/api/v1/animals';
+const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
+const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
 let currentRifugio = null;
 let isFollowingCurrentRifugio = false;
 

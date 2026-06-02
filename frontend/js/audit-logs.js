@@ -55,7 +55,7 @@ function buildUrl() {
     sortDir: state.sortDir
   });
   if (state.search) params.set('search', state.search);
-  return `http://localhost:3000/api/v1/admin/audit-logs?${params.toString()}`;
+  return `/api/v1/admin/audit-logs?${params.toString()}`;
 }
 
 /**

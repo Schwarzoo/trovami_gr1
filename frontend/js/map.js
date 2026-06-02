@@ -295,7 +295,7 @@ function renderAnnouncements(announcements) {
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
   (async () => {
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
     try {
       const res = await fetch(photoUrl, { method: 'GET' });
       if (!res.ok) throw new Error('no image');
@@ -313,7 +313,7 @@ function renderAnnouncements(announcements) {
   })();
 
   marker.on('popupopen', async () => {
-    const photoUrl = `http://localhost:3000/api/v1/announcements/${a._id}/photo`;
+    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
     try {
       const res = await fetch(photoUrl, { method: 'GET' });
       if (!res.ok) throw new Error('no image');
@@ -502,8 +502,8 @@ function populateFilterOptions(announcements) {
  */
 async function loadAnnouncements() {
   const [annRes, rifugiRes] = await Promise.all([
-    fetch('http://localhost:3000/api/v1/announcements'),
-    fetch('http://localhost:3000/api/v1/users/rifugi?isPublic=true')
+    fetch('/api/v1/announcements'),
+    fetch('/api/v1/users/rifugi?isPublic=true')
   ]);
   if (!annRes.ok) { console.error('Errore fetch annunci'); return; }
 

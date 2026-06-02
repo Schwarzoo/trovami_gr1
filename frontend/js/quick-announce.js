@@ -217,12 +217,12 @@ async function submitQuickAnnounce(data) {
       announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
       announcementForm.append('photo', data.photo);
 
-      announcementRes = await fetch('http://localhost:3000/api/v1/announcements', {
+      announcementRes = await fetch('/api/v1/announcements', {
         method: 'POST',
         body: announcementForm
       });
     } else {
-      announcementRes = await fetch('http://localhost:3000/api/v1/announcements', {
+      announcementRes = await fetch('/api/v1/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(announcementPayload)

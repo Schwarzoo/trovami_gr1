@@ -1,8 +1,8 @@
-const HOME_API = 'http://localhost:3000/api/v1/announcements';
+const HOME_API = '/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
-const HOME_RESOLVED_API = 'http://localhost:3000/api/v1/announcements/count?status=resolved';
-const HOME_PUBLIC_RIFUGI_API = 'http://localhost:3000/api/v1/users/rifugi?isPublic=true';
+const HOME_RESOLVED_API = '/api/v1/announcements/count?status=resolved';
+const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/rifugi?isPublic=true';
 
 /**
  * Formats a value for the home-page announcement UI.
@@ -164,7 +164,7 @@ async function fetchHomePublicUser(userId) {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('not logged in');
 
-  const res = await fetch(`http://localhost:3000/api/v1/users/${encodeURIComponent(userId)}/public`, {
+  const res = await fetch(`/api/v1/users/${encodeURIComponent(userId)}/public`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const json = await res.json().catch(() => ({}));
@@ -180,7 +180,7 @@ async function fetchHomePublicUser(userId) {
 function buildHomeCard(ann) {
   const animal = ann.animalId;
   const isLost = ann.type === 'LostAnimal';
-  const photoUrl = `http://localhost:3000/api/v1/announcements/${ann._id}/photo`;
+  const photoUrl = `/api/v1/announcements/${ann._id}/photo`;
   const date = new Date(ann.date).toLocaleDateString('it-IT', {
     day: '2-digit',
     month: 'short',
