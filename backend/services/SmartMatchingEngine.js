@@ -36,7 +36,8 @@ class SmartMatchingEngine {
 
       fs.writeFileSync(tempFile, photoBuffer);
 
-      const pythonPath = process.env.PYTHON_PATH || "python";
+      // Se c'è nel .env usalo (es. locale), altrimenti usa 'python' su Windows e 'python3' su Linux (Render)
+      const pythonPath = process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3');
 
       const { stdout, stderr } = await execFileAsync(
         pythonPath,
