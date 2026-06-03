@@ -2,20 +2,6 @@ const API_BASE = '/api/v1/announcements';
 const ADMIN_BASE = '/api/v1/admin';
 
 /**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {*} input - Value that will be interpolated into announcement markup.
- * @returns {string} HTML-safe string representation of the value.
- */
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-/**
  * Formats a value for UI display, replacing empty values with a placeholder.
  * @param {*} value - Field value shown in the announcement details UI.
  * @returns {string} Trimmed display text or the empty-value placeholder.
@@ -23,15 +9,6 @@ function escapeHtml(input) {
 function displayValue(value) {
   const text = String(value ?? '').trim();
   return text || '- -';
-}
-
-/**
- * Reads a query-string parameter from the current page URL.
- * @param {string} name - Query parameter name to read.
- * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
- */
-function getQueryParam(name) {
-  return new URLSearchParams(window.location.search).get(name);
 }
 
 /**

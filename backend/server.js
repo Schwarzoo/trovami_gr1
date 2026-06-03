@@ -30,6 +30,13 @@ app.get('/api/v1/mock-emails', (req, res) => {
   return res.json(global.mockInbox);
 });
 
+app.use('/api', (req, res) => res.status(404).json({ message: 'Rotta API non trovata' }));
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ message: 'Errore interno del server' });
+});
+
 mongoose.connect(process.env.DB_URL)
   .then(() => {
     console.log('Connesso al database!');

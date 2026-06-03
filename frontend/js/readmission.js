@@ -1,15 +1,6 @@
 const form = document.getElementById('readmissionForm');
 const statusBox = document.getElementById('readmissionStatus');
 
-/**
- * Reads a query-string parameter from the current page URL.
- * @param {string} name - Query parameter name to read.
- * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
- */
-function getQueryParam(name) {
-  return new URLSearchParams(window.location.search).get(name);
-}
-
 const userId = getQueryParam('userId');
 const currentStatus = getQueryParam('status');
 

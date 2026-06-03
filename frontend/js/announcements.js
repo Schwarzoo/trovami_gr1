@@ -18,21 +18,6 @@ function displayValue(value) {
 }
 
 /**
- * Escapes HTML-sensitive characters in a value before injecting it into markup.
- * @param {*} input - Value to escape.
- * @returns {string} HTML-safe string representation of the input.
- */
-function escapeHtml(input) {
-    return String(input ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
-
-
-/**
  * Fetches the announcements list from the API using optional query parameters.
  * @param {Object} [params={}] - Query parameters to append to the announcements API URL.
  * @returns {Promise<Array<Object>>} Promise resolving to an array of announcements, or an empty array on failure.

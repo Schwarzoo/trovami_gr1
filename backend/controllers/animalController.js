@@ -151,7 +151,7 @@ exports.listAnimals = async (req, res) => {
   try {
     const { shelterId } = req.query;
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
     const skip = (page - 1) * limit;
     const filter = {};
     if (shelterId) {

@@ -1,6 +1,43 @@
 let notificationBadgeTimer = null;
 
 /**
+ * Escapes HTML-sensitive characters before inserting text into markup.
+ * @param {*} input - Value to escape.
+ * @returns {string} HTML-safe string representation of the input.
+ */
+function escapeHtml(input) {
+  return String(input ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+/**
+ * Reads a query-string parameter from the current page URL.
+ * @param {string} name - Query parameter name to read.
+ * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
+ */
+function getQueryParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+/**
+ * Decodes a JWT payload without verifying the signature for client-side UI decisions.
+ * @param {string} token - JWT string read from local storage.
+ * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
+ */
+function decodeJwt(token) {
+  try {
+    const payload = token.split('.')[1];
+    return JSON.parse(atob(payload));
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * Opens the profile new-announcement flow from shared navigation controls.
  * @returns {void}
  */

@@ -9,7 +9,7 @@ router.delete('/me', authMiddleware, deleteMe);
 router.get('/me/followed-shelters', authMiddleware, getFollowedShelters);
 router.post('/me/followed-shelters/:shelterId', authMiddleware, followShelter);
 router.delete('/me/followed-shelters/:shelterId', authMiddleware, unfollowShelter);
-router.get('/rifugi', getPublicRifugi);
+router.get('/shelters', getPublicRifugi);
 router.get('/:id/public', authMiddleware, getPublicUser);
 
 module.exports = router;

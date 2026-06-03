@@ -29,7 +29,7 @@ const notificationSchema = new mongoose.Schema(
         "report",
         "rifugio_request",
         "admin_warning",
-        "SMART_MATCH",
+        "smart_match",
         "contact_request",
         "shelter_announcement",
       ],
