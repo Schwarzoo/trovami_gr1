@@ -2,6 +2,10 @@
   const ROOT_ID = 'mock-inbox-root';
   const STYLE_ID = 'mock-inbox-styles';
   const ENDPOINT = '/api/v1/mock-emails';
+  const REFRESH_INTERVAL_MS = 3000;
+
+  let refreshTimer = null;
+  let lastRenderedSignature = '';
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -152,7 +156,7 @@
     root.id = ROOT_ID;
     root.innerHTML = `
       <button type="button" class="mock-inbox-trigger" aria-haspopup="dialog" aria-expanded="false">
-        <span aria-hidden="true">📬</span>
+        <span aria-hidden="true"></span>
         <span>Simulatore Email</span>
       </button>
       <div class="mock-inbox-backdrop" aria-hidden="true">
@@ -232,6 +236,59 @@
     body.appendChild(list);
   }
 
+  /**
+   * Builds a stable signature string for the current inbox payload.
+   * @param {Array<Object>} emails - Email entries returned by the mock inbox endpoint.
+   * @returns {string} Deterministic signature used to detect inbox changes.
+   */
+  function signatureForEmails(emails) {
+    try {
+      return JSON.stringify((Array.isArray(emails) ? emails : []).map((email) => ({
+        to: email?.to || '',
+        subject: email?.subject || '',
+        message: email?.message || '',
+        time: email?.time || ''
+      })));
+    } catch (error) {
+      return String(Date.now());
+    }
+  }
+
+  /**
+   * Re-fetches the mock inbox and updates the rendered list when new emails appear.
+   * @param {HTMLElement} root - Root element that contains the mock inbox widget.
+   * @returns {Promise<void>} Promise resolving after the inbox refresh attempt.
+   */
+  async function refreshInbox(root) {
+    try {
+      const response = await fetch(ENDPOINT, { cache: 'no-cache' });
+      if (!response.ok) return;
+
+      const emails = await response.json();
+      if (!Array.isArray(emails)) return;
+
+      const signature = signatureForEmails(emails);
+      if (signature === lastRenderedSignature) return;
+
+      lastRenderedSignature = signature;
+      renderItems(root, emails);
+    } catch (error) {
+      console.warn('Mock inbox non disponibile', error);
+    }
+  }
+
+  /**
+   * Starts the periodic refresh loop for the mock inbox widget.
+   * @param {HTMLElement} root - Root element that contains the mock inbox widget.
+   * @returns {void} No return value.
+   */
+  function startAutoRefresh(root) {
+    if (refreshTimer) return;
+    refreshTimer = window.setInterval(() => {
+      refreshInbox(root);
+    }, REFRESH_INTERVAL_MS);
+  }
+
   async function boot() {
     try {
       const response = await fetch(ENDPOINT, { cache: 'no-cache' });
@@ -246,9 +303,14 @@
       const trigger = root.querySelector('.mock-inbox-trigger');
       const closeButton = root.querySelector('.mock-inbox-close');
 
+      lastRenderedSignature = signatureForEmails(emails);
       renderItems(root, emails);
+      startAutoRefresh(root);
 
-      trigger?.addEventListener('click', () => openInbox(root));
+      trigger?.addEventListener('click', async () => {
+        await refreshInbox(root);
+        openInbox(root);
+      });
       closeButton?.addEventListener('click', () => closeInbox(root));
       backdrop?.addEventListener('click', (event) => {
         if (event.target === backdrop) closeInbox(root);

@@ -7,6 +7,10 @@ const { promisify } = require("util");
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Detects whether the app is running in Render simulation mode.
+ * @returns {boolean} True when `RENDER=true`.
+ */
 function isRenderSimulationEnabled() {
   return String(process.env.RENDER).toLowerCase() === 'true';
 }

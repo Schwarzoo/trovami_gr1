@@ -1783,54 +1783,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
   });
 
-  grid.addEventListener('click', (e) => {
-    const clickedCard = e.target.closest('.card');
-    if (!clickedCard || !grid.contains(clickedCard)) return;
-    if (e.target.closest('button, a, input, select, textarea')) return;
-    const id = clickedCard.dataset.id;
-    if (id) openAnnouncementModal(id);
-  });
-
-
-  document.querySelectorAll('button.close').forEach(b => b.addEventListener('click', async (e) => {
-    const id = e.target.dataset.id;
-    const confirmed = await showProfileConfirm({
-      title: 'Segna come risolto',
-      message: 'Segni l\'annuncio come risolto? Non comparirà più nella lista pubblica.',
-      confirmLabel: 'Segna come risolto',
-      danger: false
-    });
-    if (!confirmed) return;
-    const res = await fetch(`/api/v1/announcements/${id}`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
-    if (res.ok) {
-      loadMyAnnouncements();
-      window.dispatchEvent(new Event('announcements:resolved-updated'));
-    } else alert('Errore chiusura');
-  }));
-
-  
-
-  document.querySelectorAll('button.del').forEach(b => b.addEventListener('click', async (e) => {
-    const id = e.target.dataset.id;
-    const confirmed = await showProfileConfirm({
-      title: 'Elimina annuncio',
-      message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
-      confirmLabel: 'Elimina',
-      danger: true
-    });
-    if (!confirmed) return;
-    try {
-      const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
-      if (res.ok) {
-        loadMyAnnouncements();
-      } else {
-        const d = await res.json().catch(()=>({}));
-        alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+  if (!grid.dataset.eventsBound) {
+    grid.dataset.eventsBound = '1';
+    grid.addEventListener('click', async (e) => {
+      const closeButton = e.target.closest('button.close');
+      if (closeButton) {
+        const id = closeButton.dataset.id;
+        const confirmed = await showProfileConfirm({
+          title: 'Segna come risolto',
+          message: 'Segni l\'annuncio come risolto? Non comparirà più nella lista pubblica.',
+          confirmLabel: 'Segna come risolto',
+          danger: false
+        });
+        if (!confirmed) return;
+        const res = await fetch(`/api/v1/announcements/${id}`, {
+          method: 'PATCH',
+          headers: authHeader,
+          body: JSON.stringify({ status: 'RESOLVED' })
+        });
+        if (res.ok) {
+          loadMyAnnouncements();
+          window.dispatchEvent(new Event('announcements:resolved-updated'));
+        } else {
+          alert('Errore chiusura');
+        }
+        return;
       }
-    } catch (err) {
-      alert('Errore di rete: ' + (err.message || err));
-    }
-  }));
+
+      const deleteButton = e.target.closest('button.del');
+      if (deleteButton) {
+        const id = deleteButton.dataset.id;
+        const confirmed = await showProfileConfirm({
+          title: 'Elimina annuncio',
+          message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
+          confirmLabel: 'Elimina',
+          danger: true
+        });
+        if (!confirmed) return;
+        try {
+          const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
+          if (res.ok) {
+            loadMyAnnouncements();
+          } else {
+            const d = await res.json().catch(() => ({}));
+            alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+          }
+        } catch (err) {
+          alert('Errore di rete: ' + (err.message || err));
+        }
+        return;
+      }
+
+      const clickedCard = e.target.closest('.card');
+      if (!clickedCard || !grid.contains(clickedCard)) return;
+      if (e.target.closest('button, a, input, select, textarea')) return;
+      const id = clickedCard.dataset.id;
+      if (id) openAnnouncementModal(id);
+    });
+  }
 }
 
   /**
@@ -2598,10 +2608,10 @@ function openModalForCreate() {
   configureTypeFieldForAccount('LostAnimal');
   document.getElementById('modal-description').value = '';
   document.getElementById('modal-animalName').value = '';
-  document.getElementById('modal-species').value = '';
+  wizApplyChipValue('modal-species', 'Cane');
   document.getElementById('modal-breed').value = '';
   document.getElementById('modal-color').value = '';
-  document.getElementById('modal-gender').value = '';
+  wizApplyChipValue('modal-gender', 'Sconosciuto');
   document.getElementById('modal-lunghezzaPelo').value = '';
   document.getElementById('modal-distinctiveFeatures').value = '';
   document.getElementById('modal-microchipId').value = '';
@@ -2639,10 +2649,10 @@ function openModalForEdit(ann) {
   configureTypeFieldForAccount(ann.type || 'LostAnimal');
   document.getElementById('modal-description').value = ann.description || '';
   document.getElementById('modal-animalName').value = ann.animalId?.name || '';
-  document.getElementById('modal-species').value = ann.animalId?.species || '';
+  wizApplyChipValue('modal-species', ann.animalId?.species || '');
   document.getElementById('modal-breed').value = ann.animalId?.breed || '';
   document.getElementById('modal-color').value = ann.animalId?.color || '';
-  document.getElementById('modal-gender').value = ann.animalId?.gender || '';
+  wizApplyChipValue('modal-gender', ann.animalId?.gender || 'Sconosciuto');
   document.getElementById('modal-lunghezzaPelo').value = ann.animalId?.lunghezzaPelo || '';
   document.getElementById('modal-distinctiveFeatures').value = ann.animalId?.distinctiveFeatures || '';
   document.getElementById('modal-microchipId').value = ann.animalId?.microchipId || '';
@@ -2801,17 +2811,25 @@ let wizStep = 1;
 
     // Aggiorna riepilogo dinamico
     try {
-      const name = (document.getElementById('modal-animalName') || {}).value || '';
       const species = (document.getElementById('modal-species') || {}).value || '';
-      document.getElementById('summary-base').textContent = (name && species) ? `✔️ Dati base inseriti: ${name} (${species})` : '❌ Dati base inseriti (Nome e Specie)';
+      const gender = (document.getElementById('modal-gender') || {}).value || '';
+      document.getElementById('summary-base').textContent = (species && gender)
+        ? `✔️ Dati base inseriti: ${species} • ${gender}`
+        : '❌ Dati base inseriti (Specie e Genere)';
 
       const color = (document.getElementById('modal-color') || {}).value || '';
       const fur = (document.getElementById('modal-lunghezzaPelo') || {}).value || '';
       document.getElementById('summary-aspect').textContent = (color || fur) ? `✔️ Aspetto: ${color || '—'} • ${fur || '—'}` : '❌ Dettagli aspetto completati';
 
       const coords = (document.getElementById('modal-coords') || {}).value || '';
-      const lastSeen = (document.getElementById('modal-lastSeenDate') || {}).value || '';
-      document.getElementById('summary-location').textContent = (coords && lastSeen) ? `✔️ Posizione: impostata • Data: ${lastSeen}` : '❌ Posizione e data impostate';
+      const lastSeenInput = document.getElementById('modal-lastSeenDate');
+      const lastSeen = (lastSeenInput || {}).value || '';
+      const customDateSelected = document.getElementById('lastSeenCustomBtn')?.classList.contains('is-selected');
+      const hasValidDate = customDateSelected ? Boolean(lastSeen) : true;
+      const dateLabel = customDateSelected ? lastSeen : 'oggi';
+      document.getElementById('summary-location').textContent = (coords && hasValidDate)
+        ? `✔️ Posizione: impostata • Data: ${dateLabel}`
+        : '❌ Posizione e data impostate';
     } catch (e) {}
 	}
 
@@ -2838,6 +2856,23 @@ let wizStep = 1;
 		hiddenInput.value = val;
 		hiddenInput.dispatchEvent(new Event('change'));
 	}
+
+  function wizApplyChipValue(hiddenId, value) {
+    const hiddenInput = document.getElementById(hiddenId);
+    if (!hiddenInput) return;
+
+    hiddenInput.value = value || '';
+    const chips = Array.from(document.querySelectorAll('.wiz-chip[onclick]'))
+      .filter((chip) => (chip.getAttribute('onclick') || '').includes(`'${hiddenId}'`));
+
+    chips.forEach((chip) => {
+      const marker = `,'${value}'`;
+      const onclick = (chip.getAttribute('onclick') || '').replace(/\s+/g, '');
+      chip.classList.toggle('active', Boolean(value) && onclick.includes(marker));
+    });
+
+    hiddenInput.dispatchEvent(new Event('change'));
+  }
 
 	// Tasti "Colore"
 	function wizSetColor(val, el) {

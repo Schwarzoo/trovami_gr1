@@ -3159,3 +3159,46 @@ API per utenti registrati che vogliono seguire rifugi approvati e ricevere aggio
         {
             "success": true
         }
+
+
+# Group Testing e Debugging
+Risorse utilizzate per il collaudo e la simulazione in ambiente Cloud (es. aggiramento blocchi SMTP su Render).
+
+## Mock Inbox [/api/v1/mock-emails]
+Questa rotta restituisce l'elenco delle email intercettate dal server. È attiva solo quando la variabile d'ambiente `RENDER` è impostata su `true` per evitare l'invio di email reali durante i test o a causa delle limitazioni del piano gratuito.
+
+### Recupera Email Simulate [GET]
+
++ Request (application/json)
+    + Headers
+
+            Accept: application/json
+
++ Response 200 (application/json)
+    Restituisce un array contenente le email bloccate e salvate in memoria.
+
+    + Body
+
+            [
+                {
+                    "to": "nuovo_utente@example.com",
+                    "subject": "Conferma Registrazione Account",
+                    "message": "Clicca qui per confermare: <a href='http://localhost:3000/confirm.html?token=abc123xyz'>Conferma Account</a>",
+                    "time": "14:30:05"
+                },
+                {
+                    "to": "mario_rossi@example.com",
+                    "subject": "Nuova richiesta di adozione",
+                    "message": "Hai ricevuto una nuova richiesta per l'annuncio Luna.",
+                    "time": "15:45:12"
+                }
+            ]
+
++ Response 404 (application/json)
+    Restituito se la Mock Inbox è disabilitata (es. in produzione con server SMTP reale attivo).
+
+    + Body
+
+            {
+                "message": "Mock inbox non disponibile"
+            }

@@ -47,6 +47,10 @@ function buildAnnouncementUrl(announcementId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
 }
 
+/**
+ * Detects whether the app is running in Render simulation mode.
+ * @returns {boolean} True when `RENDER=true`.
+ */
 function isRenderSimulationEnabled() {
     return String(process.env.RENDER).toLowerCase() === 'true';
 }
