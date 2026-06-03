@@ -6,6 +6,10 @@
   padding: 0;
 }
 
+html {
+    background-color: #1A0E08;
+}
+
 body {
   font-family: var(--font-body);
   background: var(--bg);
@@ -1057,4 +1061,10 @@ button#nearby-button:disabled {
     align-items: flex-end;
     padding: 0;
   }
+}
+
+
+body::before,
+body::after {
+  animation: none !important;
 }

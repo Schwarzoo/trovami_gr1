@@ -19,16 +19,25 @@ if (!token || payload?.role !== 'admin') {
   window.location.href = '/pages/login.html';
 }
 
+const ITEMS_PER_PAGE = 50;
+
 const state = {
   search: '',
   sortBy: 'createdAt',
-  sortDir: 'desc'
+  sortDir: 'desc',
+  currentPage: 1,
+  allLogs: [],
+  filteredLogs: []
 };
 
 const authHeader = { Authorization: 'Bearer ' + token };
 const body = document.getElementById('auditTableBody');
 const statusEl = document.getElementById('auditStatus');
 const searchInput = document.getElementById('auditSearch');
+const prevBtn = document.getElementById('auditPrevBtn');
+const nextBtn = document.getElementById('auditNextBtn');
+const pageNumEl = document.getElementById('auditPageNum');
+const totalPagesEl = document.getElementById('auditTotalPages');
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
@@ -45,32 +54,64 @@ function escapeHtml(input) {
 }
 
 /**
- * Builds the audit-log API URL from the current filter and sort state.
- * @returns {string} Admin audit-log endpoint URL including search, sort, and limit parameters.
+ * Filtra i log in base alla ricerca
+ * @returns {Array<Object>} Log filtrati
  */
-function buildUrl() {
-  const params = new URLSearchParams({
-    limit: '200',
-    sortBy: state.sortBy,
-    sortDir: state.sortDir
+function filterLogs() {
+  if (!state.search) {
+    return state.allLogs;
+  }
+  const searchLower = state.search.toLowerCase();
+  return state.allLogs.filter((log) => {
+    return (
+      (log?.actorName?.toLowerCase().includes(searchLower) || false) ||
+      (log?.action?.toLowerCase().includes(searchLower) || false) ||
+      (log?.targetUsername?.toLowerCase().includes(searchLower) || false)
+    );
   });
-  if (state.search) params.set('search', state.search);
-  return `/api/v1/admin/audit-logs?${params.toString()}`;
 }
 
 /**
- * Renders audit-log rows into the current table body.
- * @param {Array<Object>} logs - Audit-log records returned by the admin API.
+ * Calcola le pagine e restituisce i log per la pagina corrente
+ * @returns {Array<Object>} Log per la pagina corrente
+ */
+function getPaginatedLogs() {
+  const start = (state.currentPage - 1) * ITEMS_PER_PAGE;
+  const end = start + ITEMS_PER_PAGE;
+  return state.filteredLogs.slice(start, end);
+}
+
+/**
+ * Aggiorna l'interfaccia di paginazione
  * @returns {void}
  */
-function renderRows(logs) {
+function updatePaginationUI() {
+  const totalPages = Math.ceil(state.filteredLogs.length / ITEMS_PER_PAGE) || 1;
+
+  pageNumEl.textContent = state.currentPage;
+  totalPagesEl.textContent = totalPages;
+
+  prevBtn.disabled = state.currentPage === 1;
+  nextBtn.disabled = state.currentPage >= totalPages;
+
+  statusEl.textContent = `${state.filteredLogs.length} log trovati (pagina ${state.currentPage} di ${totalPages})`;
+}
+
+/**
+ * Renderizza i log della pagina corrente
+ * @returns {void}
+ */
+function renderCurrentPage() {
+  const logs = getPaginatedLogs();
   body.innerHTML = '';
+
   if (!logs.length) {
-    statusEl.textContent = 'Nessun log trovato';
+    if (state.filteredLogs.length === 0) {
+      statusEl.textContent = 'Nessun log trovato';
+    }
     return;
   }
 
-  statusEl.textContent = `${logs.length} log visualizzati`;
   logs.forEach((log) => {
     const row = document.createElement('tr');
     const when = log?.createdAt ? new Date(log.createdAt).toLocaleString('it-IT') : '';
@@ -85,8 +126,22 @@ function renderRows(logs) {
 }
 
 /**
- * Loads audit logs from the API and updates the table UI.
- * @returns {Promise<void>} Promise resolving after the audit table or error state is updated.
+ * Construisce l'URL per il recupero degli audit logs
+ * @returns {string} URL con parametri di sort e limite
+ */
+function buildUrl() {
+  const params = new URLSearchParams({
+    limit: '500',
+    sortBy: state.sortBy,
+    sortDir: state.sortDir
+  });
+  if (state.search) params.set('search', state.search);
+  return `/api/v1/admin/audit-logs?${params.toString()}`;
+}
+
+/**
+ * Carica i log dall'API e aggiorna lo stato
+ * @returns {Promise<void>}
  */
 async function loadAuditLogs() {
   statusEl.textContent = 'Caricamento...';
@@ -96,16 +151,34 @@ async function loadAuditLogs() {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.userMessage || data.message || 'Errore recupero audit logs');
     }
-    const logs = await res.json();
-    renderRows(Array.isArray(logs) ? logs : []);
+    state.allLogs = await res.json();
+    state.allLogs = Array.isArray(state.allLogs) ? state.allLogs : [];
+    state.currentPage = 1;
+
+    applyFiltersAndRender();
   } catch (err) {
     statusEl.textContent = err.message || 'Errore recupero audit logs';
     body.innerHTML = '';
+    state.allLogs = [];
+    state.filteredLogs = [];
+    state.currentPage = 1;
+    updatePaginationUI();
   }
 }
 
 /**
- * Updates the active state of audit-log sort controls.
+ * Applica i filtri e renderizza i risultati
+ * @returns {void}
+ */
+function applyFiltersAndRender() {
+  state.filteredLogs = filterLogs();
+  state.currentPage = 1;
+  updatePaginationUI();
+  renderCurrentPage();
+}
+
+/**
+ * Aggiorna lo stato dei pulsanti di sort
  * @returns {void}
  */
 function updateSortButtons() {
@@ -117,6 +190,7 @@ function updateSortButtons() {
   });
 }
 
+// Event listeners per il sort
 document.querySelectorAll('[data-sort]').forEach((button) => {
   button.addEventListener('click', () => {
     const nextSort = button.dataset.sort;
@@ -131,16 +205,39 @@ document.querySelectorAll('[data-sort]').forEach((button) => {
   });
 });
 
+// Event listener per la ricerca con debounce
 let searchTimer = null;
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     state.search = searchInput.value.trim();
-    loadAuditLogs();
+    applyFiltersAndRender();
   }, 250);
 });
 
+// Event listeners per la paginazione
+prevBtn.addEventListener('click', () => {
+  if (state.currentPage > 1) {
+    state.currentPage--;
+    updatePaginationUI();
+    renderCurrentPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+
+nextBtn.addEventListener('click', () => {
+  const totalPages = Math.ceil(state.filteredLogs.length / ITEMS_PER_PAGE) || 1;
+  if (state.currentPage < totalPages) {
+    state.currentPage++;
+    updatePaginationUI();
+    renderCurrentPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+
+// Event listener per il refresh
 document.getElementById('auditRefresh').addEventListener('click', loadAuditLogs);
 
+// Inizializzazione
 updateSortButtons();
 loadAuditLogs();

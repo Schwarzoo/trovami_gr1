@@ -15,7 +15,9 @@ html {
   background-color: #1a0e08;
 }
 
+
 body {
+  position: relative;
   min-height: 100vh;
   background-color: #1a0e08;
   background-attachment: fixed;
@@ -26,6 +28,7 @@ body {
   position: relative;
   isolation: isolate;
 }
+
 
 body::before,
 body::after {
@@ -57,7 +60,7 @@ body::before {
 }
 
 body::after {
-  z-index: -1;
+  z-index: -3;
   background: repeating-linear-gradient(
     -55deg,
     transparent,
@@ -65,10 +68,10 @@ body::after {
     rgba(216, 90, 48, 0.03) 60px,
     rgba(216, 90, 48, 0.03) 61px
   );
-  animation: profileBgDrift 46s ease-in-out infinite alternate;
+  animation: bgDrift 46s ease-in-out infinite alternate;
 }
 
-@keyframes profileBgFloat {
+@keyframes bgFloat {
   from {
     transform: translate3d(-1.5%, -1%, 0) scale(1.03);
   }
@@ -77,7 +80,7 @@ body::after {
   }
 }
 
-@keyframes profileBgDrift {
+@keyframes bgDrift {
   from {
     transform: translate3d(1%, 0, 0) scale(1.02);
   }
@@ -662,7 +665,8 @@ body::after {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+
+  background: transparent;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1146,7 +1150,67 @@ body::after {
   color: var(--accent-2);
 }
 
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px 0;
+}
+
+.audit-page-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 60px;
+  text-align: center;
+}
+
+.audit-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.audit-nav-btn:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.audit-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audit-nav-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 @media (max-width: 600px) {
+  .audit-pagination {
+    gap: 12px;
+  }
+
+  .audit-nav-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
   .modal-overlay {
     padding: 0;
   }

@@ -22,22 +22,22 @@ body {
 body::before,
 body::after {
   content: '';
-  position: fixed;
-  inset: -8%;
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
 body::before {
-  z-index: -1;
+  z-index: -2;
   background-image: radial-gradient(circle, rgba(240, 153, 123, 0.18) 1px, transparent 1px);
   background-size: 36px 36px;
   mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-  animation: homeBgFloat 34s ease-in-out infinite alternate;
+  animation: bgFloat 34s ease-in-out infinite alternate;
 }
 
 body::after {
-  z-index: -1;
+  z-index: -3;
   background: repeating-linear-gradient(
     -55deg,
     transparent,
@@ -45,10 +45,10 @@ body::after {
     rgba(216, 90, 48, 0.03) 60px,
     rgba(216, 90, 48, 0.03) 61px
   );
-  animation: homeBgDrift 46s ease-in-out infinite alternate;
+  animation: bgDrift 46s ease-in-out infinite alternate;
 }
 
-@keyframes homeBgFloat {
+@keyframes bgFloat {
   from {
     transform: translate3d(-1.5%, -1%, 0) scale(1.03);
   }
@@ -57,7 +57,7 @@ body::after {
   }
 }
 
-@keyframes homeBgDrift {
+@keyframes bgDrift {
   from {
     transform: translate3d(1%, 0, 0) scale(1.02);
   }
@@ -332,6 +332,7 @@ body::after {
   font-size: 1.8rem;
   font-weight: 400;
   margin: 0;
+  color: #ffe;
 }
 
 .section-header p {
@@ -357,7 +358,6 @@ body::after {
   margin-bottom: 0.35rem;
   color: #221a15;
 }
-
 .map-shell-copy p {
   margin: 0;
   color: var(--text-muted);
@@ -928,4 +928,9 @@ body::after {
   .quick-announce-location-pill {
     align-self: flex-start;
   }
+}
+
+body::before,
+body::after {
+  animation: none !important;
 }

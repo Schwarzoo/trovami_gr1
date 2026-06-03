@@ -151,4 +151,9 @@ function loadMockInboxWidget() {
 }
 
 document.addEventListener('DOMContentLoaded', loadPartials);
-document.addEventListener('DOMContentLoaded', loadMockInboxWidget);
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('enableMockInbox') === '1') {
+    loadMockInboxWidget();
+  }
+});
