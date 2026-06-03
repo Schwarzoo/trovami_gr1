@@ -156,7 +156,6 @@
     root.id = ROOT_ID;
     root.innerHTML = `
       <button type="button" class="mock-inbox-trigger" aria-haspopup="dialog" aria-expanded="false">
-        <span aria-hidden="true"></span>
         <span>Simulatore Email</span>
       </button>
       <div class="mock-inbox-backdrop" aria-hidden="true">
