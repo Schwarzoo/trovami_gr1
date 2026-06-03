@@ -116,126 +116,88 @@
 
   <!-- MODAL: Quick Announcement -->
   <div id="quick-announce-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal-content">
+    <div class="modal-content quick-announce-modal">
       <div class="modal-header">
-        <h2>Segnala un animale</h2>
+        <div>
+          <p class="quick-announce-kicker">Segnalazione rapida</p>
+          <h2>Pubblica in pochi secondi</h2>
+        </div>
         <button id="quick-announce-close" class="modal-close" aria-label="Chiudi">✕</button>
       </div>
       <div class="modal-body">
         <form id="quick-announce-form">
-          <!-- Campi obbligatori in evidenza -->
-          <fieldset class="form-section">
-            <legend>Informazioni essenziali *</legend>
-
-            <div class="form-group">
-              <label for="qa-type">Tipo di segnalazione *</label>
-              <select id="qa-type" name="type" required>
-                <option value="">-- Seleziona --</option>
-                <option value="LostAnimal">Animale smarrito</option>
-                <option value="Sighting">Avvistamento</option>
-              </select>
+          <div class="quick-announce-hero">
+            <div class="quick-announce-photo-block form-group">
+              <label for="qa-photo">Foto</label>
+              <label class="quick-announce-photo-drop" for="qa-photo">
+                <input type="file" id="qa-photo" name="photo" accept="image/*" />
+                <div class="quick-announce-photo-copy">
+                  <strong>Aggiungi una foto</strong>
+                </div>
+                <span class="quick-announce-photo-cta">Carica immagine</span>
+              </label>
+              <img id="qa-photo-preview" alt="Anteprima foto segnalazione" hidden />
             </div>
 
-            <div class="form-group">
-              <label for="qa-species">Specie *</label>
-              <input type="text" id="qa-species" name="species" placeholder="Es. Cane, Gatto, Coniglio..." required>
+            <div class="quick-announce-essentials">
+              <div class="form-group">
+                <label for="qa-type">Tipo di segnalazione *</label>
+                <select id="qa-type" name="type" required>
+                  <option value="">-- Seleziona --</option>
+                  <option value="LostAnimal">Animale smarrito</option>
+                  <option value="Sighting">Avvistamento</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="qa-species">Specie *</label>
+                <input type="text" id="qa-species" name="species" placeholder="Es. Cane, Gatto, Coniglio..." required>
+              </div>
+
+              <div class="quick-announce-grid">
+                <div class="form-group">
+                  <label for="qa-color">Colore *</label>
+                  <input type="text" id="qa-color" name="color" placeholder="Es. Bianco, Nero..." required>
+                </div>
+                <div class="form-group">
+                  <label for="qa-health">Salute *</label>
+                  <select id="qa-health" name="healthCondition" required>
+                    <option value="">-- Seleziona --</option>
+                    <option value="in salute">In salute</option>
+                    <option value="ferito">Ferito</option>
+                    <option value="malnutrito">Malnutrito</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="qa-description">Dettagli utili</label>
+                <textarea id="qa-description" name="description" placeholder="Dove l'hai visto, cosa sta facendo, elementi utili per riconoscerlo..."></textarea>
+              </div>
+
+              <div class="quick-announce-contacts">
+                <div class="form-group">
+                  <label for="qa-contact-email">Email contatto</label>
+                  <input type="email" id="qa-contact-email" name="contactEmail" placeholder="nome@example.com">
+                </div>
+
+                <div class="form-group">
+                  <label for="qa-contact-phone">Telefono contatto</label>
+                  <input type="tel" id="qa-contact-phone" name="contactPhone" placeholder="Es. +39 333 1234567">
+                </div>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label for="qa-color">Colore *</label>
-              <input type="text" id="qa-color" name="color" placeholder="Es. Bianco, Nero, Marrone..." required>
-            </div>
-
-            <div class="form-group">
-              <label for="qa-health">Condizioni di salute *</label>
-              <select id="qa-health" name="healthCondition" required>
-                <option value="">-- Seleziona --</option>
-                <option value="in salute">In salute</option>
-                <option value="ferito">Ferito</option>
-                <option value="malnutrito">Malnutrito</option>
-              </select>
-            </div>
-          </fieldset>
-
-          <!-- Campi aggiuntivi -->
-          <fieldset class="form-section">
-            <legend>Informazioni aggiuntive</legend>
-
-            <div class="form-group">
-              <label for="qa-breed">Razza</label>
-              <input type="text" id="qa-breed" name="breed" placeholder="Es. Labrador, Persiano...">
-            </div>
-
-            <div class="form-group">
-              <label for="qa-gender">Genere</label>
-              <select id="qa-gender" name="gender">
-                <option value="">-- Seleziona --</option>
-                <option value="Maschio">Maschio</option>
-                <option value="Femmina">Femmina</option>
-                <option value="Sconosciuto">Sconosciuto</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="qa-hair">Lunghezza pelo</label>
-              <select id="qa-hair" name="lunghezzaPelo">
-                <option value="">-- Seleziona --</option>
-                <option value="Corto">Corto</option>
-                <option value="Medio">Medio</option>
-                <option value="Lungo">Lungo</option>
-                <option value="Senza">Senza</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="qa-behaviour">Comportamento</label>
-              <select id="qa-behaviour" name="animalBehaviour">
-                <option value="">-- Seleziona --</option>
-                <option value="tranquillo">Tranquillo</option>
-                <option value="spaventato">Spaventato</option>
-                <option value="indifferente">Indifferente</option>
-                <option value="aggressivo">Aggressivo</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="qa-features">Segni particolari</label>
-              <textarea id="qa-features" name="distinctiveFeatures" placeholder="Es. collare rosso, zoppo, cicatrice..."></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="qa-description">Descrizione</label>
-              <textarea id="qa-description" name="description" placeholder="Descrivi la situazione, dove è stato visto l'animale, qualsiasi dettaglio utile..."></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="qa-contact-name">Nome contatto</label>
-              <input type="text" id="qa-contact-name" name="contactName" placeholder="Nome e cognome o riferimento">
-            </div>
-
-            <div class="form-group">
-              <label for="qa-contact-email">Email contatto</label>
-              <input type="email" id="qa-contact-email" name="contactEmail" placeholder="nome@example.com">
-            </div>
-
-            <div class="form-group">
-              <label for="qa-contact-phone">Telefono contatto</label>
-              <input type="tel" id="qa-contact-phone" name="contactPhone" placeholder="Es. +39 333 1234567">
-            </div>
-
-            <div class="form-group">
-              <label for="qa-photo">Foto (opzionale)</label>
-              <input type="file" id="qa-photo" name="photo" accept="image/*" />
-              <span class="form-hint">Seleziona un'immagine per rendere la segnalazione più utile.</span>
-            </div>
-
-            <div class="form-group">
-              <label>Posizione</label>
+            <div class="quick-announce-location form-group">
+              <div class="quick-announce-location-head">
+                <div>
+                  <label>Posizione</label>
+                </div>
+                <span class="quick-announce-location-pill">Auto</span>
+              </div>
               <div id="qa-location-status" class="location-status">Richiedendo la posizione...</div>
-              <span class="form-hint">Il browser chiederà automaticamente il permesso per la geolocalizzazione.</span>
             </div>
-
-          </fieldset>
+          </div>
 
           <div class="form-actions">
             <button type="button" id="quick-announce-cancel" class="button button-secondary">Annulla</button>
