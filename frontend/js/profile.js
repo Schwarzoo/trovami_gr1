@@ -26,6 +26,118 @@ let isRefreshingNotifications = false;
 const API_ANIMALS = '/api/v1/animals';
 const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
+const ANNOUNCEMENT_WIZARD_STEPS = 4;
+let announcementWizardStep = 1;
+
+/**
+ * Escapes text used in the announcement review block.
+ * @param {string} value - Raw value to escape.
+ * @returns {string} Escaped HTML.
+ */
+function escapeReviewHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Synchronizes visible type tabs with the hidden select used by save logic.
+ * @returns {void}
+ */
+function syncAnnouncementTypeTabs() {
+  const typeSelect = document.getElementById('modal-type');
+  const tabs = Array.from(document.querySelectorAll('.announcement-type-tab'));
+  if (!typeSelect || tabs.length === 0) return;
+
+  tabs.forEach((tab) => {
+    const option = Array.from(typeSelect.options).find((item) => item.value === tab.dataset.announcementType);
+    tab.hidden = !option;
+    tab.disabled = typeSelect.disabled || !option;
+    if (option) tab.textContent = option.textContent;
+    tab.classList.toggle('is-active', tab.dataset.announcementType === typeSelect.value);
+  });
+}
+
+/**
+ * Builds the final review from current form values.
+ * @returns {void}
+ */
+function renderAnnouncementReview() {
+  const review = document.getElementById('announcement-review');
+  if (!review) return;
+
+  const type = document.getElementById('modal-type')?.selectedOptions?.[0]?.textContent || 'Annuncio';
+  const rows = [
+    ['Tipo', type],
+    ['Nome', document.getElementById('modal-animalName')?.value || 'Non indicato'],
+    ['Specie', document.getElementById('modal-species')?.value || 'Non indicata'],
+    ['Razza', document.getElementById('modal-breed')?.value || 'Non indicata'],
+    ['Colore', document.getElementById('modal-color')?.value || 'Non indicato'],
+    ['Genere', document.getElementById('modal-gender')?.value || 'Sconosciuto'],
+    ['Pelo', document.getElementById('modal-lunghezzaPelo')?.value || 'Non indicato'],
+    ['Descrizione', document.getElementById('modal-description')?.value || 'Non indicata']
+  ];
+
+  review.innerHTML = `<dl>${rows.map(([label, value]) => `
+    <div class="announcement-review__row">
+      <dt>${escapeReviewHtml(label)}</dt>
+      <dd>${escapeReviewHtml(value)}</dd>
+    </div>
+  `).join('')}</dl>`;
+}
+
+/**
+ * Checks only the visible step fields before moving forward.
+ * @returns {boolean} True when current step is valid.
+ */
+function validateAnnouncementStep() {
+  const panel = document.querySelector(`.announcement-panel[data-step-panel="${announcementWizardStep}"]`);
+  if (!panel) return true;
+
+  const fields = Array.from(panel.querySelectorAll('input, textarea, select'))
+    .filter((field) => !field.disabled && field.type !== 'hidden');
+
+  for (const field of fields) {
+    if (!field.checkValidity()) {
+      field.reportValidity();
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Shows a wizard step and updates navigation controls.
+ * @param {number} step - Step number to show.
+ * @returns {void}
+ */
+function setAnnouncementWizardStep(step) {
+  announcementWizardStep = Math.min(Math.max(step, 1), ANNOUNCEMENT_WIZARD_STEPS);
+
+  document.querySelectorAll('.announcement-panel').forEach((panel) => {
+    panel.classList.toggle('is-active', Number(panel.dataset.stepPanel) === announcementWizardStep);
+  });
+
+  document.querySelectorAll('.announcement-step').forEach((item) => {
+    const itemStep = Number(item.dataset.stepIndicator);
+    item.classList.toggle('is-active', itemStep === announcementWizardStep);
+    item.classList.toggle('is-done', itemStep < announcementWizardStep);
+  });
+
+  const counter = document.getElementById('announcement-step-counter');
+  const backButton = document.getElementById('announcement-back');
+  const nextButton = document.getElementById('announcement-next');
+  const saveButton = document.getElementById('modal-save');
+
+  if (counter) counter.textContent = `Passo ${announcementWizardStep} di ${ANNOUNCEMENT_WIZARD_STEPS}`;
+  if (backButton) backButton.style.display = announcementWizardStep === 1 ? 'none' : '';
+  if (nextButton) nextButton.style.display = announcementWizardStep === ANNOUNCEMENT_WIZARD_STEPS ? 'none' : '';
+  if (saveButton) saveButton.style.display = announcementWizardStep === ANNOUNCEMENT_WIZARD_STEPS ? '' : 'none';
+  if (announcementWizardStep === ANNOUNCEMENT_WIZARD_STEPS) renderAnnouncementReview();
+}
 
 /**
  * Sets last seen mode.
@@ -57,6 +169,7 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
     typeSelect.innerHTML = '<option value="Sighting">In rifugio</option>';
     typeSelect.value = 'Sighting';
     typeSelect.disabled = true;
+    syncAnnouncementTypeTabs();
     return;
   }
 
@@ -66,6 +179,7 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
     <option value="Sighting">Avvistamento</option>
   `;
   typeSelect.value = defaultType || 'LostAnimal';
+  syncAnnouncementTypeTabs();
 }
 
 /**
@@ -138,6 +252,7 @@ function configureModalFieldsForType(type) {
       ? 'Avvistamento: compila solo i dati che conosci, il nome non è obbligatorio.'
       : 'Smarrito: inserisci i dati dell animale che stai cercando.';
   }
+  syncAnnouncementTypeTabs();
 }
 
 /**
@@ -2258,6 +2373,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('modal-type')?.addEventListener('change', (event) => {
     configureModalFieldsForType(event.target.value);
   });
+  document.querySelectorAll('.announcement-type-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const typeSelect = document.getElementById('modal-type');
+      if (!typeSelect || typeSelect.disabled || tab.disabled) return;
+      typeSelect.value = tab.dataset.announcementType;
+      configureModalFieldsForType(typeSelect.value);
+    });
+  });
+  document.getElementById('announcement-back')?.addEventListener('click', () => {
+    setAnnouncementWizardStep(announcementWizardStep - 1);
+  });
+  document.getElementById('announcement-next')?.addEventListener('click', () => {
+    if (!validateAnnouncementStep()) return;
+    setAnnouncementWizardStep(announcementWizardStep + 1);
+  });
 
   document.getElementById('view-modal-close')?.addEventListener('click', () => {
     document.getElementById('view-modal-overlay').style.display = 'none';
@@ -2606,6 +2736,7 @@ function openModalForCreate() {
     adoptionSelect.value = 'none';
     adoptionSelect.disabled = currentUser?.role !== 'shelter';
   }
+  setAnnouncementWizardStep(1);
   showModal(true);
 }
 
@@ -2664,6 +2795,7 @@ function openModalForEdit(ann) {
     adoptionSelectEdit.value = ann.animalId?.adoptable && currentUser?.role === 'shelter' ? 'adoptable' : 'none';
     adoptionSelectEdit.disabled = currentUser?.role !== 'shelter';
   }
+  setAnnouncementWizardStep(1);
   showModal(true);
 }
 
