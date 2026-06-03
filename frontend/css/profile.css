@@ -15,7 +15,9 @@ html {
   background-color: #1A0E08;
 }
 
+
 body {
+  position: relative;
   min-height: 100vh;
   background-color: #1A0E08;
   background-attachment: fixed;
@@ -23,20 +25,19 @@ body {
     radial-gradient(ellipse 55% 50% at 85% -5%, #7A2E10 0%, transparent 65%),
     radial-gradient(ellipse 50% 45% at -5% 95%, #5C2D08 0%, transparent 60%),
     radial-gradient(ellipse 70% 60% at 50% 50%, #2C1208 0%, transparent 70%);
-  position: relative;
-  isolation: isolate;
 }
+
 
 body::before,
 body::after {
   content: '';
-  position: fixed;
-  inset: -8%;
+  position: absolute;
+  inset: 0;
   pointer-events: none;
 }
 
 body::before {
-  z-index: -1;
+  z-index: -2;
   background-image: radial-gradient(circle, rgba(240, 153, 123, 0.18) 1px, transparent 1px);
   background-size: 36px 36px;
   mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
@@ -45,7 +46,7 @@ body::before {
 }
 
 body::after {
-  z-index: -1;
+  z-index: -3;
   background: repeating-linear-gradient(
     -55deg,
     transparent,
@@ -73,7 +74,6 @@ body::after {
     transform: translate3d(-1%, -0.8%, 0) scale(1.06);
   }
 }
-
 
 #profile-section {
   max-width: 420px;
@@ -311,7 +311,15 @@ body::after {
 #my-animals-grid .card-meta { margin-bottom: 0.25rem; }
 #my-animals-grid .card-species { font-size: 0.72rem; }
 #my-animals-grid .card-breed { font-size: 1rem; margin-bottom: 0.35rem; }
-#my-animals-grid .card-description { font-size: 0.78rem; -webkit-line-clamp: 3; }
+#my-animals-grid .card-description {
+  font-size: 0.78rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 #my-animals-grid .card .card-image img { object-fit: cover; }
 
@@ -366,7 +374,8 @@ body::after {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+
+  background: transparent;
   display: flex;
   align-items: flex-start;
   justify-content: center;
