@@ -136,4 +136,19 @@ function startNotificationBadgeUpdates() {
   window.addEventListener('notifications:updated', updateNotificationBadge);
 }
 
+/**
+ * Loads the mock inbox widget once, if the backend exposes it.
+ * @returns {void}
+ */
+function loadMockInboxWidget() {
+  if (document.querySelector('script[data-mock-inbox]')) return;
+
+  const script = document.createElement('script');
+  script.src = '/js/mock-inbox.js';
+  script.defer = true;
+  script.dataset.mockInbox = 'true';
+  document.body.appendChild(script);
+}
+
 document.addEventListener('DOMContentLoaded', loadPartials);
+document.addEventListener('DOMContentLoaded', loadMockInboxWidget);

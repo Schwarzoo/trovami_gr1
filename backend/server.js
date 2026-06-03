@@ -7,6 +7,9 @@ const path = require('path');
 
 const app = express();
 
+global.mockInbox = global.mockInbox || [];
+const mockInboxEnabled = String(process.env.RENDER).toLowerCase() === 'true';
+
 
 app.use(express.json());
 app.use(cors());
@@ -18,6 +21,14 @@ app.use('/api/v1/notifications', require('./routes/notificationRoutes'));
 app.use('/api/v1/contact-requests', require('./routes/contactRequestRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
 app.use(express.static(path.join(__dirname, '../frontend')));
+
+app.get('/api/v1/mock-emails', (req, res) => {
+  if (!mockInboxEnabled) {
+    return res.status(404).json({ message: 'Mock inbox non disponibile' });
+  }
+
+  return res.json(global.mockInbox);
+});
 
 mongoose.connect(process.env.DB_URL)
   .then(() => {

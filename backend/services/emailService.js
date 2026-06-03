@@ -3,6 +3,20 @@ const User = require('../models/User');
 
 let transporter;
 
+function isRenderMockInboxEnabled() {
+  return String(process.env.RENDER).toLowerCase() === 'true';
+}
+
+function pushMockEmail(to, subject, message) {
+  global.mockInbox = global.mockInbox || [];
+  global.mockInbox.push({
+    to,
+    subject,
+    message,
+    time: new Date().toISOString()
+  });
+}
+
 /**
  * Returns the singleton Nodemailer transporter configured from environment variables.
  * The transporter is created lazily so tests and boot code can set env vars first.
@@ -54,6 +68,22 @@ function isEmailConfigured() {
 async function sendVerificationEmail(user, rawToken) {
   const verifyUrl = `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/v1/auth/email-verifications?token=${rawToken}`;
 
+  if (isRenderMockInboxEnabled()) {
+    pushMockEmail(
+      user.email,
+      'Conferma Registrazione',
+      `
+        <h1>Trovami! - Verifica Email</h1>
+        <p>Per attivare il tuo account, clicca il link qui sotto:</p>
+        <a href="${verifyUrl}" style="background-color:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
+          Verifica Email
+        </a>
+        <p>Questo link scade tra 24 ore.</p>
+      `
+    );
+    return;
+  }
+
   await getTransporter().sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: user.email,
@@ -77,6 +107,24 @@ async function sendVerificationEmail(user, rawToken) {
  */
 async function sendPasswordResetEmail(email, rawToken) {
   const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/reset-password.html?token=${rawToken}`;
+
+  if (isRenderMockInboxEnabled()) {
+    pushMockEmail(
+      email,
+      'Recupero Password - Trovami',
+      `
+        <h1>Trovami! - Recupero Password</h1>
+        <h2>Hai richiesto il recupero della password</h2>
+        <p>Clicca il link qui sotto per impostare una nuova password:</p>
+        <a href="${resetUrl}" style="background-color:#007bff;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">
+          Reimposta Password
+        </a>
+        <p>Questo link scade tra 15 minuti.</p>
+        <p>Se non hai richiesto il recupero della password, ignora questo email.</p>
+      `
+    );
+    return;
+  }
 
   await getTransporter().sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -105,7 +153,14 @@ async function sendPasswordResetEmail(email, rawToken) {
 async function sendSmartMatchEmail(userId, subject, html) {
   try {
     const recipient = await User.findById(userId).select('email username');
-    if (!recipient?.email || !isEmailConfigured()) return;
+    if (!recipient?.email) return;
+
+    if (isRenderMockInboxEnabled()) {
+      pushMockEmail(recipient.email, subject, html);
+      return;
+    }
+
+    if (!isEmailConfigured()) return;
 
     await getTransporter().sendMail({
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -128,18 +183,13 @@ async function sendSmartMatchEmail(userId, subject, html) {
  */
 async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
   try {
-    if (!recipient?.email || !isEmailConfigured()) return;
+    if (!recipient?.email) return;
 
     const animalName = animal?.name || 'un nuovo animale';
     const breed = animal?.breed || 'Non specificata';
     const age = animal?.age || 'Non specificata';
     const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'un rifugio che segui';
-
-    await getTransporter().sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: recipient.email,
-      subject: `Trovami - Nuovo annuncio da ${shelterName}`,
-      html: `
+    const html = `
         <p>Ciao ${escapeHtml(recipient.username || '')},</p>
         <p>${escapeHtml(shelterName)} ha pubblicato un nuovo annuncio.</p>
         <ul>
@@ -148,7 +198,20 @@ async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
           <li><strong>Razza:</strong> ${escapeHtml(breed)}</li>
         </ul>
         <p><a href="${escapeHtml(url)}" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#C85A2A;color:#ffffff;text-decoration:none;font-weight:700;">Apri scheda animale</a></p>
-      `
+      `;
+
+    if (isRenderMockInboxEnabled()) {
+      pushMockEmail(recipient.email, `Trovami - Nuovo annuncio da ${shelterName}`, html);
+      return;
+    }
+
+    if (!isEmailConfigured()) return;
+
+    await getTransporter().sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: recipient.email,
+      subject: `Trovami - Nuovo annuncio da ${shelterName}`,
+      html
     });
   } catch (err) {
     console.error('Errore invio email annuncio rifugio:', err);
@@ -164,17 +227,26 @@ async function sendShelterAnnouncementEmail(recipient, shelter, animal, url) {
  * @returns {Promise<void>} Promise resolving when the email is sent or skipped.
  */
 async function sendAnnouncementCommentEmail(publisher, commenterUsername, text, announcementUrl) {
-  if (!publisher?.notificationPrefs?.emailOnComment || !publisher?.email || !isEmailConfigured()) return;
+  if (!publisher?.notificationPrefs?.emailOnComment || !publisher?.email) return;
+
+  const html = `
+      <h2>Nuovo commento su un tuo annuncio</h2>
+      <p><strong>${escapeHtml(commenterUsername)}</strong>: ${escapeHtml(text)}</p>
+      <p><a href="${escapeHtml(announcementUrl)}">Vedi annuncio</a></p>
+    `;
+
+  if (isRenderMockInboxEnabled()) {
+    pushMockEmail(publisher.email, 'Trovami - Nuovo commento', html);
+    return;
+  }
+
+  if (!isEmailConfigured()) return;
 
   await getTransporter().sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: publisher.email,
     subject: 'Trovami - Nuovo commento',
-    html: `
-      <h2>Nuovo commento su un tuo annuncio</h2>
-      <p><strong>${escapeHtml(commenterUsername)}</strong>: ${escapeHtml(text)}</p>
-      <p><a href="${escapeHtml(announcementUrl)}">Vedi annuncio</a></p>
-    `
+    html
   });
 }
 
@@ -185,17 +257,26 @@ async function sendAnnouncementCommentEmail(publisher, commenterUsername, text, 
  * @returns {Promise<void>} Promise resolving when the email is sent or skipped.
  */
 async function sendAccountBlockedEmail(user, reason) {
-  if (!user?.email || !isEmailConfigured()) return;
+  if (!user?.email) return;
+
+  const html = `
+      <h2>Account bloccato</h2>
+      <p>Il tuo account Trovami e stato bloccato da un admin.</p>
+      <p><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
+    `;
+
+  if (isRenderMockInboxEnabled()) {
+    pushMockEmail(user.email, 'Account bloccato - Trovami', html);
+    return;
+  }
+
+  if (!isEmailConfigured()) return;
 
   await getTransporter().sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: user.email,
     subject: 'Account bloccato - Trovami',
-    html: `
-      <h2>Account bloccato</h2>
-      <p>Il tuo account Trovami e stato bloccato da un admin.</p>
-      <p><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
-    `
+    html
   });
 }
 
