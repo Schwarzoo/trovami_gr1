@@ -98,7 +98,6 @@ userBaseSchema.pre("validate", function normalizeRole() {
  * @description Dati specifici di un account rifugio.
  * @property {string} rifugioStatus Stato della richiesta rifugio.
  * @property {{ rifugioName?: string, address?: string, city?: string, description?: string, totalSlots?: number, availableSlots?: number, location?: { type?: string, coordinates?: number[] } }} rifugioData Dati anagrafici del rifugio.
- * @property {{ shelterName?: string, totalSlots?: number, availableSlots?: number, location?: { type?: string, coordinates?: number[] } }} shelterData Dati operativi del rifugio.
  */
 const shelterUserSchema = new mongoose.Schema({
   rifugioStatus: {
@@ -120,15 +119,6 @@ const shelterUserSchema = new mongoose.Schema({
     },
   },
 
-  shelterData: {
-    shelterName: { type: String },
-    totalSlots: { type: Number },
-    availableSlots: { type: Number },
-    location: {
-      type: { type: String, enum: ["Point"] },
-      coordinates: { type: [Number], default: undefined },
-    },
-  },
 });
 
 const User = mongoose.model("User", userBaseSchema);

@@ -73,11 +73,36 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
  * @returns {number[]|null} Current shelter coordinates as `[longitude, latitude]`, or null when unavailable.
  */
 function getRifugioCoordinates() {
-  const coords = currentUser?.rifugioData?.location?.coordinates || currentUser?.shelterData?.location?.coordinates;
+  const coords = currentUser?.rifugioData?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
   const [lng, lat] = coords.map(Number);
   if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
   return [lng, lat];
+}
+
+/**
+ * Reverse geocodes a point to a short address and city string.
+ * @param {number} lng - Point longitude.
+ * @param {number} lat - Point latitude.
+ * @returns {Promise<{address: string, city: string} | null>} Best-effort address payload.
+ */
+async function reverseGeocodeRifugioPosition(lng, lat) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=it&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const addr = json?.address || {};
+    const address = [addr.road, addr.house_number].filter(Boolean).join(' ').trim() || json?.display_name || '';
+    const city = addr.city || addr.town || addr.village || addr.hamlet || addr.municipality || addr.county || '';
+
+    if (!address && !city) return null;
+    return { address, city };
+  } catch (err) {
+    console.error('Errore reverse geocoding rifugio:', err);
+    return null;
+  }
 }
 
 /**
@@ -287,6 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveProfileButton.disabled = !enabled;
     editProfileButton.disabled = enabled;
     document.getElementById('profile-section').classList.toggle('is-editing', enabled);
+    setRifugioPositionEditingState(enabled);
   }
 
   /**
@@ -613,7 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const when = request.createdAt ? new Date(request.createdAt).toLocaleString('it-IT') : '';
       const isShelter = currentUser.role === 'shelter';
       const canReply = isShelter && request.status === 'pending';
-      const shelterName = shelter.rifugioData?.rifugioName || shelter.shelterData?.shelterName || shelter.username || 'Rifugio';
+      const shelterName = shelter.rifugioData?.rifugioName || shelter.username || 'Rifugio';
       const animalName = animal.name || animal.species || 'Animale';
       const item = document.createElement('div');
       item.className = 'comment-item contact-request-item';
@@ -799,7 +825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const name = me.rifugioData?.rifugioName || me.shelterData?.shelterName || me.username || 'Rifugio';
+    const name = me.rifugioData?.rifugioName || me.username || 'Rifugio';
     const labels = {
       pending: 'in attesa di approvazione admin',
       approved: 'approvato',
@@ -833,12 +859,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const coords = getRifugioCoordinates();
+    const savedAddress = [me.rifugioData?.address, me.rifugioData?.city].filter(Boolean).join(', ');
     box.style.display = 'block';
     text.textContent = coords
-      ? 'Posizione salvata. Puoi modificarla dalla mappa.'
-      : 'Aggiungi la posizione del rifugio per pubblicare annunci.';
+      ? (savedAddress
+        ? `Posizione salvata: ${savedAddress}. Puoi modificarla dalla mappa.`
+        : 'Posizione salvata. Puoi modificarla dalla mappa.')
+      : 'Aggiungi la posizione del rifugio: puoi cercarla per indirizzo e città, usare la tua posizione o scegliere un punto sulla mappa.';
     button.textContent = coords ? 'Modifica posizione' : 'Aggiungi posizione';
-    if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa.';
+    if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa o cerca l\'indirizzo.';
+    setRifugioPositionEditingState(document.getElementById('profile-section')?.classList.contains('is-editing'));
+  }
+
+  /**
+   * Toggles shelter position controls between locked and editable state.
+   * @param {boolean} enabled - Whether the shelter position UI should be interactive.
+   * @returns {void}
+   */
+  function setRifugioPositionEditingState(enabled) {
+    const box = document.getElementById('rifugio-position-box');
+    if (!box) return;
+
+    box.classList.toggle('is-locked', !enabled);
+
+    [
+      'rifugio-search-address',
+      'rifugio-search-city',
+      'searchRifugioPosition',
+      'useRifugioLocation',
+      'editRifugioPosition',
+      'saveRifugioPosition'
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
+        el.disabled = !enabled;
+      }
+    });
+
+    const map = document.getElementById('rifugio-position-map');
+    if (map) {
+      map.style.pointerEvents = enabled ? 'auto' : 'none';
+      map.style.filter = enabled ? '' : 'grayscale(0.15) opacity(0.72)';
+    }
+
+    const hint = document.getElementById('rifugio-position-message');
+    if (hint && !enabled) {
+      hint.textContent = 'Clicca Modifica in basso per sbloccare la posizione del rifugio.';
+    }
   }
 
   /**
@@ -854,7 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       rifugioMapInstance = L.map('rifugio-position-map').setView([46.0667, 11.1333], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(rifugioMapInstance);
       rifugioMapInstance.on('click', (e) => {
-        setPendingRifugioLocation(e.latlng.lng, e.latlng.lat);
+        setPendingRifugioLocation(e.latlng.lng, e.latlng.lat, { lookupAddress: true });
       });
     }
 
@@ -868,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {number} lat - Selected shelter latitude.
    * @returns {void}
    */
-  function setPendingRifugioLocation(lng, lat) {
+  function setPendingRifugioLocation(lng, lat, options = {}) {
     pendingRifugioLocation = [lng, lat];
     const map = ensureRifugioMap();
     if (!map) return;
@@ -880,6 +948,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     map.setView([lat, lng], 15);
     document.getElementById('saveRifugioPosition').style.display = 'inline-block';
     document.getElementById('rifugio-position-message').textContent = 'Punto selezionato. Salva la posizione.';
+
+    if (options.lookupAddress) {
+      void reverseGeocodeRifugioPosition(lng, lat).then((location) => {
+        if (!location) return;
+        const addressInput = document.getElementById('rifugio-search-address');
+        const cityInput = document.getElementById('rifugio-search-city');
+        if (addressInput && location.address) addressInput.value = location.address;
+        if (cityInput && location.city) cityInput.value = location.city;
+        const message = document.getElementById('rifugio-position-message');
+        if (message) message.textContent = 'Indirizzo trovato dalla posizione. Puoi modificarlo prima di salvare.';
+      });
+    }
   }
 
   /**
@@ -889,6 +969,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openRifugioPositionEditor() {
     const map = ensureRifugioMap();
     const coords = getRifugioCoordinates();
+    const addressInput = document.getElementById('rifugio-search-address');
+    const cityInput = document.getElementById('rifugio-search-city');
+
+    if (addressInput && !addressInput.value.trim()) addressInput.value = currentUser?.rifugioData?.address || '';
+    if (cityInput && !cityInput.value.trim()) cityInput.value = currentUser?.rifugioData?.city || '';
+
     if (coords) {
       setPendingRifugioLocation(coords[0], coords[1]);
     } else if (map) {
@@ -897,6 +983,82 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('rifugio-position-message').textContent = 'Clicca sulla mappa per scegliere il punto del rifugio.';
     }
     requestAnimationFrame(() => map && map.invalidateSize());
+  }
+
+  /**
+   * Searches a rifugio location by address and city, then updates the pending marker.
+   * @returns {Promise<void>} Promise resolving after the lookup is completed or rejected.
+   */
+  async function searchRifugioPosition() {
+    const address = document.getElementById('rifugio-search-address')?.value.trim() || '';
+    const city = document.getElementById('rifugio-search-city')?.value.trim() || '';
+    const query = [address, city].filter(Boolean).join(', ');
+    const message = document.getElementById('rifugio-position-message');
+
+    if (!query) {
+      if (message) message.textContent = 'Inserisci almeno indirizzo o città.';
+      return;
+    }
+
+    const map = ensureRifugioMap();
+    if (!map) return;
+
+    if (message) message.textContent = 'Ricerca posizione in corso...';
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=it&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('Ricerca posizione non disponibile');
+
+      const results = await res.json();
+      const result = Array.isArray(results) ? results[0] : null;
+      const longitude = Number(result?.lon);
+      const latitude = Number(result?.lat);
+
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        if (message) message.textContent = 'Nessun risultato trovato per la ricerca inserita.';
+        return;
+      }
+
+      setPendingRifugioLocation(longitude, latitude);
+      if (message) message.textContent = `Posizione trovata per ${query}. Controlla la mappa e salva.`;
+    } catch (err) {
+      console.error('Errore ricerca rifugio:', err);
+      if (message) message.textContent = 'Errore durante la ricerca della posizione.';
+    }
+  }
+
+  /**
+   * Uses the browser geolocation to set the pending rifugio position.
+   * @returns {void}
+   */
+  function useRifugioCurrentLocation() {
+    const message = document.getElementById('rifugio-position-message');
+
+    if (!navigator.geolocation) {
+      alert('Geolocalizzazione non disponibile nel browser.');
+      return;
+    }
+
+    ensureRifugioMap();
+    if (message) message.textContent = 'Recupero la tua posizione...';
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setPendingRifugioLocation(longitude, latitude, { lookupAddress: true });
+        if (message) message.textContent = 'Posizione attuale rilevata. Controlla la mappa e salva.';
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let msg = 'Errore nella geolocalizzazione.';
+        if (error.code === error.PERMISSION_DENIED) msg = 'Permesso negato per la geolocalizzazione.';
+        if (error.code === error.POSITION_UNAVAILABLE) msg = 'Posizione non disponibile.';
+        if (error.code === error.TIMEOUT) msg = 'Timeout della richiesta di posizione.';
+        if (message) message.textContent = msg;
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+    );
   }
 
   /**
@@ -910,6 +1072,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const [lng, lat] = pendingRifugioLocation;
+    const addressInput = document.getElementById('rifugio-search-address');
+    const cityInput = document.getElementById('rifugio-search-city');
+    let address = addressInput?.value.trim() || '';
+    let city = cityInput?.value.trim() || '';
+
+    if (!address || !city) {
+      const resolvedLocation = await reverseGeocodeRifugioPosition(lng, lat);
+      if (resolvedLocation) {
+        if (!address && resolvedLocation.address) address = resolvedLocation.address;
+        if (!city && resolvedLocation.city) city = resolvedLocation.city;
+        if (addressInput && !addressInput.value.trim() && resolvedLocation.address) addressInput.value = resolvedLocation.address;
+        if (cityInput && !cityInput.value.trim() && resolvedLocation.city) cityInput.value = resolvedLocation.city;
+      }
+    }
+
     const res = await fetch('/api/v1/users/me', {
       method: 'PUT',
       headers: {
@@ -918,7 +1095,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       },
       body: JSON.stringify({
         rifugioData: {
-          location: { type: 'Point', coordinates: [lng, lat] }
+          location: { type: 'Point', coordinates: [lng, lat] },
+          ...(address ? { address } : {}),
+          ...(city ? { city } : {})
         }
       })
     });
@@ -1066,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!overlay || !title || !body) return;
 
     const warnings = Array.isArray(user?.conductWarnings) ? user.conductWarnings : [];
-    const rifugioName = user?.rifugioData?.rifugioName || user?.shelterData?.shelterName || '';
+    const rifugioName = user?.rifugioData?.rifugioName || '';
     title.textContent = user?.username || 'Account';
     body.innerHTML = `
       <div class="admin-warning-count">
@@ -1599,6 +1778,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('editRifugioPosition')?.addEventListener('click', openRifugioPositionEditor);
   document.getElementById('saveRifugioPosition')?.addEventListener('click', saveRifugioPosition);
+  document.getElementById('searchRifugioPosition')?.addEventListener('click', searchRifugioPosition);
+  document.getElementById('useRifugioLocation')?.addEventListener('click', useRifugioCurrentLocation);
 
   document.getElementById('admin-section')?.addEventListener('click', async (e) => {
     const button = e.target?.closest?.('[data-admin-action]');
@@ -2051,7 +2232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const publisher = data.publisherId || {};
     const isLost = data.type === 'LostAnimal';
     const rifugioName = publisher?.role === 'shelter'
-      ? (publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username)
+      ? (publisher?.rifugioData?.rifugioName || publisher?.username)
       : '';
 
     const date = new Date(data.date).toLocaleDateString('it-IT', {
@@ -2610,7 +2791,7 @@ function openModalForCreate() {
   document.getElementById('modal-animalName').value = '';
   wizApplyChipValue('modal-species', 'Cane');
   document.getElementById('modal-breed').value = '';
-  document.getElementById('modal-color').value = '';
+  wizSetColor('Nero', document.querySelector('.color-swatch[title="Nero"]') || document.querySelector('.color-swatch.active') || document.querySelector('.color-swatch'));
   wizApplyChipValue('modal-gender', 'Sconosciuto');
   document.getElementById('modal-lunghezzaPelo').value = '';
   document.getElementById('modal-distinctiveFeatures').value = '';

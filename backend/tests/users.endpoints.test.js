@@ -88,6 +88,58 @@ describe('users endpoints', () => {
     expect(res.body.username).toBe('luigi');
   });
 
+  test('PUT /api/v1/users/me saves shelter location details', async () => {
+    const setMock = jest.fn();
+
+    mockUserModel.findById
+      .mockResolvedValueOnce({
+        _id: 'user1',
+        isActive: true,
+        role: 'shelter'
+      })
+      .mockReturnValueOnce({
+        select: jest.fn(() => Promise.resolve({
+          role: 'shelter',
+          rifugioStatus: 'approved'
+        }))
+      })
+      .mockReturnValueOnce({
+        set: setMock,
+        save: jest.fn().mockResolvedValue({
+          toObject: () => ({
+            _id: 'user1',
+            username: 'rifugio',
+            rifugioData: {
+              address: 'Via Roma 10',
+              city: 'Roma',
+              location: { type: 'Point', coordinates: [12.5, 41.9] }
+            }
+          })
+        })
+      });
+
+    const res = await request(app)
+      .put('/api/v1/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        rifugioData: {
+          location: { type: 'Point', coordinates: [12.5, 41.9] },
+          address: 'Via Roma 10',
+          city: 'Roma'
+        }
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
+    expect(setMock).toHaveBeenCalledWith(expect.objectContaining({
+      'rifugioData.location': { type: 'Point', coordinates: [12.5, 41.9] },
+      'rifugioData.address': 'Via Roma 10',
+      'rifugioData.city': 'Roma'
+    }));
+    expect(res.body.rifugioData.address).toBe('Via Roma 10');
+    expect(res.body.rifugioData.city).toBe('Roma');
+  });
+
   test('GET /api/v1/users/rifugi?isPublic=true returns shelters', async () => {
     mockUserModel.find.mockReturnValue(
       makeQuery([
