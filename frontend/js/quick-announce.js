@@ -6,6 +6,8 @@ const QUICK_ANNOUNCE_CANCEL = document.getElementById('quick-announce-cancel');
 const QUICK_ANNOUNCE_PROGRESS = document.getElementById('qa-progress');
 const QUICK_ANNOUNCE_SUBMIT = document.querySelector('#quick-announce-form button[type="submit"]');
 const QUICK_ANNOUNCE_QUERY = 'quick-announce=1';
+const QUICK_ANNOUNCE_PHOTO_INPUT = document.getElementById('qa-photo');
+const QUICK_ANNOUNCE_PHOTO_PREVIEW = document.getElementById('qa-photo-preview');
 
 let currentLocation = null;
 
@@ -41,6 +43,10 @@ function closeQuickAnnounceModal() {
   document.body.style.overflow = '';
   QUICK_ANNOUNCE_FORM.reset();
   currentLocation = null;
+  if (QUICK_ANNOUNCE_PHOTO_PREVIEW) {
+    QUICK_ANNOUNCE_PHOTO_PREVIEW.hidden = true;
+    QUICK_ANNOUNCE_PHOTO_PREVIEW.src = '';
+  }
   setQuickAnnounceLoading(false);
 }
 
@@ -81,12 +87,29 @@ function requestGeolocation() {
         type: 'Point',
         coordinates: [longitude, latitude] // GeoJSON format: [lng, lat]
       };
-      
-      locationDisplay.innerHTML = `
-        <span class="location-status success">
-          📍 Posizione acquisita (${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°)
-        </span>
-      `;
+      // Try reverse-geocoding to get a human readable street if available
+      reverseGeocode(latitude, longitude).then((address) => {
+        if (address) {
+          currentLocation.address = address;
+          locationDisplay.innerHTML = `
+            <span class="location-status success">
+              ${escapeHtml(address)}
+            </span>
+          `;
+        } else {
+          locationDisplay.innerHTML = `
+            <span class="location-status success">
+              Posizione acquisita (${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°)
+            </span>
+          `;
+        }
+      }).catch((_) => {
+        locationDisplay.innerHTML = `
+          <span class="location-status success">
+            Posizione acquisita (${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°)
+          </span>
+        `;
+      });
     },
     (error) => {
       console.error('Geolocation error:', error);
@@ -111,6 +134,45 @@ function requestGeolocation() {
 }
 
 /**
+ * Reverse geocodes coordinates to a short address string using Nominatim.
+ * Returns a short road/city string or null when resolution fails.
+ * @param {number} lat
+ * @param {number} lon
+ * @returns {Promise<string|null>}
+ */
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null);
+    if (!json) return null;
+    const addr = json.address || {};
+    // Prefer road + house_number + city-like field, fall back to town/village or display_name
+    const parts = [];
+    if (addr.road) parts.push(addr.road);
+    if (addr.house_number) parts.push(addr.house_number);
+    const city = addr.city || addr.town || addr.village || addr.hamlet || addr.county;
+    if (city) parts.push(city);
+    const short = parts.join(', ');
+    if (short) return short;
+    if (json.display_name) return json.display_name.split(',').slice(0,3).join(', ');
+    return null;
+  } catch (e) { return null; }
+}
+
+/**
+ * Escapes HTML special characters for safe insertion into innerHTML.
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function (s) {
+    return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[s];
+  });
+}
+
+/**
  * Handles quick-announcement form submission and API creation.
  * @param {Event} e - Browser event object.
  * @returns {Promise<void>} Promise resolving after validation and submission handling finish.
@@ -124,6 +186,8 @@ async function handleQuickAnnounceSubmit(e) {
   const type = document.getElementById('qa-type').value;
   const contactEmail = document.getElementById('qa-contact-email')?.value.trim();
   const contactPhone = document.getElementById('qa-contact-phone')?.value.trim();
+  const description = document.getElementById('qa-description')?.value.trim() || '';
+  const photoFile = QUICK_ANNOUNCE_PHOTO_INPUT?.files?.[0] || null;
 
   if (!species || !color || !healthCondition || !type) {
     alert('Per favore, compila i campi obbligatori: Specie, Colore, Condizioni di salute e Tipo di segnalazione.');
@@ -144,19 +208,14 @@ async function handleQuickAnnounceSubmit(e) {
   const data = {
     type: formData.get('type'),
     species: formData.get('species'),
-    breed: formData.get('breed') || 'Non specificato',
-    gender: formData.get('gender') || 'Sconosciuto',
     color: formData.get('color'),
-    lunghezzaPelo: formData.get('lunghezzaPelo') || null,
-    distinctiveFeatures: formData.get('distinctiveFeatures') || '',
-    description: formData.get('description') || 'Nessuna descrizione',
+    description: formData.get('description') || description || 'Nessuna descrizione',
     healthCondition: formData.get('healthCondition'),
-    animalBehaviour: formData.get('animalBehaviour') || 'indifferente',
-    contactName: formData.get('contactName') || '',
     contactEmail: formData.get('contactEmail') || '',
     contactPhone: formData.get('contactPhone') || '',
     coordinates: currentLocation.coordinates,
-    photo: formData.get('photo')
+    address: currentLocation.address || null,
+    photo: photoFile
   };
 
   try {
@@ -180,16 +239,11 @@ async function submitQuickAnnounce(data) {
     isQuick: true,
     type: data.type,
     species: data.species,
-    breed: data.breed,
-    gender: data.gender,
     color: data.color,
-    lunghezzaPelo: data.lunghezzaPelo,
-    distinctiveFeatures: data.distinctiveFeatures,
     description: data.description,
     coordinates: data.coordinates,
+    address: data.address || undefined,
     healthCondition: data.healthCondition,
-    animalBehaviour: data.animalBehaviour,
-    contactName: data.contactName,
     contactEmail: data.contactEmail,
     contactPhone: data.contactPhone,
     lastSeenDate: new Date().toISOString()
@@ -202,18 +256,13 @@ async function submitQuickAnnounce(data) {
       announcementForm.append('type', announcementPayload.type);
       announcementForm.append('isQuick', 'true');
       announcementForm.append('species', announcementPayload.species);
-      announcementForm.append('breed', announcementPayload.breed);
-      announcementForm.append('gender', announcementPayload.gender);
       announcementForm.append('color', announcementPayload.color);
-      if (announcementPayload.lunghezzaPelo) announcementForm.append('lunghezzaPelo', announcementPayload.lunghezzaPelo);
-      if (announcementPayload.distinctiveFeatures) announcementForm.append('distinctiveFeatures', announcementPayload.distinctiveFeatures);
       announcementForm.append('description', announcementPayload.description);
-      if (announcementPayload.contactName) announcementForm.append('contactName', announcementPayload.contactName);
       if (announcementPayload.contactEmail) announcementForm.append('contactEmail', announcementPayload.contactEmail);
       if (announcementPayload.contactPhone) announcementForm.append('contactPhone', announcementPayload.contactPhone);
       announcementForm.append('coordinates', announcementPayload.coordinates.join(','));
+      if (announcementPayload.address) announcementForm.append('address', announcementPayload.address);
       announcementForm.append('healthCondition', announcementPayload.healthCondition);
-      announcementForm.append('animalBehaviour', announcementPayload.animalBehaviour);
       announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
       announcementForm.append('photo', data.photo);
 
@@ -262,6 +311,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   QUICK_ANNOUNCE_FORM?.addEventListener('submit', handleQuickAnnounceSubmit);
+
+  QUICK_ANNOUNCE_PHOTO_INPUT?.addEventListener('change', () => {
+    const file = QUICK_ANNOUNCE_PHOTO_INPUT.files?.[0];
+    if (!QUICK_ANNOUNCE_PHOTO_PREVIEW) return;
+    if (!file) {
+      QUICK_ANNOUNCE_PHOTO_PREVIEW.hidden = true;
+      QUICK_ANNOUNCE_PHOTO_PREVIEW.src = '';
+      return;
+    }
+
+    QUICK_ANNOUNCE_PHOTO_PREVIEW.src = URL.createObjectURL(file);
+    QUICK_ANNOUNCE_PHOTO_PREVIEW.hidden = false;
+    QUICK_ANNOUNCE_PHOTO_PREVIEW.onload = () => URL.revokeObjectURL(QUICK_ANNOUNCE_PHOTO_PREVIEW.src);
+  });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && QUICK_ANNOUNCE_MODAL?.getAttribute('aria-hidden') === 'false') {

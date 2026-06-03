@@ -26,118 +26,6 @@ let isRefreshingNotifications = false;
 const API_ANIMALS = '/api/v1/animals';
 const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
-const ANNOUNCEMENT_WIZARD_STEPS = 4;
-let announcementWizardStep = 1;
-
-/**
- * Escapes text used in the announcement review block.
- * @param {string} value - Raw value to escape.
- * @returns {string} Escaped HTML.
- */
-function escapeReviewHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
- * Synchronizes visible type tabs with the hidden select used by save logic.
- * @returns {void}
- */
-function syncAnnouncementTypeTabs() {
-  const typeSelect = document.getElementById('modal-type');
-  const tabs = Array.from(document.querySelectorAll('.announcement-type-tab'));
-  if (!typeSelect || tabs.length === 0) return;
-
-  tabs.forEach((tab) => {
-    const option = Array.from(typeSelect.options).find((item) => item.value === tab.dataset.announcementType);
-    tab.hidden = !option;
-    tab.disabled = typeSelect.disabled || !option;
-    if (option) tab.textContent = option.textContent;
-    tab.classList.toggle('is-active', tab.dataset.announcementType === typeSelect.value);
-  });
-}
-
-/**
- * Builds the final review from current form values.
- * @returns {void}
- */
-function renderAnnouncementReview() {
-  const review = document.getElementById('announcement-review');
-  if (!review) return;
-
-  const type = document.getElementById('modal-type')?.selectedOptions?.[0]?.textContent || 'Annuncio';
-  const rows = [
-    ['Tipo', type],
-    ['Nome', document.getElementById('modal-animalName')?.value || 'Non indicato'],
-    ['Specie', document.getElementById('modal-species')?.value || 'Non indicata'],
-    ['Razza', document.getElementById('modal-breed')?.value || 'Non indicata'],
-    ['Colore', document.getElementById('modal-color')?.value || 'Non indicato'],
-    ['Genere', document.getElementById('modal-gender')?.value || 'Sconosciuto'],
-    ['Pelo', document.getElementById('modal-lunghezzaPelo')?.value || 'Non indicato'],
-    ['Descrizione', document.getElementById('modal-description')?.value || 'Non indicata']
-  ];
-
-  review.innerHTML = `<dl>${rows.map(([label, value]) => `
-    <div class="announcement-review__row">
-      <dt>${escapeReviewHtml(label)}</dt>
-      <dd>${escapeReviewHtml(value)}</dd>
-    </div>
-  `).join('')}</dl>`;
-}
-
-/**
- * Checks only the visible step fields before moving forward.
- * @returns {boolean} True when current step is valid.
- */
-function validateAnnouncementStep() {
-  const panel = document.querySelector(`.announcement-panel[data-step-panel="${announcementWizardStep}"]`);
-  if (!panel) return true;
-
-  const fields = Array.from(panel.querySelectorAll('input, textarea, select'))
-    .filter((field) => !field.disabled && field.type !== 'hidden');
-
-  for (const field of fields) {
-    if (!field.checkValidity()) {
-      field.reportValidity();
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Shows a wizard step and updates navigation controls.
- * @param {number} step - Step number to show.
- * @returns {void}
- */
-function setAnnouncementWizardStep(step) {
-  announcementWizardStep = Math.min(Math.max(step, 1), ANNOUNCEMENT_WIZARD_STEPS);
-
-  document.querySelectorAll('.announcement-panel').forEach((panel) => {
-    panel.classList.toggle('is-active', Number(panel.dataset.stepPanel) === announcementWizardStep);
-  });
-
-  document.querySelectorAll('.announcement-step').forEach((item) => {
-    const itemStep = Number(item.dataset.stepIndicator);
-    item.classList.toggle('is-active', itemStep === announcementWizardStep);
-    item.classList.toggle('is-done', itemStep < announcementWizardStep);
-  });
-
-  const counter = document.getElementById('announcement-step-counter');
-  const backButton = document.getElementById('announcement-back');
-  const nextButton = document.getElementById('announcement-next');
-  const saveButton = document.getElementById('modal-save');
-
-  if (counter) counter.textContent = `Passo ${announcementWizardStep} di ${ANNOUNCEMENT_WIZARD_STEPS}`;
-  if (backButton) backButton.style.display = announcementWizardStep === 1 ? 'none' : '';
-  if (nextButton) nextButton.style.display = announcementWizardStep === ANNOUNCEMENT_WIZARD_STEPS ? 'none' : '';
-  if (saveButton) saveButton.style.display = announcementWizardStep === ANNOUNCEMENT_WIZARD_STEPS ? '' : 'none';
-  if (announcementWizardStep === ANNOUNCEMENT_WIZARD_STEPS) renderAnnouncementReview();
-}
 
 /**
  * Sets last seen mode.
@@ -169,7 +57,6 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
     typeSelect.innerHTML = '<option value="Sighting">In rifugio</option>';
     typeSelect.value = 'Sighting';
     typeSelect.disabled = true;
-    syncAnnouncementTypeTabs();
     return;
   }
 
@@ -179,7 +66,6 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
     <option value="Sighting">Avvistamento</option>
   `;
   typeSelect.value = defaultType || 'LostAnimal';
-  syncAnnouncementTypeTabs();
 }
 
 /**
@@ -187,11 +73,36 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
  * @returns {number[]|null} Current shelter coordinates as `[longitude, latitude]`, or null when unavailable.
  */
 function getRifugioCoordinates() {
-  const coords = currentUser?.rifugioData?.location?.coordinates || currentUser?.shelterData?.location?.coordinates;
+  const coords = currentUser?.rifugioData?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
   const [lng, lat] = coords.map(Number);
   if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
   return [lng, lat];
+}
+
+/**
+ * Reverse geocodes a point to a short address and city string.
+ * @param {number} lng - Point longitude.
+ * @param {number} lat - Point latitude.
+ * @returns {Promise<{address: string, city: string} | null>} Best-effort address payload.
+ */
+async function reverseGeocodeRifugioPosition(lng, lat) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=it&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    const addr = json?.address || {};
+    const address = [addr.road, addr.house_number].filter(Boolean).join(' ').trim() || json?.display_name || '';
+    const city = addr.city || addr.town || addr.village || addr.hamlet || addr.municipality || addr.county || '';
+
+    if (!address && !city) return null;
+    return { address, city };
+  } catch (err) {
+    console.error('Errore reverse geocoding rifugio:', err);
+    return null;
+  }
 }
 
 /**
@@ -252,7 +163,6 @@ function configureModalFieldsForType(type) {
       ? 'Avvistamento: compila solo i dati che conosci, il nome non è obbligatorio.'
       : 'Smarrito: inserisci i dati dell animale che stai cercando.';
   }
-  syncAnnouncementTypeTabs();
 }
 
 /**
@@ -402,6 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     saveProfileButton.disabled = !enabled;
     editProfileButton.disabled = enabled;
     document.getElementById('profile-section').classList.toggle('is-editing', enabled);
+    setRifugioPositionEditingState(enabled);
   }
 
   /**
@@ -728,7 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const when = request.createdAt ? new Date(request.createdAt).toLocaleString('it-IT') : '';
       const isShelter = currentUser.role === 'shelter';
       const canReply = isShelter && request.status === 'pending';
-      const shelterName = shelter.rifugioData?.rifugioName || shelter.shelterData?.shelterName || shelter.username || 'Rifugio';
+      const shelterName = shelter.rifugioData?.rifugioName || shelter.username || 'Rifugio';
       const animalName = animal.name || animal.species || 'Animale';
       const item = document.createElement('div');
       item.className = 'comment-item contact-request-item';
@@ -914,7 +825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const name = me.rifugioData?.rifugioName || me.shelterData?.shelterName || me.username || 'Rifugio';
+    const name = me.rifugioData?.rifugioName || me.username || 'Rifugio';
     const labels = {
       pending: 'in attesa di approvazione admin',
       approved: 'approvato',
@@ -948,12 +859,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const coords = getRifugioCoordinates();
+    const savedAddress = [me.rifugioData?.address, me.rifugioData?.city].filter(Boolean).join(', ');
     box.style.display = 'block';
     text.textContent = coords
-      ? 'Posizione salvata. Puoi modificarla dalla mappa.'
-      : 'Aggiungi la posizione del rifugio per pubblicare annunci.';
+      ? (savedAddress
+        ? `Posizione salvata: ${savedAddress}. Puoi modificarla dalla mappa.`
+        : 'Posizione salvata. Puoi modificarla dalla mappa.')
+      : 'Aggiungi la posizione del rifugio: puoi cercarla per indirizzo e città, usare la tua posizione o scegliere un punto sulla mappa.';
     button.textContent = coords ? 'Modifica posizione' : 'Aggiungi posizione';
-    if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa.';
+    if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa o cerca l\'indirizzo.';
+    setRifugioPositionEditingState(document.getElementById('profile-section')?.classList.contains('is-editing'));
+  }
+
+  /**
+   * Toggles shelter position controls between locked and editable state.
+   * @param {boolean} enabled - Whether the shelter position UI should be interactive.
+   * @returns {void}
+   */
+  function setRifugioPositionEditingState(enabled) {
+    const box = document.getElementById('rifugio-position-box');
+    if (!box) return;
+
+    box.classList.toggle('is-locked', !enabled);
+
+    [
+      'rifugio-search-address',
+      'rifugio-search-city',
+      'searchRifugioPosition',
+      'useRifugioLocation',
+      'editRifugioPosition',
+      'saveRifugioPosition'
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
+        el.disabled = !enabled;
+      }
+    });
+
+    const map = document.getElementById('rifugio-position-map');
+    if (map) {
+      map.style.pointerEvents = enabled ? 'auto' : 'none';
+      map.style.filter = enabled ? '' : 'grayscale(0.15) opacity(0.72)';
+    }
+
+    const hint = document.getElementById('rifugio-position-message');
+    if (hint && !enabled) {
+      hint.textContent = 'Clicca Modifica in basso per sbloccare la posizione del rifugio.';
+    }
   }
 
   /**
@@ -969,7 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       rifugioMapInstance = L.map('rifugio-position-map').setView([46.0667, 11.1333], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(rifugioMapInstance);
       rifugioMapInstance.on('click', (e) => {
-        setPendingRifugioLocation(e.latlng.lng, e.latlng.lat);
+        setPendingRifugioLocation(e.latlng.lng, e.latlng.lat, { lookupAddress: true });
       });
     }
 
@@ -983,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @param {number} lat - Selected shelter latitude.
    * @returns {void}
    */
-  function setPendingRifugioLocation(lng, lat) {
+  function setPendingRifugioLocation(lng, lat, options = {}) {
     pendingRifugioLocation = [lng, lat];
     const map = ensureRifugioMap();
     if (!map) return;
@@ -995,6 +948,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     map.setView([lat, lng], 15);
     document.getElementById('saveRifugioPosition').style.display = 'inline-block';
     document.getElementById('rifugio-position-message').textContent = 'Punto selezionato. Salva la posizione.';
+
+    if (options.lookupAddress) {
+      void reverseGeocodeRifugioPosition(lng, lat).then((location) => {
+        if (!location) return;
+        const addressInput = document.getElementById('rifugio-search-address');
+        const cityInput = document.getElementById('rifugio-search-city');
+        if (addressInput && location.address) addressInput.value = location.address;
+        if (cityInput && location.city) cityInput.value = location.city;
+        const message = document.getElementById('rifugio-position-message');
+        if (message) message.textContent = 'Indirizzo trovato dalla posizione. Puoi modificarlo prima di salvare.';
+      });
+    }
   }
 
   /**
@@ -1004,6 +969,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openRifugioPositionEditor() {
     const map = ensureRifugioMap();
     const coords = getRifugioCoordinates();
+    const addressInput = document.getElementById('rifugio-search-address');
+    const cityInput = document.getElementById('rifugio-search-city');
+
+    if (addressInput && !addressInput.value.trim()) addressInput.value = currentUser?.rifugioData?.address || '';
+    if (cityInput && !cityInput.value.trim()) cityInput.value = currentUser?.rifugioData?.city || '';
+
     if (coords) {
       setPendingRifugioLocation(coords[0], coords[1]);
     } else if (map) {
@@ -1012,6 +983,82 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('rifugio-position-message').textContent = 'Clicca sulla mappa per scegliere il punto del rifugio.';
     }
     requestAnimationFrame(() => map && map.invalidateSize());
+  }
+
+  /**
+   * Searches a rifugio location by address and city, then updates the pending marker.
+   * @returns {Promise<void>} Promise resolving after the lookup is completed or rejected.
+   */
+  async function searchRifugioPosition() {
+    const address = document.getElementById('rifugio-search-address')?.value.trim() || '';
+    const city = document.getElementById('rifugio-search-city')?.value.trim() || '';
+    const query = [address, city].filter(Boolean).join(', ');
+    const message = document.getElementById('rifugio-position-message');
+
+    if (!query) {
+      if (message) message.textContent = 'Inserisci almeno indirizzo o città.';
+      return;
+    }
+
+    const map = ensureRifugioMap();
+    if (!map) return;
+
+    if (message) message.textContent = 'Ricerca posizione in corso...';
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=it&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('Ricerca posizione non disponibile');
+
+      const results = await res.json();
+      const result = Array.isArray(results) ? results[0] : null;
+      const longitude = Number(result?.lon);
+      const latitude = Number(result?.lat);
+
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        if (message) message.textContent = 'Nessun risultato trovato per la ricerca inserita.';
+        return;
+      }
+
+      setPendingRifugioLocation(longitude, latitude);
+      if (message) message.textContent = `Posizione trovata per ${query}. Controlla la mappa e salva.`;
+    } catch (err) {
+      console.error('Errore ricerca rifugio:', err);
+      if (message) message.textContent = 'Errore durante la ricerca della posizione.';
+    }
+  }
+
+  /**
+   * Uses the browser geolocation to set the pending rifugio position.
+   * @returns {void}
+   */
+  function useRifugioCurrentLocation() {
+    const message = document.getElementById('rifugio-position-message');
+
+    if (!navigator.geolocation) {
+      alert('Geolocalizzazione non disponibile nel browser.');
+      return;
+    }
+
+    ensureRifugioMap();
+    if (message) message.textContent = 'Recupero la tua posizione...';
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setPendingRifugioLocation(longitude, latitude, { lookupAddress: true });
+        if (message) message.textContent = 'Posizione attuale rilevata. Controlla la mappa e salva.';
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        let msg = 'Errore nella geolocalizzazione.';
+        if (error.code === error.PERMISSION_DENIED) msg = 'Permesso negato per la geolocalizzazione.';
+        if (error.code === error.POSITION_UNAVAILABLE) msg = 'Posizione non disponibile.';
+        if (error.code === error.TIMEOUT) msg = 'Timeout della richiesta di posizione.';
+        if (message) message.textContent = msg;
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+    );
   }
 
   /**
@@ -1025,6 +1072,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const [lng, lat] = pendingRifugioLocation;
+    const addressInput = document.getElementById('rifugio-search-address');
+    const cityInput = document.getElementById('rifugio-search-city');
+    let address = addressInput?.value.trim() || '';
+    let city = cityInput?.value.trim() || '';
+
+    if (!address || !city) {
+      const resolvedLocation = await reverseGeocodeRifugioPosition(lng, lat);
+      if (resolvedLocation) {
+        if (!address && resolvedLocation.address) address = resolvedLocation.address;
+        if (!city && resolvedLocation.city) city = resolvedLocation.city;
+        if (addressInput && !addressInput.value.trim() && resolvedLocation.address) addressInput.value = resolvedLocation.address;
+        if (cityInput && !cityInput.value.trim() && resolvedLocation.city) cityInput.value = resolvedLocation.city;
+      }
+    }
+
     const res = await fetch('/api/v1/users/me', {
       method: 'PUT',
       headers: {
@@ -1033,7 +1095,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       },
       body: JSON.stringify({
         rifugioData: {
-          location: { type: 'Point', coordinates: [lng, lat] }
+          location: { type: 'Point', coordinates: [lng, lat] },
+          ...(address ? { address } : {}),
+          ...(city ? { city } : {})
         }
       })
     });
@@ -1181,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!overlay || !title || !body) return;
 
     const warnings = Array.isArray(user?.conductWarnings) ? user.conductWarnings : [];
-    const rifugioName = user?.rifugioData?.rifugioName || user?.shelterData?.shelterName || '';
+    const rifugioName = user?.rifugioData?.rifugioName || '';
     title.textContent = user?.username || 'Account';
     body.innerHTML = `
       <div class="admin-warning-count">
@@ -1714,6 +1778,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('editRifugioPosition')?.addEventListener('click', openRifugioPositionEditor);
   document.getElementById('saveRifugioPosition')?.addEventListener('click', saveRifugioPosition);
+  document.getElementById('searchRifugioPosition')?.addEventListener('click', searchRifugioPosition);
+  document.getElementById('useRifugioLocation')?.addEventListener('click', useRifugioCurrentLocation);
 
   document.getElementById('admin-section')?.addEventListener('click', async (e) => {
     const button = e.target?.closest?.('[data-admin-action]');
@@ -1851,20 +1917,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const grid = document.getElementById('announcements-grid');
   grid.innerHTML = '';
   mine.forEach(a => {
-    const div = document.createElement('div'); div.className = 'card';
+    const div = document.createElement('article');
+    div.className = 'card profile-announcement-card';
     div.dataset.id = a._id;
     const photoUrl = `/api/v1/announcements/${a._id}/photo`;
+    const statusLabel = a.status === 'RESOLVED' ? 'Risolto' : 'Attivo';
+    const statusClass = a.status === 'RESOLVED' ? 'is-resolved' : 'is-active';
+    const titleText = a.animalId?.name ? `${escapeHtml(a.animalId.name)} - ${escapeHtml(a.animalId.species || '')}` : escapeHtml(a.animalId?.species || 'Animale');
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
       <div class="card-body">
-        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:${a.status === 'RESOLVED' ? 'var(--sighting)' : 'var(--accent)'};font-weight:700;">${a.status === 'RESOLVED' ? 'Risolto' : 'Attivo'}</div>
-        <div class="card-breed">${a.animalId?.name ? escapeHtml(a.animalId.name) + ' - ' : ''}${a.animalId?.species ?? ''} ${a.animalId?.breed ?? ''}</div>
-        <div class="card-description">${a.description}</div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button data-id="${a._id}" class="edit btn btn--ghost">Modifica</button>
-          ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost">Chiudi</button>` : ''}
-          <button data-id="${a._id}" class="del btn btn--danger">Elimina</button>
-          <a href="/pages/announcements.html" style="margin-left:auto;">Vedi su lista</a>
+        <div class="profile-announcement-card__meta">
+          <span class="profile-announcement-status ${statusClass}">${statusLabel}</span>
+          <span class="profile-announcement-kind">Il tuo annuncio</span>
+        </div>
+        <h3 class="card-breed profile-announcement-card__title">${titleText}</h3>
+        <p class="card-description profile-announcement-card__description">${escapeHtml(a.description || 'Nessuna descrizione disponibile.')}</p>
+        <div class="profile-announcement-card__actions">
+          <button data-id="${a._id}" class="edit btn btn--ghost profile-announcement-card__button">Modifica</button>
+          ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost profile-announcement-card__button">Chiudi</button>` : ''}
+          <button data-id="${a._id}" class="del btn btn--danger profile-announcement-card__button">Elimina</button>
+          
         </div>
       </div>
     `;
@@ -1891,54 +1964,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
   });
 
-  grid.addEventListener('click', (e) => {
-    const clickedCard = e.target.closest('.card');
-    if (!clickedCard || !grid.contains(clickedCard)) return;
-    if (e.target.closest('button, a, input, select, textarea')) return;
-    const id = clickedCard.dataset.id;
-    if (id) openAnnouncementModal(id);
-  });
-
-
-  document.querySelectorAll('button.close').forEach(b => b.addEventListener('click', async (e) => {
-    const id = e.target.dataset.id;
-    const confirmed = await showProfileConfirm({
-      title: 'Segna come risolto',
-      message: 'Segni l\'annuncio come risolto? Non comparirà più nella lista pubblica.',
-      confirmLabel: 'Segna come risolto',
-      danger: false
-    });
-    if (!confirmed) return;
-    const res = await fetch(`/api/v1/announcements/${id}`, { method: 'PATCH', headers: authHeader, body: JSON.stringify({ status: 'RESOLVED' }) });
-    if (res.ok) {
-      loadMyAnnouncements();
-      window.dispatchEvent(new Event('announcements:resolved-updated'));
-    } else alert('Errore chiusura');
-  }));
-
-  
-
-  document.querySelectorAll('button.del').forEach(b => b.addEventListener('click', async (e) => {
-    const id = e.target.dataset.id;
-    const confirmed = await showProfileConfirm({
-      title: 'Elimina annuncio',
-      message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
-      confirmLabel: 'Elimina',
-      danger: true
-    });
-    if (!confirmed) return;
-    try {
-      const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
-      if (res.ok) {
-        loadMyAnnouncements();
-      } else {
-        const d = await res.json().catch(()=>({}));
-        alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+  if (!grid.dataset.eventsBound) {
+    grid.dataset.eventsBound = '1';
+    grid.addEventListener('click', async (e) => {
+      const closeButton = e.target.closest('button.close');
+      if (closeButton) {
+        const id = closeButton.dataset.id;
+        const confirmed = await showProfileConfirm({
+          title: 'Segna come risolto',
+          message: 'Segni l\'annuncio come risolto? Non comparirà più nella lista pubblica.',
+          confirmLabel: 'Segna come risolto',
+          danger: false
+        });
+        if (!confirmed) return;
+        const res = await fetch(`/api/v1/announcements/${id}`, {
+          method: 'PATCH',
+          headers: authHeader,
+          body: JSON.stringify({ status: 'RESOLVED' })
+        });
+        if (res.ok) {
+          loadMyAnnouncements();
+          window.dispatchEvent(new Event('announcements:resolved-updated'));
+        } else {
+          alert('Errore chiusura');
+        }
+        return;
       }
-    } catch (err) {
-      alert('Errore di rete: ' + (err.message || err));
-    }
-  }));
+
+      const deleteButton = e.target.closest('button.del');
+      if (deleteButton) {
+        const id = deleteButton.dataset.id;
+        const confirmed = await showProfileConfirm({
+          title: 'Elimina annuncio',
+          message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
+          confirmLabel: 'Elimina',
+          danger: true
+        });
+        if (!confirmed) return;
+        try {
+          const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
+          if (res.ok) {
+            loadMyAnnouncements();
+          } else {
+            const d = await res.json().catch(() => ({}));
+            alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+          }
+        } catch (err) {
+          alert('Errore di rete: ' + (err.message || err));
+        }
+        return;
+      }
+
+      const clickedCard = e.target.closest('.card');
+      if (!clickedCard || !grid.contains(clickedCard)) return;
+      if (e.target.closest('button, a, input, select, textarea')) return;
+      const id = clickedCard.dataset.id;
+      if (id) openAnnouncementModal(id);
+    });
+  }
 }
 
   /**
@@ -2149,7 +2232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const publisher = data.publisherId || {};
     const isLost = data.type === 'LostAnimal';
     const rifugioName = publisher?.role === 'shelter'
-      ? (publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username)
+      ? (publisher?.rifugioData?.rifugioName || publisher?.username)
       : '';
 
     const date = new Date(data.date).toLocaleDateString('it-IT', {
@@ -2181,7 +2264,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
 
     document.getElementById('view-modal-body').innerHTML = `
-      <dl class="detail-list">
+        <div class="view-modal-summary">
+          <dl class="detail-list view-modal-details">
         ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
         <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
         <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
@@ -2194,9 +2278,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
         <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
         <dt>Stato</dt><dd>${displayValue(data.status)}</dd>
-      </dl>
-      <p class="modal-description">${escapeHtml(data.description || '')}</p>
-      ${rifugioName ? `<div class="modal-contact"><strong>Rifugio:</strong><span>${escapeHtml(rifugioName)}</span></div>` : ''}
+        </dl>
+        <div class="view-modal-aside">
+          <section class="view-modal-block">
+            <h4>Descrizione</h4>
+            <p class="modal-description">${escapeHtml(data.description || 'Nessuna descrizione disponibile.')}</p>
+          </section>
+          ${rifugioName ? `<section class="view-modal-block view-modal-contact-block"><h4>Rifugio</h4><div class="modal-contact"><span>${escapeHtml(rifugioName)}</span></div></section>` : ''}
+        </div>
+      </div>
     `;
 
     try {
@@ -2204,12 +2294,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const isOwner = (publisher && ((publisher._id && String(publisher._id) === String(myUserId)) || (String(publisher) === String(myUserId))));
       if (isOwner && bodyEl) {
         const actions = document.createElement('div');
-        actions.style = 'margin-top:12px;display:flex;gap:8px;justify-content:flex-end;';
+        actions.style = 'margin-top:12px;display:flex;gap:8px;';
         const btn = document.createElement('button');
         btn.className = 'btn btn--ghost';
         btn.id = 'downloadFlyerBtn';
         btn.dataset.id = data._id;
-        btn.textContent = 'Volantino';
+        btn.textContent = 'Genera Volantino';
         actions.appendChild(btn);
         bodyEl.appendChild(actions);
 
@@ -2372,21 +2462,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('modal-cancel').addEventListener('click', ()=> showModal(false));
   document.getElementById('modal-type')?.addEventListener('change', (event) => {
     configureModalFieldsForType(event.target.value);
-  });
-  document.querySelectorAll('.announcement-type-tab').forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const typeSelect = document.getElementById('modal-type');
-      if (!typeSelect || typeSelect.disabled || tab.disabled) return;
-      typeSelect.value = tab.dataset.announcementType;
-      configureModalFieldsForType(typeSelect.value);
-    });
-  });
-  document.getElementById('announcement-back')?.addEventListener('click', () => {
-    setAnnouncementWizardStep(announcementWizardStep - 1);
-  });
-  document.getElementById('announcement-next')?.addEventListener('click', () => {
-    if (!validateAnnouncementStep()) return;
-    setAnnouncementWizardStep(announcementWizardStep + 1);
   });
 
   document.getElementById('view-modal-close')?.addEventListener('click', () => {
@@ -2714,10 +2789,10 @@ function openModalForCreate() {
   configureTypeFieldForAccount('LostAnimal');
   document.getElementById('modal-description').value = '';
   document.getElementById('modal-animalName').value = '';
-  document.getElementById('modal-species').value = '';
+  wizApplyChipValue('modal-species', 'Cane');
   document.getElementById('modal-breed').value = '';
-  document.getElementById('modal-color').value = '';
-  document.getElementById('modal-gender').value = '';
+  wizSetColor('Nero', document.querySelector('.color-swatch[title="Nero"]') || document.querySelector('.color-swatch.active') || document.querySelector('.color-swatch'));
+  wizApplyChipValue('modal-gender', 'Sconosciuto');
   document.getElementById('modal-lunghezzaPelo').value = '';
   document.getElementById('modal-distinctiveFeatures').value = '';
   document.getElementById('modal-microchipId').value = '';
@@ -2736,7 +2811,6 @@ function openModalForCreate() {
     adoptionSelect.value = 'none';
     adoptionSelect.disabled = currentUser?.role !== 'shelter';
   }
-  setAnnouncementWizardStep(1);
   showModal(true);
 }
 
@@ -2756,10 +2830,10 @@ function openModalForEdit(ann) {
   configureTypeFieldForAccount(ann.type || 'LostAnimal');
   document.getElementById('modal-description').value = ann.description || '';
   document.getElementById('modal-animalName').value = ann.animalId?.name || '';
-  document.getElementById('modal-species').value = ann.animalId?.species || '';
+  wizApplyChipValue('modal-species', ann.animalId?.species || '');
   document.getElementById('modal-breed').value = ann.animalId?.breed || '';
   document.getElementById('modal-color').value = ann.animalId?.color || '';
-  document.getElementById('modal-gender').value = ann.animalId?.gender || '';
+  wizApplyChipValue('modal-gender', ann.animalId?.gender || 'Sconosciuto');
   document.getElementById('modal-lunghezzaPelo').value = ann.animalId?.lunghezzaPelo || '';
   document.getElementById('modal-distinctiveFeatures').value = ann.animalId?.distinctiveFeatures || '';
   document.getElementById('modal-microchipId').value = ann.animalId?.microchipId || '';
@@ -2795,7 +2869,6 @@ function openModalForEdit(ann) {
     adoptionSelectEdit.value = ann.animalId?.adoptable && currentUser?.role === 'shelter' ? 'adoptable' : 'none';
     adoptionSelectEdit.disabled = currentUser?.role !== 'shelter';
   }
-  setAnnouncementWizardStep(1);
   showModal(true);
 }
 
@@ -2877,3 +2950,132 @@ function showMapPicker() {
     mapInstance.invalidateSize();
   }
 }
+
+let wizStep = 1;
+	const maxSteps = 4;
+
+	function wizUpdateUI() {
+		// Aggiorna Pannelli
+		for(let i=1; i<=maxSteps; i++) {
+			document.getElementById('wiz-panel'+i).classList.remove('active');
+			if(i === wizStep) document.getElementById('wiz-panel'+i).classList.add('active');
+		}
+		// Aggiorna Stepper (Pallini in alto)
+		for(let i=1; i<=maxSteps; i++) {
+			const circle = document.getElementById('wiz-sc'+i);
+			const label = document.getElementById('wiz-sl'+i);
+			const line = document.getElementById('wiz-line'+i);
+			
+			if (i < wizStep) {
+				circle.className = 'step-circle done'; circle.textContent = '✓';
+				label.className = 'step-label done';
+			} else if (i === wizStep) {
+				circle.className = 'step-circle active'; circle.textContent = i;
+				label.className = 'step-label active';
+			} else {
+				circle.className = 'step-circle todo'; circle.textContent = i;
+				label.className = 'step-label todo';
+			}
+			if (line) line.className = (i < wizStep) ? 'step-line done' : 'step-line';
+		}
+		
+		// Aggiorna Bottoni in basso
+		document.getElementById('wiz-stepCounter').textContent = `Passo ${wizStep} di ${maxSteps}`;
+		document.getElementById('wiz-btnBack').style.display = (wizStep > 1) ? 'block' : 'none';
+		document.getElementById('wiz-btnNext').style.display = (wizStep < maxSteps) ? 'block' : 'none';
+		document.getElementById('modal-save').style.display = (wizStep === maxSteps) ? 'block' : 'none';
+
+		// Fix mappa (Leaflet a volte non carica bene i tile se il div era nascosto)
+		if (wizStep === 3 && typeof mapInstance !== 'undefined' && mapInstance) {
+			setTimeout(() => mapInstance.invalidateSize(), 100);
+		}
+
+    // Aggiorna riepilogo dinamico
+    try {
+      const species = (document.getElementById('modal-species') || {}).value || '';
+      const gender = (document.getElementById('modal-gender') || {}).value || '';
+      document.getElementById('summary-base').textContent = (species && gender)
+        ? `✔️ Dati base inseriti: ${species} • ${gender}`
+        : '❌ Dati base inseriti (Specie e Genere)';
+
+      const color = (document.getElementById('modal-color') || {}).value || '';
+      const fur = (document.getElementById('modal-lunghezzaPelo') || {}).value || '';
+      document.getElementById('summary-aspect').textContent = (color || fur) ? `✔️ Aspetto: ${color || '—'} • ${fur || '—'}` : '❌ Dettagli aspetto completati';
+
+      const coords = (document.getElementById('modal-coords') || {}).value || '';
+      const lastSeenInput = document.getElementById('modal-lastSeenDate');
+      const lastSeen = (lastSeenInput || {}).value || '';
+      const customDateSelected = document.getElementById('lastSeenCustomBtn')?.classList.contains('is-selected');
+      const hasValidDate = customDateSelected ? Boolean(lastSeen) : true;
+      const dateLabel = customDateSelected ? lastSeen : 'oggi';
+      document.getElementById('summary-location').textContent = (coords && hasValidDate)
+        ? `✔️ Posizione: impostata • Data: ${dateLabel}`
+        : '❌ Posizione e data impostate';
+    } catch (e) {}
+	}
+
+	function wizNextStep() { if(wizStep < maxSteps) { wizStep++; wizUpdateUI(); } }
+	function wizPrevStep() { if(wizStep > 1) { wizStep--; wizUpdateUI(); } }
+
+	// Tasto "Tipo Annuncio" (Smarrito / Avvistamento)
+	function wizSelectType(val, el) {
+		document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+		el.classList.add('active');
+		const select = document.getElementById('modal-type');
+		select.value = val;
+		// Lancia l'evento "change" manuale così il tuo profile.js originale se ne accorge
+		select.dispatchEvent(new Event('change')); 
+	}
+
+	// Tasti "Chips" generici (Cane/Gatto, Pelo, Genere)
+	function wizSetChip(hiddenId, val, el) {
+		const group = el.closest('.chip-group');
+		group.querySelectorAll('.wiz-chip').forEach(c => c.classList.remove('active'));
+		el.classList.add('active');
+		
+		const hiddenInput = document.getElementById(hiddenId);
+		hiddenInput.value = val;
+		hiddenInput.dispatchEvent(new Event('change'));
+	}
+
+  function wizApplyChipValue(hiddenId, value) {
+    const hiddenInput = document.getElementById(hiddenId);
+    if (!hiddenInput) return;
+
+    hiddenInput.value = value || '';
+    const chips = Array.from(document.querySelectorAll('.wiz-chip[onclick]'))
+      .filter((chip) => (chip.getAttribute('onclick') || '').includes(`'${hiddenId}'`));
+
+    chips.forEach((chip) => {
+      const marker = `,'${value}'`;
+      const onclick = (chip.getAttribute('onclick') || '').replace(/\s+/g, '');
+      chip.classList.toggle('active', Boolean(value) && onclick.includes(marker));
+    });
+
+    hiddenInput.dispatchEvent(new Event('change'));
+  }
+
+	// Tasti "Colore"
+	function wizSetColor(val, el) {
+		document.querySelectorAll('.color-swatch').forEach(c => c.classList.remove('active'));
+		el.classList.add('active');
+		document.getElementById('modal-color').value = val;
+    const hidden = document.getElementById('modal-color');
+    if (hidden) hidden.dispatchEvent(new Event('change'));
+	}
+
+	// Intercetta l'apertura del pop-up originale per resettare il Wizard al passo 1
+	const originalOpen = window.openModalForCreate;
+	if(originalOpen) {
+		window.openModalForCreate = function() {
+			wizStep = 1; wizUpdateUI();
+			originalOpen();
+		}
+	}
+	const originalEdit = window.openModalForEdit;
+	if(originalEdit) {
+		window.openModalForEdit = function(ann) {
+			wizStep = 1; wizUpdateUI();
+			originalEdit(ann);
+		}
+	}

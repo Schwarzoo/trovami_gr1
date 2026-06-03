@@ -29,7 +29,7 @@ function invalidId(res, label) {
 function populateRequest(query) {
   return query
     .populate('requesterId', 'username email phoneNumber')
-    .populate('shelterId', 'username role rifugioData shelterData')
+    .populate('shelterId', 'username role rifugioData')
     .populate('animalId', 'name species breed photos adoptable');
 }
 
@@ -47,7 +47,7 @@ exports.createContactRequest = async (req, res) => {
 
     const [requester, animal] = await Promise.all([
       User.findById(req.user.userId).select('username email phoneNumber role'),
-      Animal.findById(animalId).populate('shelterId', 'username role rifugioStatus rifugioData shelterData')
+      Animal.findById(animalId).populate('shelterId', 'username role rifugioStatus rifugioData')
     ]);
     if (!requester) return res.status(401).json({ message: 'Utente non valido' });
     if (requester.role !== 'user') {
@@ -186,7 +186,7 @@ exports.replyToContactRequest = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(requestId)) return invalidId(res, 'ID richiesta');
 
     const [shelter, contactRequest] = await Promise.all([
-      User.findById(req.user.userId).select('username role rifugioStatus rifugioData shelterData'),
+      User.findById(req.user.userId).select('username role rifugioStatus rifugioData'),
       ContactRequest.findById(requestId).populate('requesterId', 'username')
     ]);
     if (!shelter) return res.status(401).json({ message: 'Utente non valido' });

@@ -59,17 +59,32 @@
 					</div>
 
 					<div id="rifugio-status-box" class="comment-item" style="display:none;margin-top:8px;"></div>
-					<div id="rifugio-position-box" class="comment-item" style="display:none;margin-top:8px;">
+					<div id="rifugio-position-box" class="comment-item shelter-position-card" style="display:none;margin-top:8px;">
 						<div class="comment-meta">
 							<span class="comment-user">Posizione rifugio</span>
+							<span class="comment-date">Modificabile in ogni momento</span>
 						</div>
 						<div id="rifugio-position-text" class="comment-text">Aggiungi la posizione del rifugio per pubblicare annunci.</div>
-						<div id="rifugio-position-map" style="display:none;height:220px;margin-top:10px;border-radius:8px;overflow:hidden;"></div>
-						<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+						<div class="field-grid shelter-position-fields">
+							<div class="field" style="margin:0;">
+								<label for="rifugio-search-address">Indirizzo</label>
+								<input id="rifugio-search-address" type="text" placeholder="Via, numero civico" />
+							</div>
+							<div class="field" style="margin:0;">
+								<label for="rifugio-search-city">Città</label>
+								<input id="rifugio-search-city" type="text" placeholder="Comune" />
+							</div>
+						</div>
+						<div class="shelter-position-actions">
+							<button id="searchRifugioPosition" type="button" class="btn btn--ghost">Trova da indirizzo</button>
+							<button id="useRifugioLocation" type="button" class="btn btn--ghost">Usa la mia posizione</button>
+						</div>
+						<div id="rifugio-position-map" class="shelter-position-map" style="display:none;"></div>
+						<div class="shelter-position-actions shelter-position-actions--save">
 							<button id="editRifugioPosition" type="button" class="btn btn--ghost">Aggiungi posizione</button>
 							<button id="saveRifugioPosition" type="button" class="btn btn--primary" style="display:none;">Salva posizione</button>
 						</div>
-						<div id="rifugio-position-message" class="form-hint" style="margin-top:8px;"></div>
+						<div id="rifugio-position-message" class="form-hint shelter-position-message"></div>
 					</div>
 
 					<div style="display:flex;gap:8px;margin-top:8px;">
@@ -218,178 +233,213 @@
 	</div>
 
 	<!-- Modal for create/edit announcement -->
-	<div id="modal-overlay" class="modal-overlay announcement-wizard-overlay" style="display:none;">
-		<div class="modal-card announcement-wizard" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-			<div class="modal-header announcement-wizard__header">
+	<div id="modal-overlay" class="modal-overlay" style="display:none;">
+		<div class="modal-card wizard-modal">
+			
+			<div class="wizard-header">
 				<div>
-					<h3 id="modal-title">Annuncio</h3>
-					<p id="modal-type-hint" class="form-hint">Scegli il tipo di annuncio.</p>
+					<h2 id="modal-title">Nuovo annuncio</h2>
+					<p>Inserisci i dettagli dell'animale</p>
 				</div>
-				<button id="modal-close" class="announcement-wizard__close" type="button" aria-label="Chiudi">X</button>
+				<button id="modal-close" class="wiz-close-btn" aria-label="Chiudi">✕</button>
 			</div>
 
-			<form id="modalForm" class="modal-form announcement-wizard__form">
-				<select id="modal-type" class="visually-hidden" aria-label="Tipo annuncio">
+			<div class="type-tabs">
+				<button type="button" class="type-tab active" onclick="wizSelectType('LostAnimal', this)">Smarrito</button>
+				<button type="button" class="type-tab" onclick="wizSelectType('Sighting', this)">Avvistamento</button>
+				<select id="modal-type" style="display:none;">
 					<option value="LostAnimal">Smarrito</option>
 					<option value="Sighting">Avvistamento</option>
 				</select>
+			</div>
 
-				<div class="announcement-wizard__tabs" role="group" aria-label="Tipo annuncio">
-					<button type="button" class="announcement-type-tab is-active" data-announcement-type="LostAnimal">Smarrito</button>
-					<button type="button" class="announcement-type-tab" data-announcement-type="Sighting">Avvistamento</button>
-				</div>
+			<div class="stepper">
+				<div class="step-item"><div class="step-circle active" id="wiz-sc1">1</div><span class="step-label active" id="wiz-sl1">Animale</span></div>
+				<div class="step-line" id="wiz-line1"></div>
+				<div class="step-item"><div class="step-circle todo" id="wiz-sc2">2</div><span class="step-label todo" id="wiz-sl2">Aspetto</span></div>
+				<div class="step-line" id="wiz-line2"></div>
+				<div class="step-item"><div class="step-circle todo" id="wiz-sc3">3</div><span class="step-label todo" id="wiz-sl3">Luogo</span></div>
+				<div class="step-line" id="wiz-line3"></div>
+				<div class="step-item"><div class="step-circle todo" id="wiz-sc4">4</div><span class="step-label todo" id="wiz-sl4">Riepilogo</span></div>
+			</div>
 
-				<div class="announcement-stepper" aria-label="Passaggi creazione annuncio">
-					<div class="announcement-step is-active" data-step-indicator="1"><span>1</span><strong>Animale</strong></div>
-					<div class="announcement-step" data-step-indicator="2"><span>2</span><strong>Aspetto</strong></div>
-					<div class="announcement-step" data-step-indicator="3"><span>3</span><strong>Foto e luogo</strong></div>
-					<div class="announcement-step" data-step-indicator="4"><span>4</span><strong>Riepilogo</strong></div>
-				</div>
+			<form id="modalForm" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+				
+				<div class="step-content active" id="wiz-panel1">
+					<p class="step-title">Di che animale si tratta?</p>
+					
+					<div class="wiz-grid">
+						<div class="wiz-field" id="modal-animal-name-row">
+							<label id="modal-animal-name-label">Nome *</label>
+							<input type="text" id="modal-animalName" placeholder="Es. Luna" />
+						</div>
+						<div class="wiz-field">
+							<label>Specie *</label>
+							<div class="chip-group">
+								<div class="wiz-chip" onclick="wizSetChip('modal-species', 'Cane', this)">Cane</div>
+								<div class="wiz-chip" onclick="wizSetChip('modal-species', 'Gatto', this)">Gatto</div>
+								<div class="wiz-chip" onclick="wizSetChip('modal-species', 'Altro', this)">Altro</div>
+							</div>
+							<input type="hidden" id="modal-species" value="" required>
+						</div>
+					</div>
 
-				<div class="announcement-wizard__body">
-					<section class="announcement-panel is-active" data-step-panel="1" aria-label="Dati animale">
-						<p class="announcement-panel__title">Di che animale si tratta?</p>
-						<div class="form-grid">
-							<div id="modal-animal-name-row" class="field">
-								<label id="modal-animal-name-label">Nome animale</label>
-								<input id="modal-animalName" placeholder="Es. Luna" />
-								<span id="modal-animal-name-hint" class="form-hint">Campo opzionale se non conosci il nome.</span>
-							</div>
-							<div class="field">
-								<label>Specie</label>
-								<input id="modal-species" placeholder="Es. Cane, Gatto" required />
-							</div>
+					<div class="wiz-grid">
+						<div class="wiz-field">
+							<label>Razza</label>
+							<input type="text" id="modal-breed" placeholder="Es. Labrador" />
 						</div>
-						<div class="form-grid">
-							<div class="field">
-								<label>Razza</label>
-								<input id="modal-breed" placeholder="Es. Labrador" />
-								<span class="form-hint">Se la conosci.</span>
+						<div class="wiz-field">
+							<label>Genere</label>
+							<div class="chip-group">
+								<div class="wiz-chip" onclick="wizSetChip('modal-gender', 'Maschio', this)">Maschio</div>
+								<div class="wiz-chip" onclick="wizSetChip('modal-gender', 'Femmina', this)">Femmina</div>
+								<div class="wiz-chip" onclick="wizSetChip('modal-gender', 'Sconosciuto', this)">Sconos.</div>
 							</div>
-							<div class="field">
-								<label>Genere</label>
-								<select id="modal-gender">
-									<option value="">Seleziona</option>
-									<option value="Maschio">Maschio</option>
-									<option value="Femmina">Femmina</option>
-									<option value="Sconosciuto">Sconosciuto</option>
-								</select>
-							</div>
-						</div>
-						<div class="field">
-							<label>Descrizione</label>
-							<textarea id="modal-description" placeholder="Aggiungi dettagli utili per riconoscere l'animale..."></textarea>
-						</div>
-					</section>
-
-					<section class="announcement-panel" data-step-panel="2" aria-label="Aspetto animale">
-						<p class="announcement-panel__title">Com'è fatto fisicamente?</p>
-						<div class="form-grid">
-							<div class="field">
-								<label>Colore</label>
-								<input id="modal-color" placeholder="Es. Bianco, Nero, Marrone" required />
-							</div>
-							<div class="field">
-								<label>Lunghezza pelo</label>
-								<select id="modal-lunghezzaPelo">
-									<option value="">Seleziona</option>
-									<option value="Corto">Corto</option>
-									<option value="Medio">Medio</option>
-									<option value="Lungo">Lungo</option>
-									<option value="Senza">Senza</option>
-								</select>
-							</div>
-						</div>
-						<div id="modal-microchip-row" class="field" style="display:none;">
-							<label>Microchip</label>
-							<input id="modal-microchipId" placeholder="Codice microchip" />
-						</div>
-						<div id="modal-adoption-row" class="field">
-							<label>Disponibilità</label>
-							<select id="modal-adoptionStatus">
-								<option value="none">Non disponibile</option>
-								<option value="adoptable">Adottabile</option>
+							<select id="modal-gender" style="display:none;">
+								<option value="Sconosciuto">Sconosciuto</option>
+								<option value="Maschio">Maschio</option>
+								<option value="Femmina">Femmina</option>
 							</select>
 						</div>
-						<div class="form-grid">
-							<div class="field">
-								<label>Comportamento</label>
-								<select id="modal-animalBehaviour">
-									<option value="indifferente">Indifferente</option>
-									<option value="tranquillo">Tranquillo</option>
-									<option value="spaventato">Spaventato</option>
-									<option value="aggressivo">Aggressivo</option>
-								</select>
-							</div>
-							<div class="field">
-								<label>Condizione salute</label>
-								<select id="modal-healthCondition">
-									<option value="in salute">In salute</option>
-									<option value="ferito">Ferito</option>
-									<option value="malnutrito">Malnutrito</option>
-								</select>
-							</div>
-						</div>
-						<div class="field">
-							<label>Segni particolari</label>
-							<textarea id="modal-distinctiveFeatures" placeholder="Es. collare rosso, cicatrice, zoppia..."></textarea>
-						</div>
-					</section>
+					</div>
 
-					<section class="announcement-panel" data-step-panel="3" aria-label="Foto e posizione">
-						<p class="announcement-panel__title">Foto e luogo dell'evento</p>
-						<div class="field">
-							<label>Foto</label>
-							<label class="announcement-photo-drop" for="modal-photo-file">
-								<span class="announcement-photo-drop__label">Seleziona una foto</span>
-								<span class="announcement-photo-drop__hint">Formato immagine, campo opzionale.</span>
-							</label>
-							<input id="modal-photo-file" class="visually-hidden" type="file" accept="image/*" />
-							<img id="modal-photo-preview" src="" alt="Anteprima foto annuncio" />
-						</div>
-						<div class="field">
-							<label id="modal-lastSeenDate-label">Ultima data vista</label>
-							<div class="choice-buttons announcement-date-buttons" role="group" aria-label="Scelta data avvistamento">
-								<button type="button" id="lastSeenTodayBtn" class="btn btn--ghost is-selected">Oggi</button>
-								<button type="button" id="lastSeenCustomBtn" class="btn btn--ghost">Scegli data</button>
-							</div>
-							<input id="modal-lastSeenDate" type="date" style="display:none;" />
-						</div>
-						<div id="modal-position-section" class="field">
-							<label id="modal-position-label">Posizione</label>
-							<div class="location-actions">
-								<button type="button" id="pickOnMap" class="btn btn--ghost">Seleziona su mappa</button>
-								<button type="button" id="useMyLocation" class="btn btn--ghost">Usa la mia posizione</button>
-							</div>
-							<span id="modal-position-hint" class="form-hint">Scegli un punto sulla mappa o usa la posizione attuale.</span>
-						</div>
-						<input id="modal-coords" type="hidden" />
-						<div id="modal-map"></div>
-					</section>
-
-					<section class="announcement-panel" data-step-panel="4" aria-label="Riepilogo">
-						<p class="announcement-panel__title">Controlla prima di pubblicare</p>
-						<div id="announcement-review" class="announcement-review"></div>
-					</section>
+					<div class="wiz-field">
+						<label>Descrizione</label>
+						<textarea id="modal-description" placeholder="Aggiungi dettagli utili per riconoscere l'animale..."></textarea>
+					</div>
 				</div>
 
-				<div class="announcement-wizard__footer">
-					<span id="announcement-step-counter" class="announcement-step-counter">Passo 1 di 4</span>
-					<div class="announcement-wizard__actions">
-						<button id="modal-cancel" class="btn btn--ghost" type="button">Annulla</button>
-						<button id="announcement-back" class="btn btn--ghost" type="button">Indietro</button>
-						<button id="announcement-next" class="btn btn--primary" type="button">Avanti</button>
-						<button id="modal-save" class="btn btn--primary" type="button">Pubblica</button>
+				<div class="step-content" id="wiz-panel2">
+					<p class="step-title">Com'è fatto fisicamente?</p>
+					
+					<div class="wiz-field">
+						<label>Colore *</label>
+						<div class="color-row">
+							<div class="color-swatch active" style="background:#1a1a1a;border:2.5px solid #fff" onclick="wizSetColor('Nero', this)" title="Nero"></div>
+							<div class="color-swatch" style="background:#f1f1ef" onclick="wizSetColor('Bianco', this)" title="Bianco"></div>
+							<div class="color-swatch" style="background:#a0522d" onclick="wizSetColor('Marrone', this)" title="Marrone"></div>
+							<div class="color-swatch" style="background:#d2691e" onclick="wizSetColor('Arancio', this)" title="Arancio"></div>
+							<div class="color-swatch" style="background:#888880" onclick="wizSetColor('Grigio', this)" title="Grigio"></div>
+							<div class="color-swatch multi" onclick="wizSetColor('Multicolore', this)" title="Multicolore"></div>
+						</div>
+						<input type="hidden" id="modal-color" value="Nero" required>
+					</div>
+
+					<div class="wiz-grid">
+						<div class="wiz-field">
+							<label>Pelo</label>
+							<div class="chip-group">
+								<div class="wiz-chip" onclick="wizSetChip('modal-lunghezzaPelo', 'Corto', this)">Corto</div>
+								<div class="wiz-chip" onclick="wizSetChip('modal-lunghezzaPelo', 'Medio', this)">Medio</div>
+								<div class="wiz-chip" onclick="wizSetChip('modal-lunghezzaPelo', 'Lungo', this)">Lungo</div>
+							</div>
+							<select id="modal-lunghezzaPelo" style="display:none;" aria-label="Lunghezza pelo">
+								<option value="" selected disabled>Seleziona lunghezza</option>
+								<option value="Corto">Corto</option>
+								<option value="Medio">Medio</option>
+								<option value="Lungo">Lungo</option>
+							</select>
+						</div>
+						<div class="wiz-field" id="modal-microchip-row" style="display:none;">
+							<label>Microchip</label>
+							<input type="text" id="modal-microchipId" placeholder="Codice microchip" />
+						</div>
+					</div>
+
+					<div class="wiz-grid">
+						<div class="wiz-field">
+							<label>Comportamento</label>
+							<select id="modal-animalBehaviour">
+								<option value="indifferente">Indifferente</option>
+								<option value="tranquillo">Tranquillo</option>
+								<option value="spaventato">Spaventato</option>
+								<option value="aggressivo">Aggressivo</option>
+							</select>
+						</div>
+						<div class="wiz-field">
+							<label>Salute</label>
+							<select id="modal-healthCondition">
+								<option value="in salute">In salute</option>
+								<option value="ferito">Ferito</option>
+								<option value="malnutrito">Malnutrito</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="wiz-field">
+						<label>Segni particolari</label>
+						<input type="text" id="modal-distinctiveFeatures" placeholder="Es. collare rosso, cicatrice, zoppia..." />
+					</div>
+					
+					<div class="wiz-field" id="modal-adoption-row" style="display:none;">
+						<label>Disponibilità adozione</label>
+						<select id="modal-adoptionStatus">
+							<option value="none">Non disponibile</option>
+							<option value="adoptable">Adottabile</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="step-content" id="wiz-panel3">
+					<p class="step-title">Dove e quando?</p>
+					
+					<div class="wiz-field">
+						<label>Foto (opzionale)</label>
+						<div class="photo-drop" onclick="document.getElementById('modal-photo-file').click()">
+							<div style="font-size:1.8rem; margin-bottom:5px;">📷</div>
+							<div style="color:var(--wiz-text-muted); font-size:0.9rem;">Clicca per caricare un'immagine</div>
+						</div>
+						<input id="modal-photo-file" type="file" accept="image/*" style="display:none;" />
+						<img id="modal-photo-preview" src="" style="display:none; max-height:120px; border-radius:8px; margin-top:10px; align-self:center;" />
+					</div>
+
+					<div class="wiz-field">
+						<label id="modal-lastSeenDate-label">Ultima data vista</label>
+						<div class="choice-buttons" style="margin-bottom:8px;">
+							<button type="button" id="lastSeenTodayBtn" class="btn btn--ghost is-selected">Oggi</button>
+							<button type="button" id="lastSeenCustomBtn" class="btn btn--ghost">Scegli data</button>
+						</div>
+						<input id="modal-lastSeenDate" type="date" style="display:none;" />
+					</div>
+
+					<div class="wiz-field" id="modal-position-section">
+						<label>Posizione *</label>
+						<div style="display:flex; gap:8px; margin-bottom:8px;">
+							<button type="button" id="pickOnMap" class="btn btn--ghost" style="flex:1;">Scegli su mappa</button>
+							<button type="button" id="useMyLocation" class="btn btn--ghost" style="flex:1;">Mia posizione</button>
+						</div>
+						<input id="modal-coords" type="hidden" />
+						<div id="modal-map" style="height:200px; display:none; border-radius:8px;"></div>
+					</div>
+				</div>
+
+				<div class="step-content" id="wiz-panel4">
+					<p class="step-title">Controlla e pubblica</p>
+					<div style="background:var(--wiz-surface2); border:1px solid var(--wiz-border); border-radius:10px; padding:16px; margin-bottom:15px;">
+						<ul style="list-style:none; padding:0; margin:0; font-size:0.9rem; color:var(--wiz-text-muted); display:flex; flex-direction:column; gap:10px;">
+							<li id="summary-base">❌ Dati base inseriti (Specie e Genere)</li>
+							<li id="summary-aspect">❌ Dettagli aspetto completati</li>
+							<li id="summary-location">❌ Posizione e data impostate</li>
+						</ul>
+					</div>
+					<div id="profile-modal-progress" class="loading-bar" aria-hidden="true" style="margin-top:10px;">
+						<div class="loading-bar__track"><div class="loading-bar__fill"></div></div>
+						<div class="loading-bar__label">Smart matching in corso, attendere...</div>
 					</div>
 				</div>
 			</form>
 
-			<div id="profile-modal-progress" class="loading-bar" aria-hidden="true">
-				<div class="loading-bar__track">
-					<div class="loading-bar__fill"></div>
+			<div class="wiz-footer">
+				<span class="step-counter" id="wiz-stepCounter" style="font-size:0.85rem; color:#ffffff;">Passo 1 di 4</span>
+				<div style="display:flex; gap:10px;">
+					<button type="button" class="wiz-btn-back" id="wiz-btnBack" onclick="wizPrevStep()" style="display:none;">Indietro</button>
+					<button type="button" class="wiz-btn-next" id="wiz-btnNext" onclick="wizNextStep()">Avanti</button>
+					<button type="button" class="wiz-btn-publish" id="modal-save">Pubblica Annuncio</button>
+					<button type="button" id="modal-cancel" style="display:none;">Annulla</button>
 				</div>
-				<div class="loading-bar__label">Smart matching in corso...</div>
 			</div>
+
 		</div>
 	</div>
 

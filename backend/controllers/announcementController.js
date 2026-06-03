@@ -48,6 +48,14 @@ function buildAnnouncementUrl(announcementId) {
 }
 
 /**
+ * Detects whether the app is running in Render simulation mode.
+ * @returns {boolean} True when `RENDER=true`.
+ */
+function isRenderSimulationEnabled() {
+    return String(process.env.RENDER).toLowerCase() === 'true';
+}
+
+/**
  * Builds the frontend URL for opening an animal inside a shelter page.
  * @param {string} shelterId - Shelter identifier used by the shelter page.
  * @param {string} animalId - Animal identifier to open inside the shelter page.
@@ -299,7 +307,7 @@ exports.getAnnouncements = async (req, res) => {
         const announcements = await Announcement.find(filter)
             .select('-photo -comments -imageEmbedding -__v')
             .populate('animalId')
-            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData') // 'name' non esiste nel modello User
+            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData') // 'name' non esiste nel modello User
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
@@ -482,7 +490,7 @@ exports.createAnnouncement = async (req,res)=>{
                 console.warn('Impossibile aggiornare foto animale:', err.message || err);
             }
 
-        if (announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
+        if (!isRenderSimulationEnabled() && announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
             const matches = await smartMatchingEngine.findMatches(announcement, animal.species);
             if (matches.length > 0) {
                 await saveMatchNotification(announcement, matches);
@@ -660,7 +668,7 @@ exports.reportAnnouncement = async (req, res) => {
 	        const announcement = await Announcement.findById(req.params.id)
 	            .select('-photo -imageEmbedding -__v')
 	            .populate('animalId')
-	            .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData shelterData');
+                .populate('publisherId', 'username email phoneNumber contactVisibility role rifugioStatus rifugioData');
 
         if (!announcement) {
             return res.status(404).json({ message: 'Annuncio non trovato' });

@@ -65,8 +65,6 @@ form.addEventListener('submit', async (e) => {
   const email = document.getElementById('email').value.trim();
   const phoneNumber = document.getElementById('phoneNumber').value.trim();
   const rifugioName = document.getElementById('rifugioName').value.trim();
-  const rifugioAddress = document.getElementById('rifugioAddress').value.trim();
-  const rifugioCity = document.getElementById('rifugioCity').value.trim();
   const rifugioDescription = document.getElementById('rifugioDescription').value.trim();
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirmPassword').value;
@@ -97,8 +95,6 @@ form.addEventListener('submit', async (e) => {
       accountType: isRifugio ? 'rifugio' : 'user',
       rifugioData: isRifugio ? {
         rifugioName,
-        address: rifugioAddress,
-        city: rifugioCity,
         description: rifugioDescription
       } : undefined
     })

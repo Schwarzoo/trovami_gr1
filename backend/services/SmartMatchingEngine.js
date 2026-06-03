@@ -8,6 +8,14 @@ const { promisify } = require("util");
 const execFileAsync = promisify(execFile);
 
 /**
+ * Detects whether the app is running in Render simulation mode.
+ * @returns {boolean} True when `RENDER=true`.
+ */
+function isRenderSimulationEnabled() {
+  return String(process.env.RENDER).toLowerCase() === 'true';
+}
+
+/**
  * Coordinates image embedding generation and announcement similarity matching.
  * @returns {void} The class constructor initializes smart-matching instances.
  */
@@ -26,7 +34,7 @@ class SmartMatchingEngine {
    * @returns {Promise<Array<number>|null>} Promise resolving to the embedding vector, or null when generation fails.
    */
   async generateImageEmbedding(photoBuffer) {
-    if (process.env.RENDER) {
+    if (isRenderSimulationEnabled()) {
         console.log("[SMART MATCHING] Ambiente Cloud Render rilevato.");
         console.log("[SMART MATCHING] Generazione di un finto vettore IA a 512 dimensioni per bypassare i limiti di RAM.");
         

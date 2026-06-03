@@ -33,10 +33,7 @@ function normalizeName(value, fallback) {
  */
 function getRifugioAuditName(user) {
   if (!user || user.role !== 'shelter') return null;
-  const rifugioName = normalizeName(
-    user.rifugioData?.rifugioName || user.shelterData?.shelterName,
-    null
-  );
+  const rifugioName = normalizeName(user.rifugioData?.rifugioName, null);
   return rifugioName ? `rifugio ${rifugioName}` : null;
 }
 
@@ -113,7 +110,7 @@ async function resolveActor(actor) {
   if (actor.username || actor.actorName) return actor;
   const actorId = toObjectId(actor);
   if (!actorId) return null;
-  return User.findById(actorId).select('username role rifugioData shelterData');
+  return User.findById(actorId).select('username role rifugioData');
 }
 
 /**
