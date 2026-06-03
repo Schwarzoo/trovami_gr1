@@ -1,10 +1,70 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html {
+    background-color: #1A0E08;
+}
+
 body {
     font-family: var(--font-body);
-    background: var(--bg);
+    background-color: #1A0E08;
+    background-attachment: fixed;
+    background-image:
+        radial-gradient(ellipse 55% 50% at 85% -5%, #7A2E10 0%, transparent 65%),
+        radial-gradient(ellipse 50% 45% at -5% 95%, #5C2D08 0%, transparent 60%),
+        radial-gradient(ellipse 70% 60% at 50% 50%, #2C1208 0%, transparent 70%);
     color: var(--text);
     min-height: 100vh;
+    position: relative;
+    isolation: isolate;
+    margin: 0;
+    padding: 0;
+}
+
+body::before,
+body::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+body::before {
+    z-index: -2;
+    background-image: radial-gradient(circle, rgba(240, 153, 123, 0.18) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    animation: bgFloat 34s ease-in-out infinite alternate;
+}
+
+body::after {
+    z-index: -3;
+    background: repeating-linear-gradient(
+        -55deg,
+        transparent,
+        transparent 60px,
+        rgba(216, 90, 48, 0.03) 60px,
+        rgba(216, 90, 48, 0.03) 61px
+    );
+    animation: bgDrift 46s ease-in-out infinite alternate;
+}
+
+@keyframes bgFloat {
+    from {
+        transform: translate3d(-1.5%, -1%, 0) scale(1.03);
+    }
+    to {
+        transform: translate3d(1.5%, 1%, 0) scale(1.08);
+    }
+}
+
+@keyframes bgDrift {
+    from {
+        transform: translate3d(1%, 0, 0) scale(1.02);
+    }
+    to {
+        transform: translate3d(-1%, -0.8%, 0) scale(1.06);
+    }
 }
 
 /* PAGE LAYOUT */
@@ -12,6 +72,8 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 1.5rem 4rem;
+    position: relative;
+    z-index: 1;
 }
 
 .page-header {
@@ -26,10 +88,11 @@ body {
     font-weight: 500;
     letter-spacing: -0.03em;
     margin: 0;
+    color: #fff;
 }
 
 .page-header p {
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.78);
     font-size: 0.98rem;
     line-height: 1.6;
 }
@@ -92,17 +155,18 @@ body {
     flex-wrap: wrap;
     align-items: flex-end;
     margin-bottom: 1.2rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 20px;
     padding: 1rem 1.2rem;
-    box-shadow: var(--shadow);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(4px);
 }
 
 .filters label {
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.7);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -116,13 +180,13 @@ body {
 select,
 input[type="text"],
 input[type="date"] {
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     padding: 0.55rem 0.8rem;
     font-family: inherit;
     font-size: 0.9rem;
-    background: var(--bg);
-    color: var(--text);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
     min-width: 160px;
@@ -132,8 +196,14 @@ input[type="date"] {
 select:focus,
 input[type="text"]:focus,
 input[type="date"]:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(196, 82, 28, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+select::placeholder,
+input[type="text"]::placeholder,
+input[type="date"]::placeholder {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 input[type="date"] {
@@ -185,7 +255,7 @@ button#nearby-button:disabled {
 #result-count {
     margin-left: auto;
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.7);
     font-weight: 600;
     align-self: center;
 }

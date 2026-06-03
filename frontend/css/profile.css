@@ -42,7 +42,7 @@ body::before {
   background-size: 36px 36px;
   mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-  animation: profileBgFloat 34s ease-in-out infinite alternate;
+  animation: bgFloat 34s ease-in-out infinite alternate;
 }
 
 body::after {
@@ -54,10 +54,10 @@ body::after {
     rgba(216, 90, 48, 0.03) 60px,
     rgba(216, 90, 48, 0.03) 61px
   );
-  animation: profileBgDrift 46s ease-in-out infinite alternate;
+  animation: bgDrift 46s ease-in-out infinite alternate;
 }
 
-@keyframes profileBgFloat {
+@keyframes bgFloat {
   from {
     transform: translate3d(-1.5%, -1%, 0) scale(1.03);
   }
@@ -66,7 +66,7 @@ body::after {
   }
 }
 
-@keyframes profileBgDrift {
+@keyframes bgDrift {
   from {
     transform: translate3d(1%, 0, 0) scale(1.02);
   }

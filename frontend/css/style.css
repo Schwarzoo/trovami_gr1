@@ -1,12 +1,75 @@
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
+}
+
+html {
+  background-color: #1A0E08;
+}
+
+body {
+  background-color: #1A0E08;
+  background-attachment: fixed;
+  background-image:
+    radial-gradient(ellipse 55% 50% at 85% -5%, #7A2E10 0%, transparent 65%),
+    radial-gradient(ellipse 50% 45% at -5% 95%, #5C2D08 0%, transparent 60%),
+    radial-gradient(ellipse 70% 60% at 50% 50%, #2C1208 0%, transparent 70%);
+  position: relative;
+  isolation: isolate;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  z-index: -2;
+  background-image: radial-gradient(circle, rgba(240, 153, 123, 0.18) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  animation: bgFloat 34s ease-in-out infinite alternate;
+}
+
+body::after {
+  z-index: -3;
+  background: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 60px,
+    rgba(216, 90, 48, 0.03) 60px,
+    rgba(216, 90, 48, 0.03) 61px
+  );
+  animation: bgDrift 46s ease-in-out infinite alternate;
+}
+
+@keyframes bgFloat {
+  from {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.03);
+  }
+  to {
+    transform: translate3d(1.5%, 1%, 0) scale(1.08);
+  }
+}
+
+@keyframes bgDrift {
+  from {
+    transform: translate3d(1%, 0, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(-1%, -0.8%, 0) scale(1.06);
+  }
 }
 
 .page {
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 #map {
