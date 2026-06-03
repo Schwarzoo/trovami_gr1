@@ -238,7 +238,7 @@ function buildCard(ann) {
                 <span class="card-detail-label">Salute</span><span>${displayValue(ann.healthCondition)}</span>
                 <span class="card-detail-label">Comportamento</span><span>${displayValue(ann.animalBehaviour)}</span>
             </div>
-            <button class="card-cta" type="button">Vedi dettagli →</button>
+            <button class="card-cta" type="button">Vedi dettagli</button>
         </div>
     `;
 
@@ -294,7 +294,7 @@ async function openModal(ann) {
 
     if (coords?.length === 2) {
         const link = `map.html?highlight=${encodeURIComponent(data._id)}`;
-        locationInfo = `<dt>Posizione</dt><dd><a class="modal-map-btn" href="${link}">📍 Vedi sulla mappa</a></dd>`;
+        locationInfo = `<dt>Posizione</dt><dd><a class="modal-map-btn" href="${link}">Vedi sulla mappa</a></dd>`;
     }
 
     const rifugioAddress = [publisher?.rifugioData?.address, publisher?.rifugioData?.city]
@@ -454,10 +454,10 @@ async function openModal(ann) {
         <div class="modal-contact">
             <div class="modal-contact-header">Contatti</div>
             ${isLoggedIn
-                ? `<div class="modal-contact-name">${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
+                ? `<div class="modal-contact-name">Nome: ${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
                    <div class="modal-contact-links">
                        ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
-                       ${publisher?.email ? `<a href="mailto:${publisher.email}">✉️ ${escapeHtml(publisher.email)}</a>` : ''}
+                       ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
                    </div>
                    ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
                    ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`

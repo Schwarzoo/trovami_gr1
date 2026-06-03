@@ -154,6 +154,59 @@ describe('announcement endpoints', () => {
     expect(res.body.status).toBe('ACTIVE');
   });
 
+  test('POST /api/v1/announcements runs smart matching when RENDER is false', async () => {
+    process.env.RENDER = 'FALSE';
+
+    const userDoc = {
+      _id: 'user1',
+      role: 'user',
+      rifugioStatus: 'approved',
+      rifugioData: {},
+      username: 'mario'
+    };
+
+    mockAnimalModel.findById.mockResolvedValue({
+      _id: 'animal1',
+      species: 'Dog'
+    });
+    mockUserModel.findById
+      .mockResolvedValueOnce({ isActive: true, role: 'user' })
+      .mockReturnValueOnce({
+        select: jest.fn().mockResolvedValue(userDoc)
+      })
+      .mockReturnValueOnce({
+        select: jest.fn().mockResolvedValue({
+          _id: 'user2',
+          email: 'anna@example.com',
+          username: 'anna'
+        })
+      });
+    mockSmartMatchingEngine.generateImageEmbedding.mockResolvedValue([0.1, 0.2]);
+    mockSmartMatchingEngine.findMatches.mockResolvedValue([
+      {
+        score: 0.91,
+        announcement: makeDoc({
+          _id: 'ann2',
+          publisherId: { _id: 'user2', username: 'anna', contactVisibility: {} }
+        })
+      }
+    ]);
+
+    const res = await request(app)
+      .post('/api/v1/announcements')
+      .set('Authorization', `Bearer ${token}`)
+      .field('type', 'LostAnimal')
+      .field('animalId', 'animal1')
+      .field('description', 'Test announcement')
+      .field('coordinates', '12.5,41.9')
+      .attach('photo', Buffer.from('not-an-image'), 'photo.jpg');
+
+    expect(res.status).toBe(201);
+    expect(mockSmartMatchingEngine.generateImageEmbedding).toHaveBeenCalled();
+    expect(mockSmartMatchingEngine.findMatches).toHaveBeenCalled();
+    expect(mockNotificationModel.create).toHaveBeenCalled();
+  });
+
   test('POST /api/v1/announcements/:id/reports creates report', async () => {
     mockUserModel.findById.mockResolvedValue({
       _id: 'user1',

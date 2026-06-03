@@ -1736,20 +1736,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const grid = document.getElementById('announcements-grid');
   grid.innerHTML = '';
   mine.forEach(a => {
-    const div = document.createElement('div'); div.className = 'card';
+    const div = document.createElement('article');
+    div.className = 'card profile-announcement-card';
     div.dataset.id = a._id;
     const photoUrl = `/api/v1/announcements/${a._id}/photo`;
+    const statusLabel = a.status === 'RESOLVED' ? 'Risolto' : 'Attivo';
+    const statusClass = a.status === 'RESOLVED' ? 'is-resolved' : 'is-active';
+    const titleText = a.animalId?.name ? `${escapeHtml(a.animalId.name)} - ${escapeHtml(a.animalId.species || '')}` : escapeHtml(a.animalId?.species || 'Animale');
     div.innerHTML = `
       <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
       <div class="card-body">
-        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:${a.status === 'RESOLVED' ? 'var(--sighting)' : 'var(--accent)'};font-weight:700;">${a.status === 'RESOLVED' ? 'Risolto' : 'Attivo'}</div>
-        <div class="card-breed">${a.animalId?.name ? escapeHtml(a.animalId.name) + ' - ' : ''}${a.animalId?.species ?? ''} ${a.animalId?.breed ?? ''}</div>
-        <div class="card-description">${a.description}</div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button data-id="${a._id}" class="edit btn btn--ghost">Modifica</button>
-          ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost">Chiudi</button>` : ''}
-          <button data-id="${a._id}" class="del btn btn--danger">Elimina</button>
-          <a href="/pages/announcements.html" style="margin-left:auto;">Vedi su lista</a>
+        <div class="profile-announcement-card__meta">
+          <span class="profile-announcement-status ${statusClass}">${statusLabel}</span>
+          <span class="profile-announcement-kind">Il tuo annuncio</span>
+        </div>
+        <h3 class="card-breed profile-announcement-card__title">${titleText}</h3>
+        <p class="card-description profile-announcement-card__description">${escapeHtml(a.description || 'Nessuna descrizione disponibile.')}</p>
+        <div class="profile-announcement-card__actions">
+          <button data-id="${a._id}" class="edit btn btn--ghost profile-announcement-card__button">Modifica</button>
+          ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost profile-announcement-card__button">Chiudi</button>` : ''}
+          <button data-id="${a._id}" class="del btn btn--danger profile-announcement-card__button">Elimina</button>
+          
         </div>
       </div>
     `;
@@ -2066,7 +2073,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
 
     document.getElementById('view-modal-body').innerHTML = `
-      <dl class="detail-list">
+        <div class="view-modal-summary">
+          <dl class="detail-list view-modal-details">
         ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
         <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
         <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
@@ -2079,9 +2087,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
         <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
         <dt>Stato</dt><dd>${displayValue(data.status)}</dd>
-      </dl>
-      <p class="modal-description">${escapeHtml(data.description || '')}</p>
-      ${rifugioName ? `<div class="modal-contact"><strong>Rifugio:</strong><span>${escapeHtml(rifugioName)}</span></div>` : ''}
+        </dl>
+        <div class="view-modal-aside">
+          <section class="view-modal-block">
+            <h4>Descrizione</h4>
+            <p class="modal-description">${escapeHtml(data.description || 'Nessuna descrizione disponibile.')}</p>
+          </section>
+          ${rifugioName ? `<section class="view-modal-block view-modal-contact-block"><h4>Rifugio</h4><div class="modal-contact"><span>${escapeHtml(rifugioName)}</span></div></section>` : ''}
+        </div>
+      </div>
     `;
 
     try {
@@ -2089,12 +2103,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const isOwner = (publisher && ((publisher._id && String(publisher._id) === String(myUserId)) || (String(publisher) === String(myUserId))));
       if (isOwner && bodyEl) {
         const actions = document.createElement('div');
-        actions.style = 'margin-top:12px;display:flex;gap:8px;justify-content:flex-end;';
+        actions.style = 'margin-top:12px;display:flex;gap:8px;';
         const btn = document.createElement('button');
         btn.className = 'btn btn--ghost';
         btn.id = 'downloadFlyerBtn';
         btn.dataset.id = data._id;
-        btn.textContent = 'Volantino';
+        btn.textContent = 'Genera Volantino';
         actions.appendChild(btn);
         bodyEl.appendChild(actions);
 
@@ -2745,3 +2759,107 @@ function showMapPicker() {
     mapInstance.invalidateSize();
   }
 }
+
+let wizStep = 1;
+	const maxSteps = 4;
+
+	function wizUpdateUI() {
+		// Aggiorna Pannelli
+		for(let i=1; i<=maxSteps; i++) {
+			document.getElementById('wiz-panel'+i).classList.remove('active');
+			if(i === wizStep) document.getElementById('wiz-panel'+i).classList.add('active');
+		}
+		// Aggiorna Stepper (Pallini in alto)
+		for(let i=1; i<=maxSteps; i++) {
+			const circle = document.getElementById('wiz-sc'+i);
+			const label = document.getElementById('wiz-sl'+i);
+			const line = document.getElementById('wiz-line'+i);
+			
+			if (i < wizStep) {
+				circle.className = 'step-circle done'; circle.textContent = '✓';
+				label.className = 'step-label done';
+			} else if (i === wizStep) {
+				circle.className = 'step-circle active'; circle.textContent = i;
+				label.className = 'step-label active';
+			} else {
+				circle.className = 'step-circle todo'; circle.textContent = i;
+				label.className = 'step-label todo';
+			}
+			if (line) line.className = (i < wizStep) ? 'step-line done' : 'step-line';
+		}
+		
+		// Aggiorna Bottoni in basso
+		document.getElementById('wiz-stepCounter').textContent = `Passo ${wizStep} di ${maxSteps}`;
+		document.getElementById('wiz-btnBack').style.display = (wizStep > 1) ? 'block' : 'none';
+		document.getElementById('wiz-btnNext').style.display = (wizStep < maxSteps) ? 'block' : 'none';
+		document.getElementById('modal-save').style.display = (wizStep === maxSteps) ? 'block' : 'none';
+
+		// Fix mappa (Leaflet a volte non carica bene i tile se il div era nascosto)
+		if (wizStep === 3 && typeof mapInstance !== 'undefined' && mapInstance) {
+			setTimeout(() => mapInstance.invalidateSize(), 100);
+		}
+
+    // Aggiorna riepilogo dinamico
+    try {
+      const name = (document.getElementById('modal-animalName') || {}).value || '';
+      const species = (document.getElementById('modal-species') || {}).value || '';
+      document.getElementById('summary-base').textContent = (name && species) ? `✔️ Dati base inseriti: ${name} (${species})` : '❌ Dati base inseriti (Nome e Specie)';
+
+      const color = (document.getElementById('modal-color') || {}).value || '';
+      const fur = (document.getElementById('modal-lunghezzaPelo') || {}).value || '';
+      document.getElementById('summary-aspect').textContent = (color || fur) ? `✔️ Aspetto: ${color || '—'} • ${fur || '—'}` : '❌ Dettagli aspetto completati';
+
+      const coords = (document.getElementById('modal-coords') || {}).value || '';
+      const lastSeen = (document.getElementById('modal-lastSeenDate') || {}).value || '';
+      document.getElementById('summary-location').textContent = (coords && lastSeen) ? `✔️ Posizione: impostata • Data: ${lastSeen}` : '❌ Posizione e data impostate';
+    } catch (e) {}
+	}
+
+	function wizNextStep() { if(wizStep < maxSteps) { wizStep++; wizUpdateUI(); } }
+	function wizPrevStep() { if(wizStep > 1) { wizStep--; wizUpdateUI(); } }
+
+	// Tasto "Tipo Annuncio" (Smarrito / Avvistamento)
+	function wizSelectType(val, el) {
+		document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+		el.classList.add('active');
+		const select = document.getElementById('modal-type');
+		select.value = val;
+		// Lancia l'evento "change" manuale così il tuo profile.js originale se ne accorge
+		select.dispatchEvent(new Event('change')); 
+	}
+
+	// Tasti "Chips" generici (Cane/Gatto, Pelo, Genere)
+	function wizSetChip(hiddenId, val, el) {
+		const group = el.closest('.chip-group');
+		group.querySelectorAll('.wiz-chip').forEach(c => c.classList.remove('active'));
+		el.classList.add('active');
+		
+		const hiddenInput = document.getElementById(hiddenId);
+		hiddenInput.value = val;
+		hiddenInput.dispatchEvent(new Event('change'));
+	}
+
+	// Tasti "Colore"
+	function wizSetColor(val, el) {
+		document.querySelectorAll('.color-swatch').forEach(c => c.classList.remove('active'));
+		el.classList.add('active');
+		document.getElementById('modal-color').value = val;
+    const hidden = document.getElementById('modal-color');
+    if (hidden) hidden.dispatchEvent(new Event('change'));
+	}
+
+	// Intercetta l'apertura del pop-up originale per resettare il Wizard al passo 1
+	const originalOpen = window.openModalForCreate;
+	if(originalOpen) {
+		window.openModalForCreate = function() {
+			wizStep = 1; wizUpdateUI();
+			originalOpen();
+		}
+	}
+	const originalEdit = window.openModalForEdit;
+	if(originalEdit) {
+		window.openModalForEdit = function(ann) {
+			wizStep = 1; wizUpdateUI();
+			originalEdit(ann);
+		}
+	}
