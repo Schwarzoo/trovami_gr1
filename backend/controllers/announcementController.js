@@ -210,7 +210,7 @@ async function saveMatchNotification(announcement, matches) {
                 userId: announcement.publisherId,
                 announcementId: matchedAnnouncementId || announcement._id,
                 message: `Trovati ${matches.length} possibili annunci compatibili con il tuo annuncio. Miglior similitudine: ${bestSimilarity}%`,
-                type: 'SMART_MATCH'
+                type: 'smart_match'
             });
 
             if (matchedAnnouncementId) {
@@ -237,7 +237,7 @@ async function saveMatchNotification(announcement, matches) {
                 userId: recipientId,
                 announcementId: announcement._id,
                 message: `Il tuo annuncio ha trovato un possibile match visivo: ${similarityPercentage}% di similitudine.`,
-                type: 'SMART_MATCH'
+                type: 'smart_match'
             });
 
             await sendSmartMatchEmail(
@@ -279,7 +279,7 @@ exports.getAnnouncements = async (req, res) => {
     try {
         const { type, species, status, rifugioId, userId } = req.query;
         const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-        const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+        const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50);
         const skip = (page - 1) * limit;
         const filter = {};
         if (status !== 'all') filter.status = status || 'ACTIVE';

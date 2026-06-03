@@ -1,24 +1,10 @@
-const API_RIFUGI = '/api/v1/users/rifugi?isPublic=true';
+const API_RIFUGI = '/api/v1/users/shelters?isPublic=true';
 const API_ANNOUNCEMENTS = '/api/v1/announcements';
 const API_ANIMALS = '/api/v1/animals';
 const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
 let currentRifugio = null;
 let isFollowingCurrentRifugio = false;
-
-/**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {*} input - Value that will be interpolated into shelter markup.
- * @returns {string} HTML-safe string representation of the value.
- */
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 /**
  * Formats a numeric shelter statistic for Italian UI display.
@@ -65,19 +51,6 @@ function getRifugioId() {
  */
 function getAnimalId() {
   return new URLSearchParams(window.location.search).get('animalId');
-}
-
-/**
- * Decodes a JWT payload without verifying the signature for client-side UI decisions.
- * @param {string} token - JWT string read from local storage.
- * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
- */
-function decodeJwt(token) {
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch (e) {
-    return null;
-  }
 }
 
 /**
@@ -461,17 +434,20 @@ function renderContactRequestPanel(animal) {
     </form>
   `;
 
-  panel.querySelector('#contact-request-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const status = panel.querySelector('#contact-request-status');
-    const textarea = panel.querySelector('#contact-request-message');
-    const message = textarea.value.trim();
+  const form = document.getElementById('contact-request-form');
+  const textarea = document.getElementById('contact-request-message');
+  const status = document.getElementById('contact-request-status');
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (status) status.textContent = '';
+
+    const message = textarea?.value.trim();
     if (!message) {
-      status.textContent = 'Scrivi un messaggio.';
+      if (status) status.textContent = 'Inserisci un messaggio';
       return;
     }
 
-    status.textContent = 'Invio...';
     const res = await fetch(API_CONTACT_REQUESTS, {
       method: 'POST',
       headers: {
@@ -482,12 +458,12 @@ function renderContactRequestPanel(animal) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      status.textContent = data.userMessage || data.message || 'Errore invio richiesta';
+      if (status) status.textContent = data.userMessage || data.message || 'Errore invio richiesta';
       return;
     }
 
-    textarea.value = '';
-    status.textContent = 'Richiesta inviata.';
+    if (textarea) textarea.value = '';
+    if (status) status.textContent = 'Richiesta inviata.';
   });
 }
 
@@ -498,18 +474,16 @@ function renderContactRequestPanel(animal) {
  */
 async function openShelterAnimalModal(animalId) {
   try {
-    const res = await fetch(`${API_ANIMALS}/${encodeURIComponent(animalId)}`);
-    if (!res.ok) throw new Error('Animale non trovato');
-    const a = await res.json();
+    const a = await fetchJson(`${API_ANIMALS}/${encodeURIComponent(animalId)}`);
     const titleEl = document.getElementById('animal-modal-title');
     const nameEl = document.getElementById('animal-name-display');
     const speciesEl = document.getElementById('animal-species-display');
     const breedEl = document.getElementById('animal-breed-display');
-    const dateEl = document.getElementById('animal-dateArrived-display');
+    const dateEl = document.getElementById('animal-date-display');
     const ageEl = document.getElementById('animal-age-display');
-    const otherEl = document.getElementById('animal-otherInfo-display');
-    const notesContainer = document.getElementById('animal-medicalNotes');
-    const gallery = document.getElementById('animal-modal-gallery');
+    const otherEl = document.getElementById('animal-other-display');
+    const notesContainer = document.getElementById('animal-notes-container');
+    const gallery = document.getElementById('animal-gallery');
 
     if (titleEl) titleEl.textContent = a.name || (a.species || 'Animale');
     if (nameEl) nameEl.textContent = a.name || '-';

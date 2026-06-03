@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Announcement = require('../models/Announcement');
+const Animal = require('../models/Animal');
 const { writeAuditLog } = require('../services/auditService');
 const mongoose = require('mongoose');
 const { sendError } = require('../utils/errorResponse');
@@ -346,6 +347,8 @@ exports.deleteMe = async(req,res)=>{
                 ann._id
             );
         }
+
+        await Animal.deleteMany({ shelterId: userId });
 
         const user = await User.findByIdAndDelete(userId).select('username');
         await writeAuditLog({ actor: user || userId, action: 'eliminato account', target: null });

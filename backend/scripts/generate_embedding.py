@@ -6,6 +6,7 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("clip-ViT-B-32")
 
 def main():
+    """Genera i vettori di embedding CLIP a partire da un'immagine passata da riga di comando."""
     if len(sys.argv) < 2:
         print(json.dumps({"error": "Image path mancante"}))
         sys.exit(1)

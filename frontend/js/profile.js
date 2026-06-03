@@ -1,14 +1,3 @@
-/**
- * Decodes a JWT payload without verifying the signature for client-side UI decisions.
- * @param {string} token - JWT string read from local storage.
- * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
- */
-function decodeJwt(token) {
-  try {
-    const payload = token.split('.')[1];
-    return JSON.parse(atob(payload));
-  } catch (e) { return null; }
-}
 let mapInstance = null;
 let mapMarker = null;
 let rifugioMapInstance = null;
@@ -414,8 +403,8 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @throws {Error} When the API rejects the clear request.
    */
   async function clearRepliedAdoptionRequests() {
-    const res = await fetch(`${API_CONTACT_REQUESTS}?status=replied`, {
-      method: 'PATCH',
+    const res = await fetch(`${API_CONTACT_REQUESTS}/replied`, {
+      method: 'DELETE',
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const data = await res.json().catch(() => ({}));
@@ -475,20 +464,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Escapes HTML-sensitive characters before inserting text into markup.
-   * @param {*} input - Value that will be interpolated into profile markup.
-   * @returns {string} HTML-safe string representation of the value.
-   */
-  function escapeHtml(input) {
-    return String(input ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
-  }
-
-  /**
    * Formats a value for UI display, replacing empty values with a placeholder.
    * @param {*} value - Field value shown in profile, admin, or announcement details.
    * @returns {string} Escaped display text or muted placeholder markup.
@@ -536,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!container || !empty) return;
 
     container.innerHTML = '';
-    if (!list || list.length === 0) {
+    if (!Array.isArray(list) || list.length === 0) {
       empty.style.display = 'block';
       return;
     }
@@ -557,30 +532,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           `
         : (!isDeletedAnnouncementNotification && !isReportNotification && annId
-        ? `
+          ? `
             <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
               <a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(annId)}">Vedi annuncio</a>
             </div>
           `
-        : '');
-      const item = document.createElement('div');
-      item.className = 'comment-item';
+          : '');
+      const targetHref = shelterAnimalLink || (!isDeletedAnnouncementNotification && !isReportNotification && annId ? `/pages/announcements.html?highlight=${encodeURIComponent(annId)}` : '');
+
+      const item = document.createElement('article');
+      item.className = 'comment-item notification-item';
       item.innerHTML = `
         <div class="comment-meta">
-          <span class="comment-user">Notifica</span>
+          <span class="comment-user">${escapeHtml(n?.title || n?.type || 'Notifica')}</span>
           <span class="comment-date">${escapeHtml(when)}</span>
         </div>
         <div class="comment-text">${escapeHtml(n?.message || '')}</div>
         ${announcementLinkHtml}
       `;
-      const link = item.querySelector('a');
-      if (link) {
-        link.addEventListener('click', async (e) => {
-          e.preventDefault();
+
+      if (targetHref) {
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', async (event) => {
+          if (event.target.closest('a, button')) return;
+          event.preventDefault();
           if (n?._id) await markNotificationRead(n._id);
-          window.location.href = link.getAttribute('href');
+          window.location.href = targetHref;
         });
+
+        const link = item.querySelector('a[href]');
+        if (link) {
+          link.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (n?._id) await markNotificationRead(n._id);
+            window.location.href = targetHref;
+          });
+        }
       }
+
       container.appendChild(item);
     });
   }
@@ -3055,6 +3045,12 @@ let wizStep = 1;
     hiddenInput.dispatchEvent(new Event('change'));
   }
 
+  /**
+   * Selects the color swatch and syncs the hidden color input.
+   * @param {string} val - Color value to apply.
+   * @param {HTMLElement} el - Swatch element to mark as active.
+   * @returns {void}
+   */
 	// Tasti "Colore"
 	function wizSetColor(val, el) {
 		document.querySelectorAll('.color-swatch').forEach(c => c.classList.remove('active'));

@@ -20,11 +20,6 @@ body {
   position: relative;
   min-height: 100vh;
   background-color: #1a0e08;
-  background-attachment: fixed;
-  background-image:
-    radial-gradient(ellipse 55% 50% at 85% -5%, #7a2e10 0%, transparent 65%),
-    radial-gradient(ellipse 50% 45% at -5% 95%, #5c2d08 0%, transparent 60%),
-    radial-gradient(ellipse 70% 60% at 50% 50%, #2c1208 0%, transparent 70%);
   position: relative;
   isolation: isolate;
 }

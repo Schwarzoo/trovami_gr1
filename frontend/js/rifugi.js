@@ -1,4 +1,4 @@
-const API_RIFUGI = '/api/v1/users/rifugi?isPublic=true';
+const API_RIFUGI = '/api/v1/users/shelters?isPublic=true';
 const API_ANNOUNCEMENTS = '/api/v1/announcements';
 const API_ANIMALS = '/api/v1/animals';
 

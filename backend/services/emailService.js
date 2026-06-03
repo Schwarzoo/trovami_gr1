@@ -15,6 +15,7 @@ function pushMockEmail(to, subject, message) {
     message,
     time: new Date().toISOString()
   });
+  if (global.mockInbox.length > 50) global.mockInbox.shift();
 }
 
 /**

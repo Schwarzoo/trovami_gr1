@@ -24,7 +24,7 @@ router.get('/', authMiddleware, getContactRequests);
  *             description: URI della risorsa creata
  */
 router.post('/', authMiddleware, createContactRequest);
-router.patch('/', authMiddleware, clearRepliedContactRequests);
+router.delete('/replied', authMiddleware, clearRepliedContactRequests);
 router.post('/:id/replies', authMiddleware, replyToContactRequest);
 
 module.exports = router;

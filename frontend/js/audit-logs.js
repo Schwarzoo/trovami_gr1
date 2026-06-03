@@ -1,17 +1,3 @@
-/**
- * Decodes a JWT payload without verifying the signature for client-side UI decisions.
- * @param {string} token - JWT string read from local storage.
- * @returns {Object|null} Decoded payload object, or null when the token cannot be decoded.
- */
-function decodeJwt(token) {
-  try {
-    const payload = token.split('.')[1];
-    return JSON.parse(atob(payload));
-  } catch (e) {
-    return null;
-  }
-}
-
 const token = localStorage.getItem('token');
 const payload = token ? decodeJwt(token) : null;
 
@@ -38,20 +24,6 @@ const prevBtn = document.getElementById('auditPrevBtn');
 const nextBtn = document.getElementById('auditNextBtn');
 const pageNumEl = document.getElementById('auditPageNum');
 const totalPagesEl = document.getElementById('auditTotalPages');
-
-/**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {*} input - Value that will be interpolated into table markup.
- * @returns {string} HTML-safe string representation of the value.
- */
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 /**
  * Filtra i log in base alla ricerca

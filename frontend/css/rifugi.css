@@ -4,11 +4,6 @@ html {
 
 body {
   background-color: #1A0E08;
-  background-attachment: fixed;
-  background-image:
-    radial-gradient(ellipse 55% 50% at 85% -5%, #7A2E10 0%, transparent 65%),
-    radial-gradient(ellipse 50% 45% at -5% 95%, #5C2D08 0%, transparent 60%),
-    radial-gradient(ellipse 70% 60% at 50% 50%, #2C1208 0%, transparent 70%);
   position: relative;
   isolation: isolate;
   min-height: 100vh;

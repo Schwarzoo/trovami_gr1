@@ -1,16 +1,6 @@
 const form = document.getElementById('loginForm');
 const errorBox = document.getElementById('loginError');
 
-/**
- * Reads a query-string parameter from the current page URL.
- * @param {string} name - Query parameter name to read.
- * @returns {string|null} Parameter value from `window.location.search`, or null when absent.
- */
-function getQueryParam(name) {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name);
-}
-
 const alreadyToken = localStorage.getItem('token');
 if (alreadyToken) {
   const nxt = getQueryParam('next') || './profile.html';

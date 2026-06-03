@@ -7,6 +7,10 @@
   let refreshTimer = null;
   let lastRenderedSignature = '';
 
+  /**
+   * Injects the widget stylesheet into the document head once.
+   * @returns {void}
+   */
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
 
@@ -281,6 +285,11 @@
    * @param {HTMLElement} root - Root element that contains the mock inbox widget.
    * @returns {void} No return value.
    */
+  /**
+   * Starts the periodic inbox refresh loop.
+   * @param {HTMLElement} root - Root element that contains the mock inbox widget.
+   * @returns {void}
+   */
   function startAutoRefresh(root) {
     if (refreshTimer) return;
     refreshTimer = window.setInterval(() => {
@@ -288,6 +297,10 @@
     }, REFRESH_INTERVAL_MS);
   }
 
+  /**
+   * Boots the mock inbox widget when the backend exposes mock emails.
+   * @returns {Promise<void>} Promise resolving after the widget setup attempt.
+   */
   async function boot() {
     try {
       const response = await fetch(ENDPOINT, { cache: 'no-cache' });
