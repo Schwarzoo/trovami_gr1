@@ -155,5 +155,19 @@ document.addEventListener('DOMContentLoaded', loadPartials);
 document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('enableMockInbox') === '1') {
     loadMockInboxWidget();
+    return;
   }
+
+  // If the backend exposes the mock inbox endpoint (RENDER mode), enable and load it automatically.
+  (async () => {
+    try {
+      const res = await fetch('/api/v1/mock-emails', { cache: 'no-cache' });
+      if (res.ok) {
+        localStorage.setItem('enableMockInbox', '1');
+        loadMockInboxWidget();
+      }
+    } catch (err) {
+      // ignore network errors — mock inbox stays disabled
+    }
+  })();
 });
