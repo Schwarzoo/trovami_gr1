@@ -47,6 +47,10 @@ function buildAnnouncementUrl(announcementId) {
     return `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pages/announcements.html?highlight=${announcementId}`;
 }
 
+function isRenderSimulationEnabled() {
+    return String(process.env.RENDER).toLowerCase() === 'true';
+}
+
 /**
  * Builds the frontend URL for opening an animal inside a shelter page.
  * @param {string} shelterId - Shelter identifier used by the shelter page.
@@ -482,7 +486,7 @@ exports.createAnnouncement = async (req,res)=>{
                 console.warn('Impossibile aggiornare foto animale:', err.message || err);
             }
 
-        if (announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
+        if (!isRenderSimulationEnabled() && announcement.imageEmbedding && announcement.imageEmbedding.length > 0) {
             const matches = await smartMatchingEngine.findMatches(announcement, animal.species);
             if (matches.length > 0) {
                 await saveMatchNotification(announcement, matches);
