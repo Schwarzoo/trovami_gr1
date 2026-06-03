@@ -774,3 +774,8 @@ body::after {
     max-width: 95%;
   }
 }
+
+body::before,
+body::after {
+  animation: none !important;
+}

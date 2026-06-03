@@ -616,3 +616,9 @@ body::after {
     width: 100%;
   }
 }
+
+
+body::before,
+body::after {
+  animation: none !important;
+}

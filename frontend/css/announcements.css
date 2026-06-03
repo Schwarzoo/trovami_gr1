@@ -1005,3 +1005,9 @@ button#nearby-button:disabled {
     .modal { border-radius: 12px 12px 0 0; align-self: flex-end; max-height: 85vh; }
     #modal-overlay { align-items: flex-end; padding: 0; }
 }
+
+
+body::before,
+body::after {
+  animation: none !important;
+}

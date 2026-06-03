@@ -1226,3 +1226,8 @@ body::after {
     padding: 0;
   }
 }
+
+body::before,
+body::after {
+  animation: none !important;
+}
