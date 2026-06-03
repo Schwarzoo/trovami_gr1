@@ -218,177 +218,142 @@
 	</div>
 
 	<!-- Modal for create/edit announcement -->
-	<div id="modal-overlay" class="modal-overlay announcement-wizard-overlay" style="display:none;">
-		<div class="modal-card announcement-wizard" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-			<div class="modal-header announcement-wizard__header">
-				<div>
-					<h3 id="modal-title">Annuncio</h3>
-					<p id="modal-type-hint" class="form-hint">Scegli il tipo di annuncio.</p>
-				</div>
-				<button id="modal-close" class="announcement-wizard__close" type="button" aria-label="Chiudi">X</button>
+			<div id="modal-overlay" class="modal-overlay" style="display:none;">
+		<div class="modal-card">
+			<div class="modal-header">
+				<h3 id="modal-title">Annuncio</h3><button id="modal-close">✕</button>
 			</div>
+			<div class="modal-body">
+							<form id="modalForm" class="modal-form">
+								<div class="form-grid">
+									<div class="field">
+										<label>Tipo</label>
+										<select id="modal-type">
+											<option value="LostAnimal">Smarrito</option>
+											<option value="Sighting">Avvistamento</option>
+										</select>
+										<span id="modal-type-hint" class="form-hint">Scegli il tipo di annuncio.</span>
+									</div>
+								</div>
+								<div class="field">
+									<label>Descrizione</label>
+									<textarea id="modal-description" placeholder="Aggiungi dettagli utili..."></textarea>
+								</div>
+								<div class="form-grid">
+									<div id="modal-animal-name-row" class="field" style="display:none;">
+										<label id="modal-animal-name-label">Nome animale</label>
+										<input id="modal-animalName" placeholder="Es. Luna" />
+										<span id="modal-animal-name-hint" class="form-hint">Campo opzionale se non conosci il nome.</span>
+									</div>
+									<div class="field">
+										<label>Specie</label>
+										<input id="modal-species" placeholder="Es. Cane, Gatto" required />
+									</div>
+									<div class="field">
+										<label>Razza</label>
+										<input id="modal-breed" placeholder="Es. Labrador" />
+									</div>
+								</div>
+								<div class="form-grid">
+									<div class="field">
+										<label>Colore</label>
+										<input id="modal-color" placeholder="Es. Bianco, Nero, Marrone" required />
+									</div>
+									<div class="field">
+										<label>Genere</label>
+										<select id="modal-gender">
+											<option value="">-- Seleziona --</option>
+											<option value="Maschio">Maschio</option>
+											<option value="Femmina">Femmina</option>
+											<option value="Sconosciuto">Sconosciuto</option>
+										</select>
+									</div>
+								</div>
+								<div id="modal-microchip-row" class="field" style="display:none;">
+									<label>Microchip</label>
+									<input id="modal-microchipId" placeholder="Codice microchip" />
+								</div>
 
-			<form id="modalForm" class="modal-form announcement-wizard__form">
-				<select id="modal-type" class="visually-hidden" aria-label="Tipo annuncio">
-					<option value="LostAnimal">Smarrito</option>
-					<option value="Sighting">Avvistamento</option>
-				</select>
-
-				<div class="announcement-wizard__tabs" role="group" aria-label="Tipo annuncio">
-					<button type="button" class="announcement-type-tab is-active" data-announcement-type="LostAnimal">Smarrito</button>
-					<button type="button" class="announcement-type-tab" data-announcement-type="Sighting">Avvistamento</button>
-				</div>
-
-				<div class="announcement-stepper" aria-label="Passaggi creazione annuncio">
-					<div class="announcement-step is-active" data-step-indicator="1"><span>1</span><strong>Animale</strong></div>
-					<div class="announcement-step" data-step-indicator="2"><span>2</span><strong>Aspetto</strong></div>
-					<div class="announcement-step" data-step-indicator="3"><span>3</span><strong>Foto e luogo</strong></div>
-					<div class="announcement-step" data-step-indicator="4"><span>4</span><strong>Riepilogo</strong></div>
-				</div>
-
-				<div class="announcement-wizard__body">
-					<section class="announcement-panel is-active" data-step-panel="1" aria-label="Dati animale">
-						<p class="announcement-panel__title">Di che animale si tratta?</p>
-						<div class="form-grid">
-							<div id="modal-animal-name-row" class="field">
-								<label id="modal-animal-name-label">Nome animale</label>
-								<input id="modal-animalName" placeholder="Es. Luna" />
-								<span id="modal-animal-name-hint" class="form-hint">Campo opzionale se non conosci il nome.</span>
+								<div id="modal-adoption-row" class="field">
+									<label>Disponibilità</label>
+									<select id="modal-adoptionStatus">
+											<option value="none">Non disponibile</option>
+											<option value="adoptable">Adottabile</option>
+										</select>
+								</div>
+								<div class="form-grid">
+									<div class="field">
+										<label>Lunghezza pelo</label>
+										<select id="modal-lunghezzaPelo">
+											<option value="">-- Seleziona --</option>
+											<option value="Corto">Corto</option>
+											<option value="Medio">Medio</option>
+											<option value="Lungo">Lungo</option>
+											<option value="Senza">Senza</option>
+										</select>
+									</div>
+									<div class="field">
+										<label>Segni particolari</label>
+										<textarea id="modal-distinctiveFeatures" placeholder="Es. collare rosso, cicatrice, zoppia..."></textarea>
+									</div>
+								</div>
+								<div class="form-grid">
+									<div class="field">
+										<label>Comportamento</label>
+										<select id="modal-animalBehaviour">
+											<option value="indifferente">indifferente</option>
+											<option value="tranquillo">tranquillo</option>
+											<option value="spaventato">spaventato</option>
+											<option value="aggressivo">aggressivo</option>
+										</select>
+									</div>
+									<div class="field">
+										<label>Condizione salute</label>
+										<select id="modal-healthCondition">
+											<option value="in salute">in salute</option>
+											<option value="ferito">ferito</option>
+											<option value="malnutrito">malnutrito</option>
+										</select>
+									</div>
+								</div>
+								<div class="field">
+									<label>Foto (opzionale)</label>
+									<input id="modal-photo-file" type="file" accept="image/*" />
+									<span class="form-hint">Seleziona un file immagine da caricare (opzionale).</span>
+								</div>
+					<img id="modal-photo-preview" src="" alt="preview"
+						style="display:none;max-width:100%;border-radius:8px;margin-top:8px;" />
+								<div class="form-grid">
+									<div class="field">
+										<label id="modal-lastSeenDate-label">Ultima data vista</label>
+										<div class="choice-buttons" role="group" aria-label="Scelta data avvistamento">
+											<button type="button" id="lastSeenTodayBtn" class="btn btn--ghost is-selected">Oggi</button>
+											<button type="button" id="lastSeenCustomBtn" class="btn btn--ghost">Scegli data</button>
+										</div>
+										<input id="modal-lastSeenDate" type="date" style="display:none;" />
+									</div>
+								</div>
+								<div id="modal-position-section" class="field">
+									<label id="modal-position-label">Posizione</label>
+									<div class="location-actions">
+										<button type="button" id="pickOnMap" class="btn btn--ghost">Seleziona su mappa</button>
+										<button type="button" id="useMyLocation" class="btn btn--ghost">Usa la mia posizione</button>
+									</div>
+									<span id="modal-position-hint" class="form-hint">Scegli un punto sulla mappa o usa la posizione attuale.</span>
+								</div>
+					<input id="modal-coords" type="hidden" />
+					<div id="modal-map" style="height:220px;margin-top:8px;display:none;border-radius:8px;overflow:hidden;"></div>
+							<div class="form-actions">
+								<button id="modal-save" class="btn btn--primary" type="button">Pubblica</button>
+								<button id="modal-cancel" class="btn btn--ghost" type="button">Annulla</button>
 							</div>
-							<div class="field">
-								<label>Specie</label>
-								<input id="modal-species" placeholder="Es. Cane, Gatto" required />
+						</form>
+						<div id="profile-modal-progress" class="loading-bar" aria-hidden="true">
+							<div class="loading-bar__track">
+								<div class="loading-bar__fill"></div>
 							</div>
+							<div class="loading-bar__label">Smart matching in corso...</div>
 						</div>
-						<div class="form-grid">
-							<div class="field">
-								<label>Razza</label>
-								<input id="modal-breed" placeholder="Es. Labrador" />
-								<span class="form-hint">Se la conosci.</span>
-							</div>
-							<div class="field">
-								<label>Genere</label>
-								<select id="modal-gender">
-									<option value="">Seleziona</option>
-									<option value="Maschio">Maschio</option>
-									<option value="Femmina">Femmina</option>
-									<option value="Sconosciuto">Sconosciuto</option>
-								</select>
-							</div>
-						</div>
-						<div class="field">
-							<label>Descrizione</label>
-							<textarea id="modal-description" placeholder="Aggiungi dettagli utili per riconoscere l'animale..."></textarea>
-						</div>
-					</section>
-
-					<section class="announcement-panel" data-step-panel="2" aria-label="Aspetto animale">
-						<p class="announcement-panel__title">Com'è fatto fisicamente?</p>
-						<div class="form-grid">
-							<div class="field">
-								<label>Colore</label>
-								<input id="modal-color" placeholder="Es. Bianco, Nero, Marrone" required />
-							</div>
-							<div class="field">
-								<label>Lunghezza pelo</label>
-								<select id="modal-lunghezzaPelo">
-									<option value="">Seleziona</option>
-									<option value="Corto">Corto</option>
-									<option value="Medio">Medio</option>
-									<option value="Lungo">Lungo</option>
-									<option value="Senza">Senza</option>
-								</select>
-							</div>
-						</div>
-						<div id="modal-microchip-row" class="field" style="display:none;">
-							<label>Microchip</label>
-							<input id="modal-microchipId" placeholder="Codice microchip" />
-						</div>
-						<div id="modal-adoption-row" class="field">
-							<label>Disponibilità</label>
-							<select id="modal-adoptionStatus">
-								<option value="none">Non disponibile</option>
-								<option value="adoptable">Adottabile</option>
-							</select>
-						</div>
-						<div class="form-grid">
-							<div class="field">
-								<label>Comportamento</label>
-								<select id="modal-animalBehaviour">
-									<option value="indifferente">Indifferente</option>
-									<option value="tranquillo">Tranquillo</option>
-									<option value="spaventato">Spaventato</option>
-									<option value="aggressivo">Aggressivo</option>
-								</select>
-							</div>
-							<div class="field">
-								<label>Condizione salute</label>
-								<select id="modal-healthCondition">
-									<option value="in salute">In salute</option>
-									<option value="ferito">Ferito</option>
-									<option value="malnutrito">Malnutrito</option>
-								</select>
-							</div>
-						</div>
-						<div class="field">
-							<label>Segni particolari</label>
-							<textarea id="modal-distinctiveFeatures" placeholder="Es. collare rosso, cicatrice, zoppia..."></textarea>
-						</div>
-					</section>
-
-					<section class="announcement-panel" data-step-panel="3" aria-label="Foto e posizione">
-						<p class="announcement-panel__title">Foto e luogo dell'evento</p>
-						<div class="field">
-							<label>Foto</label>
-							<label class="announcement-photo-drop" for="modal-photo-file">
-								<span class="announcement-photo-drop__label">Seleziona una foto</span>
-								<span class="announcement-photo-drop__hint">Formato immagine, campo opzionale.</span>
-							</label>
-							<input id="modal-photo-file" class="visually-hidden" type="file" accept="image/*" />
-							<img id="modal-photo-preview" src="" alt="Anteprima foto annuncio" />
-						</div>
-						<div class="field">
-							<label id="modal-lastSeenDate-label">Ultima data vista</label>
-							<div class="choice-buttons announcement-date-buttons" role="group" aria-label="Scelta data avvistamento">
-								<button type="button" id="lastSeenTodayBtn" class="btn btn--ghost is-selected">Oggi</button>
-								<button type="button" id="lastSeenCustomBtn" class="btn btn--ghost">Scegli data</button>
-							</div>
-							<input id="modal-lastSeenDate" type="date" style="display:none;" />
-						</div>
-						<div id="modal-position-section" class="field">
-							<label id="modal-position-label">Posizione</label>
-							<div class="location-actions">
-								<button type="button" id="pickOnMap" class="btn btn--ghost">Seleziona su mappa</button>
-								<button type="button" id="useMyLocation" class="btn btn--ghost">Usa la mia posizione</button>
-							</div>
-							<span id="modal-position-hint" class="form-hint">Scegli un punto sulla mappa o usa la posizione attuale.</span>
-						</div>
-						<input id="modal-coords" type="hidden" />
-						<div id="modal-map"></div>
-					</section>
-
-					<section class="announcement-panel" data-step-panel="4" aria-label="Riepilogo">
-						<p class="announcement-panel__title">Controlla prima di pubblicare</p>
-						<div id="announcement-review" class="announcement-review"></div>
-					</section>
-				</div>
-
-				<div class="announcement-wizard__footer">
-					<span id="announcement-step-counter" class="announcement-step-counter">Passo 1 di 4</span>
-					<div class="announcement-wizard__actions">
-						<button id="modal-cancel" class="btn btn--ghost" type="button">Annulla</button>
-						<button id="announcement-back" class="btn btn--ghost" type="button">Indietro</button>
-						<button id="announcement-next" class="btn btn--primary" type="button">Avanti</button>
-						<button id="modal-save" class="btn btn--primary" type="button">Pubblica</button>
-					</div>
-				</div>
-			</form>
-
-			<div id="profile-modal-progress" class="loading-bar" aria-hidden="true">
-				<div class="loading-bar__track">
-					<div class="loading-bar__fill"></div>
-				</div>
-				<div class="loading-bar__label">Smart matching in corso...</div>
 			</div>
 		</div>
 	</div>
