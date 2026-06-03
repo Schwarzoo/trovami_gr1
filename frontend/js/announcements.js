@@ -199,7 +199,7 @@ function buildCard(ann) {
     const isLost = ann.type === 'LostAnimal';
     const isRifugioAnnouncement = publisher?.role === 'shelter';
     const rifugioName = publisher?.role === 'shelter'
-        ? (publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username)
+        ? (publisher?.rifugioData?.rifugioName || publisher?.username)
         : '';
     const primaryTitle = animal?.name || animal?.breed || animal?.species || 'Animale';
     const distanceLabel = typeof ann._distance === 'number'
@@ -315,7 +315,7 @@ async function openModal(ann) {
         ? `/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher?._id || publisher)}&animalId=${encodeURIComponent(animal._id)}`
         : null;
 
-    const shelterName = publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username;
+    const shelterName = publisher?.rifugioData?.rifugioName || publisher?.username;
     if (isRifugioAnnouncement) {
         const displayName = shelterName || 'il rifugio';
         document.getElementById('modal-title').textContent = `Questo animale si trova attualmente al rifugio ${displayName}`;
@@ -659,7 +659,7 @@ function populateRifugioFilter(announcements) {
         const publisher = ann.publisherId;
         const id = publisher?._id || publisher;
         if (!id || publisher?.role !== 'shelter') return;
-        const name = publisher?.rifugioData?.rifugioName || publisher?.shelterData?.shelterName || publisher?.username || 'Rifugio';
+        const name = publisher?.rifugioData?.rifugioName || publisher?.username || 'Rifugio';
         rifugi.set(id, name);
     });
 

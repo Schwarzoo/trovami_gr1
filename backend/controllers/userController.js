@@ -29,6 +29,31 @@ function normalizeLocation(input) {
 }
 
 /**
+ * Normalizes shelter payloads so API responses always expose location under `rifugioData.location`.
+ * @param {Object} payload - User document or plain object to normalize.
+ * @returns {Object} The same payload with a canonical rifugio location when available.
+ */
+function normalizeShelterLocationPayload(payload) {
+  if (!payload || typeof payload !== 'object') return payload;
+
+  const legacyShelterData = payload.shelterData || {};
+  const canonicalRifugioData = payload.rifugioData || {};
+
+  if (!legacyShelterData.location && !legacyShelterData.address && !legacyShelterData.city) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    rifugioData: {
+      ...legacyShelterData,
+      ...canonicalRifugioData,
+      location: canonicalRifugioData.location || legacyShelterData.location
+    }
+  };
+}
+
+/**
  * Handles the get me API request and writes the HTTP response.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
@@ -39,7 +64,7 @@ exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-passwordHash -__v');
     if (!user) return res.status(404).json({ message: 'Utente non trovato' });
-    res.json(user);
+    res.json(normalizeShelterLocationPayload(user.toObject()));
   } catch (err) {
     sendError(res, 500, err.message, 'Errore server', 'USER_SERVER_ERROR');
   }
@@ -77,12 +102,20 @@ exports.updateMe = async (req, res) => {
       updates['rifugioData.location'] = location;
     }
 
+    if (typeof req.body?.rifugioData?.address === 'string') {
+      updates['rifugioData.address'] = req.body.rifugioData.address.trim();
+    }
+
+    if (typeof req.body?.rifugioData?.city === 'string') {
+      updates['rifugioData.city'] = req.body.rifugioData.city.trim();
+    }
+
     const userDoc = await User.findById(req.user.userId);
     if (!userDoc) return res.status(404).json({ message: 'Utente non trovato' });
 
     userDoc.set(updates);
     const savedUser = await userDoc.save();
-    const user = savedUser.toObject();
+    const user = normalizeShelterLocationPayload(savedUser.toObject());
     delete user.passwordHash;
     delete user.__v;
 
@@ -137,19 +170,29 @@ exports.getPublicRifugi = async (req, res) => {
     const rifugi = await User.find({
       role: 'shelter',
       rifugioStatus: 'approved',
-      'rifugioData.location.coordinates.0': { $exists: true },
-      'rifugioData.location.coordinates.1': { $exists: true }
-    }).select('username email phoneNumber contactVisibility rifugioData');
+      $or: [
+        {
+          'rifugioData.location.coordinates.0': { $exists: true },
+          'rifugioData.location.coordinates.1': { $exists: true }
+        },
+        {
+          'shelterData.location.coordinates.0': { $exists: true },
+          'shelterData.location.coordinates.1': { $exists: true }
+        }
+      ]
+    }).select('username email phoneNumber contactVisibility rifugioData shelterData rifugioStatus');
 
     res.json(rifugi.map((rifugio) => {
       const showEmail = rifugio.contactVisibility?.showEmail !== false;
       const showPhone = rifugio.contactVisibility?.showPhone !== false;
+      const payload = normalizeShelterLocationPayload(rifugio.toObject());
       return {
-        _id: rifugio._id,
-        username: rifugio.username,
-        email: showEmail ? rifugio.email : null,
-        phoneNumber: showPhone ? rifugio.phoneNumber : null,
-        rifugioData: rifugio.rifugioData
+        _id: payload._id,
+        username: payload.username,
+        email: showEmail ? payload.email : null,
+        phoneNumber: showPhone ? payload.phoneNumber : null,
+        rifugioData: payload.rifugioData,
+        rifugioStatus: payload.rifugioStatus
       };
     }));
   } catch (err) {
@@ -166,12 +209,13 @@ exports.getPublicRifugi = async (req, res) => {
 function formatShelterPayload(shelter, emailEnabled) {
   const showEmail = shelter.contactVisibility?.showEmail !== false;
   const showPhone = shelter.contactVisibility?.showPhone !== false;
+  const payload = normalizeShelterLocationPayload(shelter.toObject ? shelter.toObject() : shelter);
   return {
-    _id: shelter._id,
-    username: shelter.username,
-    email: showEmail ? shelter.email : null,
-    phoneNumber: showPhone ? shelter.phoneNumber : null,
-    rifugioData: shelter.rifugioData,
+    _id: payload._id,
+    username: payload.username,
+    email: showEmail ? payload.email : null,
+    phoneNumber: showPhone ? payload.phoneNumber : null,
+    rifugioData: payload.rifugioData,
     emailEnabled: !!emailEnabled
   };
 }

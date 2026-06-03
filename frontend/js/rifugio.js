@@ -35,7 +35,7 @@ function formatNumber(value) {
  * @returns {string} Best available shelter display name.
  */
 function getRifugioName(rifugio) {
-  return rifugio?.rifugioData?.rifugioName || rifugio?.shelterData?.shelterName || rifugio?.username || 'Rifugio';
+  return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
 }
 
 /**
@@ -44,7 +44,7 @@ function getRifugioName(rifugio) {
  * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when unavailable.
  */
 function getCoordinates(rifugio) {
-  const coords = rifugio?.rifugioData?.location?.coordinates || rifugio?.shelterData?.location?.coordinates;
+  const coords = rifugio?.rifugioData?.location?.coordinates;
   if (!Array.isArray(coords) || coords.length !== 2) return null;
   const [lng, lat] = coords.map(Number);
   if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;

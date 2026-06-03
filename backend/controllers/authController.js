@@ -70,8 +70,6 @@ exports.register = async (req, res) => {
       rifugioStatus: wantsRifugio ? 'pending' : 'none',
       rifugioData: wantsRifugio ? {
         rifugioName: rifugioData.rifugioName,
-        address: rifugioData.address || '',
-        city: rifugioData.city || '',
         description: rifugioData.description || '',
         totalSlots: rifugioData.totalSlots || undefined,
         availableSlots: rifugioData.availableSlots || undefined

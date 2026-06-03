@@ -59,17 +59,32 @@
 					</div>
 
 					<div id="rifugio-status-box" class="comment-item" style="display:none;margin-top:8px;"></div>
-					<div id="rifugio-position-box" class="comment-item" style="display:none;margin-top:8px;">
+					<div id="rifugio-position-box" class="comment-item shelter-position-card" style="display:none;margin-top:8px;">
 						<div class="comment-meta">
 							<span class="comment-user">Posizione rifugio</span>
+							<span class="comment-date">Modificabile in ogni momento</span>
 						</div>
 						<div id="rifugio-position-text" class="comment-text">Aggiungi la posizione del rifugio per pubblicare annunci.</div>
-						<div id="rifugio-position-map" style="display:none;height:220px;margin-top:10px;border-radius:8px;overflow:hidden;"></div>
-						<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+						<div class="field-grid shelter-position-fields">
+							<div class="field" style="margin:0;">
+								<label for="rifugio-search-address">Indirizzo</label>
+								<input id="rifugio-search-address" type="text" placeholder="Via, numero civico" />
+							</div>
+							<div class="field" style="margin:0;">
+								<label for="rifugio-search-city">Città</label>
+								<input id="rifugio-search-city" type="text" placeholder="Comune" />
+							</div>
+						</div>
+						<div class="shelter-position-actions">
+							<button id="searchRifugioPosition" type="button" class="btn btn--ghost">Trova da indirizzo</button>
+							<button id="useRifugioLocation" type="button" class="btn btn--ghost">Usa la mia posizione</button>
+						</div>
+						<div id="rifugio-position-map" class="shelter-position-map" style="display:none;"></div>
+						<div class="shelter-position-actions shelter-position-actions--save">
 							<button id="editRifugioPosition" type="button" class="btn btn--ghost">Aggiungi posizione</button>
 							<button id="saveRifugioPosition" type="button" class="btn btn--primary" style="display:none;">Salva posizione</button>
 						</div>
-						<div id="rifugio-position-message" class="form-hint" style="margin-top:8px;"></div>
+						<div id="rifugio-position-message" class="form-hint shelter-position-message"></div>
 					</div>
 
 					<div style="display:flex;gap:8px;margin-top:8px;">
