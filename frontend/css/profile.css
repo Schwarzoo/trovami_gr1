@@ -1144,7 +1144,67 @@ body::after {
   color: var(--accent-2);
 }
 
+.audit-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 16px 0;
+}
+
+.audit-page-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text);
+  min-width: 60px;
+  text-align: center;
+}
+
+.audit-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.audit-nav-btn:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.audit-nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audit-nav-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 @media (max-width: 600px) {
+  .audit-pagination {
+    gap: 12px;
+  }
+
+  .audit-nav-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
   .modal-overlay {
     padding: 0;
   }
