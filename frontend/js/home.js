@@ -2,6 +2,7 @@ const HOME_API = '/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
 const HOME_RESOLVED_API = '/api/v1/announcements/count?status=resolved';
+const HOME_ACTIVE_API = '/api/v1/announcements/count?status=active';
 const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/shelters?isPublic=true';
 const HOME_CURRENT_ROLE = localStorage.getItem('role') || '';
 
@@ -89,6 +90,22 @@ async function fetchResolvedAnnouncementsCount() {
     return Number(json?.count ?? json?.resolvedCount ?? 0);
   } catch (err) {
     console.error('Errore fetch annunci risolti', err);
+    return 0;
+  }
+}
+
+/**
+ * Fetches active announcements count data from the API.
+ * @returns {Promise<number>} Total active-announcement count, or 0 on failure.
+ */
+async function fetchActiveAnnouncementsCount() {
+  try {
+    const res = await fetch(HOME_ACTIVE_API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    return Number(json?.count ?? 0);
+  } catch (err) {
+    console.error('Errore fetch annunci attivi', err);
     return 0;
   }
 }
@@ -694,15 +711,11 @@ async function renderHeroStats() {
   const rifugiCounter = document.getElementById('public-rifugi-count');
   if (!resolvedCounter && !activeCounter && !rifugiCounter) return;
 
-  const [announcements, rifugiCount] = await Promise.all([
-    fetchHomeAnnouncements(),
+  const [activeCount, resolvedCount, rifugiCount] = await Promise.all([
+    fetchActiveAnnouncementsCount(),
+    fetchResolvedAnnouncementsCount(),
     fetchPublicRifugiCount()
   ]);
-
-  const activeCount = Array.isArray(announcements)
-    ? announcements.filter((announcement) => announcement?.status === 'ACTIVE').length
-    : 0;
-  const resolvedCount = await fetchResolvedAnnouncementsCount();
 
   if (resolvedCounter) resolvedCounter.textContent = String(resolvedCount);
   if (activeCounter) activeCounter.textContent = String(activeCount);
