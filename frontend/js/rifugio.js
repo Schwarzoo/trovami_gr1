@@ -344,7 +344,7 @@ async function renderAnimalsForShelter(rifugioId) {
             <div class="card-meta"><span class="card-species">${escapeHtml(a.species || '')}</span></div>
             <h3 class="card-breed">${escapeHtml(name)}</h3>
             <p class="card-description">${escapeHtml(a.distinctiveFeatures || '')}</p>
-            <div style="margin-top:8px;font-size:0.9rem;color:var(--text-muted)">${escapeHtml(status)}</div>
+            <div class="animal-status">${escapeHtml(status)}</div>
           </div>
         </article>
       `;
@@ -503,8 +503,8 @@ async function openShelterAnimalModal(animalId) {
       if (notes.length === 0) notesContainer.innerHTML = '<div class="muted">Nessuna nota medica</div>';
       notes.forEach(n => {
         const el = document.createElement('div');
-        el.style.padding = '6px 0';
-        el.innerHTML = `<div style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(new Date(n.createdAt).toLocaleString())}</div><div>${escapeHtml(n.text)}</div>`;
+        el.className = 'medical-note';
+        el.innerHTML = `<div class="medical-note-date">${escapeHtml(new Date(n.createdAt).toLocaleString())}</div><div>${escapeHtml(n.text)}</div>`;
         notesContainer.appendChild(el);
       });
     }

@@ -173,6 +173,12 @@ body::after {
   gap: 12px;
 }
 
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
@@ -225,6 +231,255 @@ body::after {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 4px;
+}
+
+.profile-subsection {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.profile-subsection--spaced {
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.profile-subsection-title,
+.profile-section-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.profile-section-title--spaced {
+  margin-top: 18px;
+}
+
+.profile-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.profile-actions-row--wrap,
+.profile-list-actions {
+  flex-wrap: wrap;
+}
+
+.profile-message {
+  align-self: center;
+  color: var(--text-muted);
+}
+
+.profile-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-section-head h2,
+.profile-section-head__title {
+  margin: 0;
+}
+
+.profile-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-list--compact {
+  margin-top: 10px;
+}
+
+.profile-muted {
+  color: var(--text-muted);
+}
+
+.profile-grid-spaced {
+  margin-top: 16px;
+}
+
+.profile-form-field--flush {
+  margin: 0;
+}
+
+.profile-form-footer {
+  display: flex;
+  gap: 10px;
+}
+
+.profile-summary-box {
+  margin-bottom: 15px;
+  padding: 16px;
+  border: 1px solid var(--wiz-border);
+  border-radius: 10px;
+  background: var(--wiz-surface2);
+}
+
+.profile-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  color: var(--wiz-text-muted);
+  font-size: 0.9rem;
+  list-style: none;
+}
+
+.photo-drop-icon {
+  margin-bottom: 5px;
+  font-size: 1.8rem;
+}
+
+.photo-drop-copy {
+  color: var(--wiz-text-muted);
+  font-size: 0.9rem;
+}
+
+#modal-photo-preview {
+  max-height: 120px;
+  align-self: center;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+
+.color-swatch--black {
+  background: #1a1a1a;
+  border-color: #fff;
+}
+
+.color-swatch--white {
+  background: #f1f1ef;
+}
+
+.color-swatch--brown {
+  background: #a0522d;
+}
+
+.color-swatch--orange {
+  background: #d2691e;
+}
+
+.color-swatch--gray {
+  background: #888880;
+}
+
+.wizard-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wizard-choice-row {
+  margin-bottom: 8px;
+}
+
+.wizard-position-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.wizard-position-actions .btn {
+  flex: 1;
+}
+
+.wizard-inline-map {
+  height: 200px;
+  border-radius: 8px;
+}
+
+.wizard-progress {
+  margin-top: 10px;
+}
+
+.step-counter {
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.animal-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.animal-medical-notes,
+.modal-gallery-spaced,
+.adoption-reply-summary {
+  margin-bottom: 8px;
+}
+
+.animal-medical-notes {
+  color: var(--text-muted);
+}
+
+.adoption-reply-summary {
+  margin-bottom: 12px;
+}
+
+.adoption-reply-status {
+  margin-top: 8px;
+}
+
+.animal-status,
+.medical-note-date {
+  color: var(--text-muted);
+}
+
+.animal-status {
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.medical-note {
+  padding: 6px 0;
+}
+
+.medical-note-date {
+  font-size: 0.85rem;
+}
+
+.badge--score {
+  right: 10px;
+  left: auto;
+}
+
+#rifugio-status-box,
+#rifugio-position-box,
+#rifugio-position-map,
+#saveRifugioPosition,
+#admin-section,
+#my-animals,
+#contact-requests-section,
+#followed-shelters-section,
+#admin-audit-section,
+#admin-announcement-overlay,
+#admin-user-overlay,
+#adoption-reply-overlay,
+#profile-confirm-overlay,
+#modal-overlay,
+#modal-type,
+#modal-gender,
+#modal-lunghezzaPelo,
+#modal-microchip-row,
+#modal-adoption-row,
+#modal-photo-file,
+#modal-photo-preview,
+#modal-lastSeenDate,
+#modal-map,
+#wiz-btnBack,
+#modal-cancel,
+#view-modal-overlay,
+#animal-modal-overlay,
+#clearRepliedAdoptionRequests {
+  display: none;
 }
 
 .profile-grid {
@@ -297,6 +552,10 @@ body::after {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.shelter-position-actions--save {
+  align-items: center;
 }
 
 .shelter-position-actions .btn {
@@ -1035,6 +1294,11 @@ body::after {
   width: 560px;
 }
 
+.admin-announcement-modal {
+  max-width: 760px;
+  width: 100%;
+}
+
 .admin-warning-count {
   display: flex;
   align-items: center;
@@ -1086,126 +1350,7 @@ body::after {
   margin-top: 18px;
 }
 
-.audit-toolbar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-
-.audit-search {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
-.audit-search input {
-  min-width: 240px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.audit-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 12px;
-}
-
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 640px;
-}
-
-.audit-table th,
-.audit-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: top;
-}
-
-.audit-table th button {
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  font-weight: 800;
-  padding: 0;
-}
-
-.audit-table th button.is-active {
-  color: var(--accent-2);
-}
-
-.audit-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 24px;
-  padding: 16px 0;
-}
-
-.audit-page-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  color: var(--text);
-  min-width: 60px;
-  text-align: center;
-}
-
-.audit-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.audit-nav-btn:hover:not(:disabled) {
-  background: var(--surface);
-  border-color: var(--accent);
-  color: var(--accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.audit-nav-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.audit-nav-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
 @media (max-width: 600px) {
-  .audit-pagination {
-    gap: 12px;
-  }
-
-  .audit-nav-btn {
-    padding: 8px 12px;
-    font-size: 0.9rem;
-  }
-
   .modal-overlay {
     padding: 0;
   }

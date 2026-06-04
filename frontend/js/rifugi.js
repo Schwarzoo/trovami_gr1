@@ -392,13 +392,13 @@ function renderMap() {
     const address = getRifugioAddress(rifugio);
     const availableAnimals = countAvailableAnimalsForRifugio(rifugio._id);
     const popupHtml = `
-      <div style="width:280px;padding:2px 2px 4px;font-family:sans-serif;">
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px;color:#111;">${escapeHtml(name)}</div>
-        ${address ? `<div style="font-size:13px;color:#555;line-height:1.45;margin-bottom:8px;">${escapeHtml(address)}</div>` : ''}
-        <div style="font-size:13px;color:#666;margin-bottom:10px;">Animali disponibili: ${escapeHtml(availableAnimals)}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <a href="/pages/rifugio.html?rifugioId=${encodeURIComponent(rifugio._id)}" style="font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">Apri pagina rifugio</a>
-          <a href="/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}" style="font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">Vedi annunci</a>
+      <div class="rifugi-popup">
+        <div class="rifugi-popup__title">${escapeHtml(name)}</div>
+        ${address ? `<div class="rifugi-popup__address">${escapeHtml(address)}</div>` : ''}
+        <div class="rifugi-popup__count">Animali disponibili: ${escapeHtml(availableAnimals)}</div>
+        <div class="rifugi-popup__actions">
+          <a class="rifugi-popup__link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(rifugio._id)}">Apri pagina rifugio</a>
+          <a class="rifugi-popup__link" href="/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}">Vedi annunci</a>
         </div>
       </div>
     `;

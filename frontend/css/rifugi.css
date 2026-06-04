@@ -398,7 +398,8 @@ body::after {
   margin-top: 0.45rem;
 }
 
-#adoptions-grid {
+#adoptions-grid,
+.adoptions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.25rem;
@@ -561,6 +562,45 @@ body::after {
 
 .custom-popup .leaflet-popup-content {
   margin: 0;
+}
+
+.rifugi-popup {
+  width: 280px;
+  padding: 2px 2px 4px;
+  font-family: sans-serif;
+}
+
+.rifugi-popup__title {
+  margin-bottom: 8px;
+  color: #111;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.rifugi-popup__address {
+  margin-bottom: 8px;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.rifugi-popup__count {
+  margin-bottom: 10px;
+  color: #666;
+  font-size: 13px;
+}
+
+.rifugi-popup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rifugi-popup__link {
+  color: #c85a2a;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .empty-state {

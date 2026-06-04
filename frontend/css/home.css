@@ -83,6 +83,10 @@ body::after {
   overflow: hidden;
 }
 
+.hero-showcase {
+  isolation: isolate;
+}
+
 .hero::before {
   content: '';
   position: absolute;
