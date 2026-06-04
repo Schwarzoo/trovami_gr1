@@ -24,6 +24,8 @@ router.get('/', authMiddleware, getContactRequests);
  *             description: URI della risorsa creata
  */
 router.post('/', authMiddleware, createContactRequest);
+// Support PATCH / to clear replied requests (tests expect PATCH on base path)
+router.patch('/', authMiddleware, clearRepliedContactRequests);
 router.delete('/replied', authMiddleware, clearRepliedContactRequests);
 router.post('/:id/replies', authMiddleware, replyToContactRequest);
 

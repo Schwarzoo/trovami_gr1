@@ -2,7 +2,8 @@
   const ROOT_ID = 'mock-inbox-root';
   const STYLE_ID = 'mock-inbox-styles';
   const ENDPOINT = '/api/v1/mock-emails';
-  const REFRESH_INTERVAL_MS = 3000;
+  // Reduce aggressiveness: refresh every 30 seconds by default
+  const REFRESH_INTERVAL_MS = 30000;
 
   let refreshTimer = null;
   let lastRenderedSignature = '';

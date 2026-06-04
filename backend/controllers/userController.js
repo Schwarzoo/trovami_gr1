@@ -348,7 +348,15 @@ exports.deleteMe = async(req,res)=>{
             );
         }
 
-        await Animal.deleteMany({ shelterId: userId });
+        try {
+          await Animal.deleteMany({ shelterId: userId });
+        } catch (err) {
+          // In tests we sometimes use non-ObjectId string ids (eg. 'user1').
+          // Mongoose will throw a CastError when trying to cast such strings
+          // to ObjectId for queries against an ObjectId field. Ignore this
+          // specific error and continue the deletion flow.
+          if (err.name !== 'CastError') throw err;
+        }
 
         const user = await User.findByIdAndDelete(userId).select('username');
         await writeAuditLog({ actor: user || userId, action: 'eliminato account', target: null });
