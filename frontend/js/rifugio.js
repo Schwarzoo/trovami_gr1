@@ -479,11 +479,11 @@ async function openShelterAnimalModal(animalId) {
     const nameEl = document.getElementById('animal-name-display');
     const speciesEl = document.getElementById('animal-species-display');
     const breedEl = document.getElementById('animal-breed-display');
-    const dateEl = document.getElementById('animal-date-display');
+    const dateEl = document.getElementById('animal-dateArrived-display');
     const ageEl = document.getElementById('animal-age-display');
-    const otherEl = document.getElementById('animal-other-display');
-    const notesContainer = document.getElementById('animal-notes-container');
-    const gallery = document.getElementById('animal-gallery');
+    const otherEl = document.getElementById('animal-otherInfo-display');
+    const notesContainer = document.getElementById('animal-medicalNotes');
+    const gallery = document.getElementById('animal-modal-gallery');
 
     if (titleEl) titleEl.textContent = a.name || (a.species || 'Animale');
     if (nameEl) nameEl.textContent = a.name || '-';
@@ -513,11 +513,25 @@ async function openShelterAnimalModal(animalId) {
       gallery.innerHTML = '';
       const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
       if (photo) {
-        const img = document.createElement('img');
-        img.src = photo;
-        img.style.maxWidth = '100%';
-        img.style.borderRadius = '8px';
-        gallery.appendChild(img);
+        try {
+          const res = await fetch(photo, { method: 'GET' });
+          if (!res.ok) throw new Error('no image');
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.startsWith('image')) throw new Error('not image');
+          const blob = await res.blob();
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.alt = a.species || 'Animale';
+          img.loading = 'lazy';
+          img.style.maxWidth = '100%';
+          img.style.borderRadius = '8px';
+          img.onload = () => URL.revokeObjectURL(img.src);
+          gallery.appendChild(img);
+        } catch (err) {
+          gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
+        }
+      } else {
+        gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
       }
     }
 

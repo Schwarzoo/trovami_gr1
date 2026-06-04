@@ -2,7 +2,7 @@ const HOME_API = '/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
 const HOME_RESOLVED_API = '/api/v1/announcements/count?status=resolved';
-const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/rifugi?isPublic=true';
+const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/shelters?isPublic=true';
 
 /**
  * Formats a value for the home-page announcement UI.
