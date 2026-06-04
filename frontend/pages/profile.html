@@ -41,8 +41,8 @@
 						<input id="phoneNumber" placeholder="Facoltativo" />
 					</div>
 
-					<div style="margin-top:4px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08);">
-						<h3 style="margin:0 0 10px 0;font-size:1rem;">Privacy contatti</h3>
+					<div class="profile-subsection">
+						<h3 class="profile-subsection-title">Privacy contatti</h3>
 						<div class="field checkbox-row">
 							<label><input id="showEmail" type="checkbox" />Mostra email nei miei annunci</label>
 						</div>
@@ -51,26 +51,26 @@
 						</div>
 					</div>
 
-					<div style="margin-top:4px;padding-top:12px;border-top:1px solid rgba(0,0,0,0.08);">
-						<h3 style="margin:0 0 10px 0;font-size:1rem;">Notifiche</h3>
+					<div class="profile-subsection">
+						<h3 class="profile-subsection-title">Notifiche</h3>
 						<div class="field checkbox-row">
 							<label><input id="emailOnComment" type="checkbox" />Ricevi email per nuovi commenti</label>
 						</div>
 					</div>
 
-					<div id="rifugio-status-box" class="comment-item" style="display:none;margin-top:8px;"></div>
-					<div id="rifugio-position-box" class="comment-item shelter-position-card" style="display:none;margin-top:8px;">
+					<div id="rifugio-status-box" class="comment-item profile-list--compact"></div>
+					<div id="rifugio-position-box" class="comment-item shelter-position-card profile-list--compact">
 						<div class="comment-meta">
 							<span class="comment-user">Posizione rifugio</span>
 							<span class="comment-date">Modificabile in ogni momento</span>
 						</div>
 						<div id="rifugio-position-text" class="comment-text">Aggiungi la posizione del rifugio per pubblicare annunci.</div>
 						<div class="field-grid shelter-position-fields">
-							<div class="field" style="margin:0;">
+							<div class="field profile-form-field--flush">
 								<label for="rifugio-search-address">Indirizzo</label>
 								<input id="rifugio-search-address" type="text" placeholder="Via, numero civico" />
 							</div>
-							<div class="field" style="margin:0;">
+							<div class="field profile-form-field--flush">
 								<label for="rifugio-search-city">Città</label>
 								<input id="rifugio-search-city" type="text" placeholder="Comune" />
 							</div>
@@ -79,23 +79,23 @@
 							<button id="searchRifugioPosition" type="button" class="btn btn--ghost">Trova da indirizzo</button>
 							<button id="useRifugioLocation" type="button" class="btn btn--ghost">Usa la mia posizione</button>
 						</div>
-						<div id="rifugio-position-map" class="shelter-position-map" style="display:none;"></div>
+						<div id="rifugio-position-map" class="shelter-position-map"></div>
 						<div class="shelter-position-actions shelter-position-actions--save">
 							<button id="editRifugioPosition" type="button" class="btn btn--ghost">Aggiungi posizione</button>
-							<button id="saveRifugioPosition" type="button" class="btn btn--primary" style="display:none;">Salva posizione</button>
+							<button id="saveRifugioPosition" type="button" class="btn btn--primary">Salva posizione</button>
 						</div>
 						<div id="rifugio-position-message" class="form-hint shelter-position-message"></div>
 					</div>
 
-					<div style="display:flex;gap:8px;margin-top:8px;">
+					<div class="profile-actions-row">
 						<button id="editProfileBtn" type="button" class="btn btn--primary">Modifica</button>
 						<button id="saveProfileBtn" type="submit" class="btn btn--primary" disabled>Salva</button>
-						<span id="profileMessage" style="align-self:center;color:var(--text-muted);"></span>
+						<span id="profileMessage" class="profile-message"></span>
 					</div>
-					<div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(0,0,0,0.08);">
+					<div class="profile-subsection profile-subsection--spaced">
 						<button id="logoutBtn" type="button" class="btn btn--danger">Logout</button>
 					</div>
-					<div style="margin-top:12px;">
+					<div class="profile-list">
 						<button id="deleteAccount" class="btn btn--danger">Elimina account</button>
 					</div>
 				</form>
@@ -103,28 +103,28 @@
 
 			<div class="profile-right">
 				<section id="notifications-section" class="section-card">
-					<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-						<h2 style="margin:0;">Notifiche</h2>
+					<div class="profile-section-head">
+						<h2>Notifiche</h2>
 						<button id="notificationsReadAll" type="button" class="btn btn--ghost">Segna tutte lette</button>
 					</div>
-					<div id="notifications-empty" style="margin-top:10px;color:var(--text-muted);">Nessuna notifica</div>
-					<div id="notifications-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+					<div id="notifications-empty" class="profile-muted profile-list--compact">Nessuna notifica</div>
+					<div id="notifications-list" class="profile-list"></div>
 				</section>
 
-				<section id="admin-section" class="section-card" style="display:none;">
+				<section id="admin-section" class="section-card">
 					<h2>Moderazione admin</h2>
-					<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+					<div class="profile-actions-row profile-actions-row--wrap adoption-reply-summary">
 						<button id="adminRefresh" type="button" class="btn btn--ghost">Aggiorna</button>
 					</div>
-					<h3 style="margin:10px 0;font-size:1rem;">Report aperti</h3>
-					<div id="admin-reports-empty" style="color:var(--text-muted);">Nessun report aperto</div>
-					<div id="admin-reports-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-					<h3 style="margin:18px 0 10px;font-size:1rem;">Richieste rifugio</h3>
-					<div id="admin-rifugi-empty" style="color:var(--text-muted);">Nessuna richiesta rifugio</div>
-					<div id="admin-rifugi-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-					<h3 style="margin:18px 0 10px;font-size:1rem;">Richieste riammissione</h3>
-					<div id="admin-readmissions-empty" style="color:var(--text-muted);">Nessuna richiesta riammissione</div>
-					<div id="admin-readmissions-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+					<h3 class="profile-section-title">Report aperti</h3>
+					<div id="admin-reports-empty" class="profile-muted">Nessun report aperto</div>
+					<div id="admin-reports-list" class="profile-list"></div>
+					<h3 class="profile-section-title profile-section-title--spaced">Richieste rifugio</h3>
+					<div id="admin-rifugi-empty" class="profile-muted">Nessuna richiesta rifugio</div>
+					<div id="admin-rifugi-list" class="profile-list"></div>
+					<h3 class="profile-section-title profile-section-title--spaced">Richieste riammissione</h3>
+					<div id="admin-readmissions-empty" class="profile-muted">Nessuna richiesta riammissione</div>
+					<div id="admin-readmissions-list" class="profile-list"></div>
 				</section>
 
 
@@ -132,40 +132,40 @@
 				<section id="my-announcements" class="section-card">
 					<h2>I miei annunci</h2>
 					<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
-					<div id="announcements-grid" style="margin-top:16px;"></div>
+					<div id="announcements-grid" class="profile-grid-spaced"></div>
 				</section>
 
-				<section id="my-animals" class="section-card" style="display:none;">
+				<section id="my-animals" class="section-card">
 					<h2>I miei animali</h2>
 					<span class="section-badge" id="my-animals-count">0 animali</span>
-					<div id="my-animals-grid" style="margin-top:16px;"></div>
+					<div id="my-animals-grid" class="profile-grid-spaced"></div>
          </section>
 
-				<section id="contact-requests-section" class="section-card" style="display:none;">
-					<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-						<h2 id="contact-requests-title" style="margin:0;">Richieste adozione</h2>
-						<div style="display:flex;gap:8px;flex-wrap:wrap;">
-							<button id="clearRepliedAdoptionRequests" type="button" class="btn btn--ghost" style="display:none;">Svuota richieste lette</button>
+				<section id="contact-requests-section" class="section-card">
+					<div class="profile-section-head">
+						<h2 id="contact-requests-title">Richieste adozione</h2>
+						<div class="profile-actions-row profile-actions-row--wrap">
+							<button id="clearRepliedAdoptionRequests" type="button" class="btn btn--ghost">Svuota richieste lette</button>
 							<button id="contactRequestsRefresh" type="button" class="btn btn--ghost">Aggiorna</button>
 						</div>
 					</div>
-					<div id="contact-requests-empty" style="margin-top:10px;color:var(--text-muted);">Nessuna richiesta adozione</div>
-					<div id="contact-requests-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+					<div id="contact-requests-empty" class="profile-muted profile-list--compact">Nessuna richiesta adozione</div>
+					<div id="contact-requests-list" class="profile-list"></div>
 				</section>
 
-				<section id="followed-shelters-section" class="section-card" style="display:none;">
-					<h2 style="margin:0;">Rifugi seguiti</h2>
-					<div id="followed-shelters-empty" style="margin-top:10px;color:var(--text-muted);">Non segui ancora nessun rifugio</div>
-					<div id="followed-shelters-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+				<section id="followed-shelters-section" class="section-card">
+					<h2 class="profile-section-head__title">Rifugi seguiti</h2>
+					<div id="followed-shelters-empty" class="profile-muted profile-list--compact">Non segui ancora nessun rifugio</div>
+					<div id="followed-shelters-list" class="profile-list"></div>
 				</section>
         
-				<section id="admin-audit-section" class="section-card" style="display:none;">
-					<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-						<h2 style="margin:0;">Audit logs</h2>
+				<section id="admin-audit-section" class="section-card">
+					<div class="profile-section-head">
+						<h2>Audit logs</h2>
 						<a class="btn btn--ghost" href="/pages/audit-logs.html">Vedi tutti</a>
 					</div>
-					<div id="admin-audit-empty" style="margin-top:10px;color:var(--text-muted);">Nessun log disponibile</div>
-					<div id="admin-audit-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px;"></div>
+					<div id="admin-audit-empty" class="profile-muted profile-list--compact">Nessun log disponibile</div>
+					<div id="admin-audit-list" class="profile-list"></div>
 				</section>
 			</div>
 
@@ -174,7 +174,7 @@
 	<script src="../js/profile.js?v=follow-rifugi-1"></script>
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-	<div id="admin-announcement-overlay" role="dialog" aria-modal="true" style="display:none;">
+	<div id="admin-announcement-overlay" role="dialog" aria-modal="true">
 		<div class="modal admin-announcement-modal">
 			<div class="modal-header">
 				<h2 id="admin-announcement-title">Annuncio</h2>
@@ -185,7 +185,7 @@
 		</div>
 	</div>
 
-	<div id="admin-user-overlay" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+	<div id="admin-user-overlay" class="modal-overlay" role="dialog" aria-modal="true">
 		<div class="modal-card admin-user-modal">
 			<div class="modal-header">
 				<h3 id="admin-user-title">Account</h3>
@@ -195,14 +195,14 @@
 		</div>
 	</div>
 
-	<div id="adoption-reply-overlay" class="modal-overlay" role="dialog" aria-modal="true" style="display:none;">
+	<div id="adoption-reply-overlay" class="modal-overlay" role="dialog" aria-modal="true">
 		<div class="modal-card admin-user-modal">
 			<div class="modal-header">
 				<h3 id="adoption-reply-title">Rispondi richiesta</h3>
 				<button id="adoption-reply-close" type="button" aria-label="Chiudi">X</button>
 			</div>
 			<div class="modal-body">
-				<div id="adoption-reply-summary" class="comment-item" style="margin-bottom:12px;"></div>
+				<div id="adoption-reply-summary" class="comment-item adoption-reply-summary"></div>
 				<div class="field">
 					<label>Risposta</label>
 					<textarea id="adoption-reply-message" maxlength="1000" rows="5" placeholder="Scrivi la risposta per l'utente"></textarea>
@@ -211,12 +211,12 @@
 					<button id="adoption-reply-send" type="button" class="btn btn--primary">Invia risposta</button>
 					<button id="adoption-reply-cancel" type="button" class="btn btn--ghost">Annulla</button>
 				</div>
-				<div id="adoption-reply-status" class="form-hint" style="margin-top:8px;"></div>
+				<div id="adoption-reply-status" class="form-hint adoption-reply-status"></div>
 			</div>
 		</div>
 	</div>
 
-	<div id="profile-confirm-overlay" class="modal-overlay profile-confirm-overlay" role="dialog" aria-modal="true" style="display:none;">
+	<div id="profile-confirm-overlay" class="modal-overlay profile-confirm-overlay" role="dialog" aria-modal="true">
 		<div class="modal-card profile-confirm-modal">
 			<div class="modal-header">
 				<h3 id="profile-confirm-title">Conferma azione</h3>
@@ -233,7 +233,7 @@
 	</div>
 
 	<!-- Modal for create/edit announcement -->
-	<div id="modal-overlay" class="modal-overlay" style="display:none;">
+	<div id="modal-overlay" class="modal-overlay">
 		<div class="modal-card wizard-modal">
 			
 			<div class="wizard-header">
@@ -247,7 +247,7 @@
 			<div class="type-tabs">
 				<button type="button" class="type-tab active" onclick="wizSelectType('LostAnimal', this)">Smarrito</button>
 				<button type="button" class="type-tab" onclick="wizSelectType('Sighting', this)">Avvistamento</button>
-				<select id="modal-type" style="display:none;">
+				<select id="modal-type">
 					<option value="LostAnimal">Smarrito</option>
 					<option value="Sighting">Avvistamento</option>
 				</select>
@@ -263,7 +263,7 @@
 				<div class="step-item"><div class="step-circle todo" id="wiz-sc4">4</div><span class="step-label todo" id="wiz-sl4">Riepilogo</span></div>
 			</div>
 
-			<form id="modalForm" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+			<form id="modalForm" class="wizard-form">
 				
 				<div class="step-content active" id="wiz-panel1">
 					<p class="step-title">Di che animale si tratta?</p>
@@ -296,7 +296,7 @@
 								<div class="wiz-chip" onclick="wizSetChip('modal-gender', 'Femmina', this)">Femmina</div>
 								<div class="wiz-chip" onclick="wizSetChip('modal-gender', 'Sconosciuto', this)">Sconos.</div>
 							</div>
-							<select id="modal-gender" style="display:none;">
+							<select id="modal-gender">
 								<option value="Sconosciuto">Sconosciuto</option>
 								<option value="Maschio">Maschio</option>
 								<option value="Femmina">Femmina</option>
@@ -316,11 +316,11 @@
 					<div class="wiz-field">
 						<label>Colore *</label>
 						<div class="color-row">
-							<div class="color-swatch active" style="background:#1a1a1a;border:2.5px solid #fff" onclick="wizSetColor('Nero', this)" title="Nero"></div>
-							<div class="color-swatch" style="background:#f1f1ef" onclick="wizSetColor('Bianco', this)" title="Bianco"></div>
-							<div class="color-swatch" style="background:#a0522d" onclick="wizSetColor('Marrone', this)" title="Marrone"></div>
-							<div class="color-swatch" style="background:#d2691e" onclick="wizSetColor('Arancio', this)" title="Arancio"></div>
-							<div class="color-swatch" style="background:#888880" onclick="wizSetColor('Grigio', this)" title="Grigio"></div>
+							<div class="color-swatch color-swatch--black active" onclick="wizSetColor('Nero', this)" title="Nero"></div>
+							<div class="color-swatch color-swatch--white" onclick="wizSetColor('Bianco', this)" title="Bianco"></div>
+							<div class="color-swatch color-swatch--brown" onclick="wizSetColor('Marrone', this)" title="Marrone"></div>
+							<div class="color-swatch color-swatch--orange" onclick="wizSetColor('Arancio', this)" title="Arancio"></div>
+							<div class="color-swatch color-swatch--gray" onclick="wizSetColor('Grigio', this)" title="Grigio"></div>
 							<div class="color-swatch multi" onclick="wizSetColor('Multicolore', this)" title="Multicolore"></div>
 						</div>
 						<input type="hidden" id="modal-color" value="Nero" required>
@@ -334,14 +334,14 @@
 								<div class="wiz-chip" onclick="wizSetChip('modal-lunghezzaPelo', 'Medio', this)">Medio</div>
 								<div class="wiz-chip" onclick="wizSetChip('modal-lunghezzaPelo', 'Lungo', this)">Lungo</div>
 							</div>
-							<select id="modal-lunghezzaPelo" style="display:none;" aria-label="Lunghezza pelo">
+							<select id="modal-lunghezzaPelo" aria-label="Lunghezza pelo">
 								<option value="" selected disabled>Seleziona lunghezza</option>
 								<option value="Corto">Corto</option>
 								<option value="Medio">Medio</option>
 								<option value="Lungo">Lungo</option>
 							</select>
 						</div>
-						<div class="wiz-field" id="modal-microchip-row" style="display:none;">
+						<div class="wiz-field" id="modal-microchip-row">
 							<label>Microchip</label>
 							<input type="text" id="modal-microchipId" placeholder="Codice microchip" />
 						</div>
@@ -372,7 +372,7 @@
 						<input type="text" id="modal-distinctiveFeatures" placeholder="Es. collare rosso, cicatrice, zoppia..." />
 					</div>
 					
-					<div class="wiz-field" id="modal-adoption-row" style="display:none;">
+					<div class="wiz-field" id="modal-adoption-row">
 						<label>Disponibilità adozione</label>
 						<select id="modal-adoptionStatus">
 							<option value="none">Non disponibile</option>
@@ -387,43 +387,43 @@
 					<div class="wiz-field">
 						<label>Foto (opzionale)</label>
 						<div class="photo-drop" onclick="document.getElementById('modal-photo-file').click()">
-							<div style="font-size:1.8rem; margin-bottom:5px;">📷</div>
-							<div style="color:var(--wiz-text-muted); font-size:0.9rem;">Clicca per caricare un'immagine</div>
+							<div class="photo-drop-icon">📷</div>
+							<div class="photo-drop-copy">Clicca per caricare un'immagine</div>
 						</div>
-						<input id="modal-photo-file" type="file" accept="image/*" style="display:none;" />
-						<img id="modal-photo-preview" src="" style="display:none; max-height:120px; border-radius:8px; margin-top:10px; align-self:center;" />
+						<input id="modal-photo-file" type="file" accept="image/*" />
+						<img id="modal-photo-preview" src="" alt="Anteprima foto" />
 					</div>
 
 					<div class="wiz-field">
 						<label id="modal-lastSeenDate-label">Ultima data vista</label>
-						<div class="choice-buttons" style="margin-bottom:8px;">
+						<div class="choice-buttons wizard-choice-row">
 							<button type="button" id="lastSeenTodayBtn" class="btn btn--ghost is-selected">Oggi</button>
 							<button type="button" id="lastSeenCustomBtn" class="btn btn--ghost">Scegli data</button>
 						</div>
-						<input id="modal-lastSeenDate" type="date" style="display:none;" />
+						<input id="modal-lastSeenDate" type="date" />
 					</div>
 
 					<div class="wiz-field" id="modal-position-section">
 						<label>Posizione *</label>
-						<div style="display:flex; gap:8px; margin-bottom:8px;">
-							<button type="button" id="pickOnMap" class="btn btn--ghost" style="flex:1;">Scegli su mappa</button>
-							<button type="button" id="useMyLocation" class="btn btn--ghost" style="flex:1;">Mia posizione</button>
+						<div class="wizard-position-actions">
+							<button type="button" id="pickOnMap" class="btn btn--ghost">Scegli su mappa</button>
+							<button type="button" id="useMyLocation" class="btn btn--ghost">Mia posizione</button>
 						</div>
 						<input id="modal-coords" type="hidden" />
-						<div id="modal-map" style="height:200px; display:none; border-radius:8px;"></div>
+						<div id="modal-map" class="wizard-inline-map"></div>
 					</div>
 				</div>
 
 				<div class="step-content" id="wiz-panel4">
 					<p class="step-title">Controlla e pubblica</p>
-					<div style="background:var(--wiz-surface2); border:1px solid var(--wiz-border); border-radius:10px; padding:16px; margin-bottom:15px;">
-						<ul style="list-style:none; padding:0; margin:0; font-size:0.9rem; color:var(--wiz-text-muted); display:flex; flex-direction:column; gap:10px;">
+					<div class="profile-summary-box">
+						<ul class="profile-summary-list">
 							<li id="summary-base">❌ Dati base inseriti (Specie e Genere)</li>
 							<li id="summary-aspect">❌ Dettagli aspetto completati</li>
 							<li id="summary-location">❌ Posizione e data impostate</li>
 						</ul>
 					</div>
-					<div id="profile-modal-progress" class="loading-bar" aria-hidden="true" style="margin-top:10px;">
+					<div id="profile-modal-progress" class="loading-bar wizard-progress" aria-hidden="true">
 						<div class="loading-bar__track"><div class="loading-bar__fill"></div></div>
 						<div class="loading-bar__label">Smart matching in corso, attendere...</div>
 					</div>
@@ -431,12 +431,12 @@
 			</form>
 
 			<div class="wiz-footer">
-				<span class="step-counter" id="wiz-stepCounter" style="font-size:0.85rem; color:#ffffff;">Passo 1 di 4</span>
-				<div style="display:flex; gap:10px;">
-					<button type="button" class="wiz-btn-back" id="wiz-btnBack" onclick="wizPrevStep()" style="display:none;">Indietro</button>
+				<span class="step-counter" id="wiz-stepCounter">Passo 1 di 4</span>
+				<div class="profile-form-footer">
+					<button type="button" class="wiz-btn-back" id="wiz-btnBack" onclick="wizPrevStep()">Indietro</button>
 					<button type="button" class="wiz-btn-next" id="wiz-btnNext" onclick="wizNextStep()">Avanti</button>
 					<button type="button" class="wiz-btn-publish" id="modal-save">Pubblica Annuncio</button>
-					<button type="button" id="modal-cancel" style="display:none;">Annulla</button>
+					<button type="button" id="modal-cancel">Annulla</button>
 				</div>
 			</div>
 
@@ -444,7 +444,7 @@
 	</div>
 
 	<!-- Modal for announcement preview -->
-	<div id="view-modal-overlay" class="view-modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+	<div id="view-modal-overlay" class="view-modal-overlay" role="dialog" aria-modal="true">
 		<div class="view-modal">
 			<div class="view-modal-header">
 				<h3 id="view-modal-title">Annuncio</h3>
@@ -464,14 +464,14 @@
 	<div data-include="footer"></div>
 
 	<!-- Animal detail modal -->
-	<div id="animal-modal-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true">
+	<div id="animal-modal-overlay" class="modal-overlay" role="dialog" aria-modal="true">
 		<div class="modal-card">
 			<div class="modal-header">
 				<h3 id="animal-modal-title">Scheda animale</h3>
 				<button id="animal-modal-close">✕</button>
 			</div>
 			<div class="modal-body">
-				<div id="animal-modal-gallery" style="margin-bottom:8px;"></div>
+				<div id="animal-modal-gallery" class="modal-gallery-spaced"></div>
 				<form id="animal-modal-form">
 					<div class="form-grid">
 						<div class="field">
@@ -515,9 +515,9 @@
 					</div>
 					<div class="field">
 						<label>Note mediche</label>
-						<div id="animal-medicalNotes" style="margin-bottom:8px;color:var(--text-muted)"></div>
+						<div id="animal-medicalNotes" class="animal-medical-notes"></div>
 						<textarea id="animal-newMedicalNote" rows="2" placeholder="Aggiungi una nota medica..."></textarea>
-						<div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;">
+						<div class="animal-modal-actions">
 							<button id="animal-save" type="button" class="btn btn--primary">Salva</button>
 						</div>
 					</div>

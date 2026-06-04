@@ -530,13 +530,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         : null;
       const announcementLinkHtml = shelterAnimalLink
         ? `
-            <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+            <div class="profile-actions-row">
               <a class="btn btn--ghost" href="${shelterAnimalLink}">Apri scheda animale</a>
             </div>
           `
         : (!isDeletedAnnouncementNotification && !isReportNotification && annId
           ? `
-            <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+            <div class="profile-actions-row">
               <a class="btn btn--ghost" href="/pages/announcements.html?highlight=${encodeURIComponent(annId)}">Vedi annuncio</a>
             </div>
           `
@@ -646,7 +646,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${request.replyMessage ? `<br><strong>Risposta:</strong> ${escapeHtml(request.replyMessage)}` : ''}
         </div>
         ${canReply ? `
-          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="profile-actions-row profile-actions-row--wrap">
             <button type="button" class="btn btn--primary" data-adoption-action="open-reply" data-request-id="${escapeHtml(request._id)}">Rispondi</button>
           </div>
         ` : ''}
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="comment-date">${escapeHtml(pref)}</span>
         </div>
         <div class="comment-text">${escapeHtml(city || 'Rifugio seguito')}</div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="profile-actions-row profile-actions-row--wrap">
           <a class="btn btn--ghost followed-shelter-link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}">Vai alla pagina rifugio</a>
           <button type="button" class="btn btn--ghost" data-follow-action="unfollow" data-shelter-id="${escapeHtml(id)}">Non seguire più</button>
         </div>
@@ -1483,7 +1483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${escapeHtml(report.details || 'Nessun dettaglio')}
           <br>Annuncio: ${escapeHtml(animal?.species || 'non disponibile')} - ${isQuick ? 'segnalazione veloce anonima' : escapeHtml(publisher?.username || 'utente')}
         </div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="profile-actions-row profile-actions-row--wrap">
           ${ann?._id ? `<button class="btn btn--orange" data-admin-action="view-ann" data-ann-id="${escapeHtml(ann._id)}">Vedi annuncio</button>` : ''}
           ${ann?._id ? `<button class="btn btn--danger" data-admin-action="delete-ann" data-ann-id="${escapeHtml(ann._id)}">Elimina annuncio</button>` : ''}
           ${publisherId ? `<button class="btn btn--orange" data-admin-action="view-user" data-user-id="${escapeHtml(publisherId)}">Visualizza account</button>` : ''}
@@ -1523,7 +1523,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${rifugio.rifugioData?.address ? `<br>${escapeHtml(rifugio.rifugioData.address)}` : ''}
           ${rifugio.rifugioData?.description ? `<br>${escapeHtml(rifugio.rifugioData.description)}` : ''}
         </div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="profile-actions-row profile-actions-row--wrap">
           <button class="btn btn--primary" data-admin-action="approve-rifugio" data-user-id="${escapeHtml(rifugio._id)}">Approva</button>
           <button class="btn btn--danger" data-admin-action="reject-rifugio" data-user-id="${escapeHtml(rifugio._id)}">Rifiuta</button>
         </div>
@@ -1560,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${escapeHtml(user.readmissionRequest?.message || '')}
           ${user.email ? `<br>${escapeHtml(user.email)}` : ''}
         </div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div class="profile-actions-row profile-actions-row--wrap">
           <button class="btn btn--primary" data-admin-action="approve-readmission" data-user-id="${escapeHtml(user._id)}">Approva riammissione</button>
           <button class="btn btn--danger" data-admin-action="reject-readmission" data-user-id="${escapeHtml(user._id)}">Rifiuta</button>
         </div>
@@ -2051,7 +2051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div class="card-meta"><span class="card-species">${escapeHtml(a.species || '')}</span></div>
               <h3 class="card-breed">${escapeHtml(name)}</h3>
               <p class="card-description">${escapeHtml(a.distinctiveFeatures || '')}</p>
-              <div style="margin-top:8px;font-size:0.9rem;color:var(--text-muted)">${escapeHtml(status)}</div>
+              <div class="animal-status">${escapeHtml(status)}</div>
             </div>
           </article>
         `;
@@ -2155,8 +2155,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (notes.length === 0) notesContainer.innerHTML = '<div class="muted">Nessuna nota medica</div>';
       notes.forEach(n => {
         const el = document.createElement('div');
-        el.style.padding = '6px 0';
-        el.innerHTML = `<div style="font-size:0.85rem;color:var(--text-muted)">${escapeHtml(new Date(n.createdAt).toLocaleString())}</div><div>${escapeHtml(n.text)}</div>`;
+        el.className = 'medical-note';
+        el.innerHTML = `<div class="medical-note-date">${escapeHtml(new Date(n.createdAt).toLocaleString())}</div><div>${escapeHtml(n.text)}</div>`;
         notesContainer.appendChild(el);
       });
 
@@ -2363,7 +2363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
             ${isLost ? 'Smarrito' : 'Avvistato'}
           </span>
-          ${score ? `<span class="badge badge--score" style="right:10px;left:auto;">${escapeHtml(score)}</span>` : ''}
+          ${score ? `<span class="badge badge--score">${escapeHtml(score)}</span>` : ''}
         </div>
         <div class="card-body">
           <div class="card-meta">

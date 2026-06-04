@@ -326,7 +326,7 @@ function renderCommentsHtml(comments) {
           <span class="comment-date">${homeEscapeHtml(when)}</span>
         </div>
         <div class="comment-text">${homeEscapeHtml(c?.text || '')}</div>
-        <div id="${slotId}" class="comment-contact-slot" style="display:none;"></div>
+        <div id="${slotId}" class="comment-contact-slot"></div>
       </div>
     `;
   }).join('');
@@ -658,7 +658,7 @@ async function openHomeModal(ann) {
         if (u.phoneNumber) parts.push(`<a href="tel:${homeEscapeHtml(u.phoneNumber)}">${homeEscapeHtml(u.phoneNumber)}</a>`);
         if (u.email) parts.push(`<a href="mailto:${homeEscapeHtml(u.email)}">${homeEscapeHtml(u.email)}</a>`);
         slot.innerHTML = `
-          <div class="modal-contact" style="margin-top:8px;">
+          <div class="modal-contact modal-contact--inline">
             <strong>Contatto:</strong>
             <span>${homeEscapeHtml(u.username || '—')}</span>
             ${parts.join('')}

@@ -74,11 +74,6 @@ body::after {
   color: var(--accent);
 }
 
-/* Map page: make the title white for better contrast over the dark background */
-.map-header h1 {
-  color: var(--accent);
-}
-
 .page-header p {
   color: #ffffff;
   font-size: 0.98rem;
@@ -135,8 +130,17 @@ body::after {
   border-color: #9e3a10;
 }
 
+.user-action-btn--warn {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
 .user-action-btn--block:hover {
   background: #7f2f0d;
+}
+
+.user-action-btn--warn:hover {
+  background: #a8411a;
 }
 
 /* FILTERS */
@@ -420,82 +424,6 @@ button#nearby-button:disabled {
   color: #fff;
 }
 
-.card-body {
-  padding: 1rem 1.1rem 1.1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.card-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.35rem;
-  gap: 0.5rem;
-}
-
-.card-species {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  background: rgba(196, 82, 28, 0.08);
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-}
-
-.card-date {
-  font-size: 0.76rem;
-  color: var(--text-muted);
-}
-
-.card-breed {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-weight: 500;
-  margin-bottom: 0.3rem;
-  color: var(--text);
-  line-height: 1.25;
-}
-
-.card-description {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  line-height: 1.55;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 0.7rem;
-}
-
-.card-details {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 0.22rem 0.65rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 0.9rem;
-  padding: 0.6rem 0.75rem;
-  background: var(--bg);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-
-.card-detail-label {
-  font-weight: 700;
-  color: var(--text);
-}
-
-.card-details span:nth-child(even) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* Card CTA button */
 .card-cta {
   display: inline-flex;
@@ -532,13 +460,6 @@ button#nearby-button:disabled {
   color: var(--text-muted);
   margin-bottom: 0.4rem;
 }
-
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
 
 .modal-gallery-wrapper {
   position: relative;
@@ -955,6 +876,14 @@ button#nearby-button:disabled {
   margin-top: 0.5rem;
   margin-bottom: 0;
   padding: 0.7rem 0.9rem;
+}
+
+.comment-contact-slot {
+  display: none;
+}
+
+.modal-contact--inline {
+  margin-top: 8px;
 }
 
 .comment-form {

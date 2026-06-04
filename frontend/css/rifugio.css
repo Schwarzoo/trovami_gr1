@@ -67,6 +67,12 @@
   display: flex;
 }
 
+#follow-shelter-button,
+#follow-shelter-overlay,
+#animal-modal-overlay {
+  display: none;
+}
+
 .hero-actions-secondary {
   display: flex;
   gap: 0.75rem;
@@ -140,6 +146,41 @@
   min-height: 1.2rem;
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+.animal-modal-section {
+  margin-top: 12px;
+}
+
+.animal-modal-section h4 {
+  margin: 0 0 8px;
+}
+
+.animal-medical-notes {
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.modal-gallery-spaced {
+  margin-bottom: 8px;
+}
+
+.animal-status,
+.medical-note-date {
+  color: var(--text-muted);
+}
+
+.animal-status {
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.medical-note {
+  padding: 6px 0;
+}
+
+.medical-note-date {
+  font-size: 0.85rem;
 }
 
 .hero-stats {
@@ -348,6 +389,10 @@
   background: var(--bg);
   display: grid;
   gap: 0.75rem;
+}
+
+.animal-contact-request {
+  margin-top: 1rem;
 }
 
 .contact-request-box p {

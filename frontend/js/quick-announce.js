@@ -81,7 +81,7 @@ function requestGeolocation() {
   
   if (!locationDisplay) return;
   if (!navigator.geolocation) {
-    locationDisplay.innerHTML = '<span class="location-status" style="color: var(--text-muted);">⚠️ Geolocalizzazione non disponibile</span>';
+    locationDisplay.innerHTML = '<span class="location-status">⚠️ Geolocalizzazione non disponibile</span>';
     return;
   }
 

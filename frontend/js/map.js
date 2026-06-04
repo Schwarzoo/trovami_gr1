@@ -248,43 +248,36 @@ function renderAnnouncements(announcements) {
 
   const emoji = animal?.species?.toLowerCase().includes('gatt') ? '🐈' : '🐕';
   const mediaBlock = `
-    <div class="popup-media" data-ann-id="${a._id}" style="width:100%;height:110px;overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:42px;">
+    <div class="popup-media" data-ann-id="${a._id}">
       <span>${emoji}</span>
     </div>`;
 
-  const badgeStyle = isLost
-    ? 'background:#FCEBEB;color:#A32D2D;'
-    : 'background:#EAF3DE;color:#3B6D11;';
-
   const popupHTML = `
-    <div style="width:260px;font-family:sans-serif;border-radius:12px;overflow:hidden;cursor:pointer;"
+    <div class="map-popup-card"
          onclick="window.location.href='/pages/announcements.html?highlight=${a._id}'">
 
-      <div style="position:relative;">
+      <div class="map-popup-media-wrap">
         ${mediaBlock}
-        <span style="position:absolute;top:8px;left:8px;font-size:11px;font-weight:600;
-                     padding:3px 9px;border-radius:20px;${badgeStyle}">
+        <span class="map-popup-badge map-popup-badge--${isLost ? 'lost' : 'sighting'}">
           ${isLost ? 'Smarrito' : 'Avvistato'}
         </span>
       </div>
 
-      <div style="padding:12px 14px 14px;">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
-          <div style="width:26px;height:26px;border-radius:50%;background:#E6F1FB;
-                      display:flex;align-items:center;justify-content:center;font-size:13px;">🐾</div>
-          <span style="font-size:12px;color:#666;">
+      <div class="map-popup-body">
+        <div class="map-popup-meta">
+          <div class="map-popup-icon">🐾</div>
+          <span class="map-popup-animal">
             ${animal?.name ? escapeHtml(animal.name) + ' · ' : ''}${animal?.species ?? ''}${animal?.breed ? ' · ' + animal.breed : ''}
           </span>
         </div>
 
-        <div style="font-size:14px;font-weight:600;color:#111;margin-bottom:4px;
-                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        <div class="map-popup-title">
           ${a.description.length > 40 ? a.description.slice(0,40)+'…' : a.description}
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
-          <span style="font-size:11px;color:#999;">📅 ${date}</span>
-          <span style="font-size:12px;font-weight:500;color:#1a73e8;">Vedi annuncio →</span>
+        <div class="map-popup-footer">
+          <span class="map-popup-date">📅 ${date}</span>
+          <span class="map-popup-link">Vedi annuncio →</span>
         </div>
       </div>
     </div>
@@ -303,7 +296,7 @@ function renderAnnouncements(announcements) {
       if (!ct.startsWith('image')) throw new Error('not image');
       const blob = await res.blob();
       const imgUrl = URL.createObjectURL(blob);
-      const imgBlock = `<img src="${imgUrl}" style="width:100%;height:110px;object-fit:cover;display:block;"/>`;
+      const imgBlock = `<img src="${imgUrl}" class="map-popup-img" alt="Foto annuncio" />`;
       const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
       marker.getPopup().setContent(newPopup);
       marker._imgUrl = imgUrl;
@@ -321,7 +314,7 @@ function renderAnnouncements(announcements) {
       if (!ct.startsWith('image')) throw new Error('not image');
       const blob = await res.blob();
       const imgUrl = URL.createObjectURL(blob);
-      const imgBlock = `<img src="${imgUrl}" style="width:100%;height:110px;object-fit:cover;display:block;"/>`;
+      const imgBlock = `<img src="${imgUrl}" class="map-popup-img" alt="Foto annuncio" />`;
       const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
       marker.getPopup().setContent(newPopup);
       if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); }
@@ -340,14 +333,14 @@ function renderAnnouncements(announcements) {
     const name = rifugio.rifugioData?.rifugioName || rifugio.username || 'Rifugio';
     const address = [rifugio.rifugioData?.address, rifugio.rifugioData?.city].filter(Boolean).join(', ');
     const popupHTML = `
-      <div style="width:300px;font-family:sans-serif;padding:4px 2px 2px;">
-        <div style="font-size:17px;font-weight:700;margin-bottom:8px;color:#111;">${escapeHtml(name)}</div>
-        ${rifugio.rifugioData?.description ? `<div style="font-size:13px;color:#555;line-height:1.45;margin-bottom:10px;">${escapeHtml(rifugio.rifugioData.description)}</div>` : ''}
-        ${address ? `<div style="font-size:13px;color:#666;margin-bottom:8px;">${escapeHtml(address)}</div>` : ''}
-        ${rifugio.phoneNumber ? `<div style="font-size:13px;color:#666;">Tel: ${escapeHtml(rifugio.phoneNumber)}</div>` : ''}
-        ${rifugio.email ? `<div style="font-size:13px;color:#666;">Email: ${escapeHtml(rifugio.email)}</div>` : ''}
+      <div class="shelter-map-popup">
+        <div class="shelter-map-popup__title">${escapeHtml(name)}</div>
+        ${rifugio.rifugioData?.description ? `<div class="shelter-map-popup__description">${escapeHtml(rifugio.rifugioData.description)}</div>` : ''}
+        ${address ? `<div class="shelter-map-popup__text">${escapeHtml(address)}</div>` : ''}
+        ${rifugio.phoneNumber ? `<div class="shelter-map-popup__contact">Tel: ${escapeHtml(rifugio.phoneNumber)}</div>` : ''}
+        ${rifugio.email ? `<div class="shelter-map-popup__contact">Email: ${escapeHtml(rifugio.email)}</div>` : ''}
         <a href="/pages/rifugi.html?rifugioId=${encodeURIComponent(rifugio._id)}"
-           style="display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:#C85A2A;text-decoration:none;">
+           class="shelter-map-popup__link">
           Apri pagina rifugi →
         </a>
       </div>

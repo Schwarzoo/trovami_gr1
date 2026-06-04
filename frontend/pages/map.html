@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../css/announcements.css" />
   <link rel="stylesheet" href="../css/style.css" />
   <link rel="stylesheet" href="../css/header.css" />
+  <link rel="stylesheet" href="../css/map.css" />
   <title>Mappa — Trovami</title>
 </head>
 
@@ -57,8 +58,7 @@
       </div>
       <div class="filter-group">
         <label for="filter-include-unknown">Opzioni</label>
-        <label
-          style="display:flex;align-items:center;gap:8px;font-size:0.9rem;font-weight:500;color:rgb(0, 0, 0);text-transform:none;letter-spacing:0;">
+        <label class="include-unknown-label">
           <input type="checkbox" id="filter-include-unknown" checked />
           Includi segnalazioni con informazioni sconosciute
         </label>
@@ -66,7 +66,7 @@
       <span id="result-count">— annunci trovati</span>
     </div>
 
-    <div class="map-wrapper" style="position:relative;">
+    <div class="map-wrapper">
       <button id="locate-btn" aria-label="Dove sono?" title="Dove sono?">Dove sono?</button>
       <div id="map"></div>
     </div>
