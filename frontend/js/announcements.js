@@ -434,26 +434,19 @@ async function openModal(ann) {
             <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
             <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
         </dl>
-
+        
 
         <div class="modal-contact">
             <div class="modal-contact-header">Contatti</div>
-            ${data.isQuick && data.quickContact
-                ? `<div class="modal-contact-name">Nome: ${escapeHtml(data.quickContact.name || 'Segnalatore anonimo')}</div>
+            ${isLoggedIn
+                ? `<div class="modal-contact-name">Nome: ${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
                    <div class="modal-contact-links">
-                       ${data.quickContact.phoneNumber ? `<a href="tel:${escapeHtml(data.quickContact.phoneNumber)}"> ${escapeHtml(data.quickContact.phoneNumber)}</a>` : ''}
-                       ${data.quickContact.email ? `<a href="mailto:${escapeHtml(data.quickContact.email)}">${escapeHtml(data.quickContact.email)}</a>` : ''}
+                       ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
+                       ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
                    </div>
-                   ${!data.quickContact.email && !data.quickContact.phoneNumber ? '<span class="contact-locked">Nessun contatto disponibile</span>' : ''}`
-                : (isLoggedIn
-                    ? `<div class="modal-contact-name">Nome: ${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
-                       <div class="modal-contact-links">
-                           ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
-                           ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
-                       </div>
-                       ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
-                       ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
-                    : `<span class="contact-locked">🔒 Accedi per vedere i contatti del segnalante</span>`)
+                   ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
+                   ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
+                : `<span class="contact-locked">🔒 Accedi per vedere i contatti del segnalante</span>`
             }
         </div>
 
