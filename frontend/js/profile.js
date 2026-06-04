@@ -415,16 +415,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return data;
   }
 
-  /**
-   * Fetches announcement by id data from the API.
-   * @param {string} id - Announcement identifier to load.
-   * @returns {Promise<Object|null>} Announcement payload, or null when it cannot be loaded.
-   */
-  async function fetchAnnouncementById(id) {
-    const res = await fetch(`/api/v1/announcements/${encodeURIComponent(id)}`);
-    if (!res.ok) return null;
-    return await res.json();
-  }
 
   /**
    * Fetches similar announcements data from the API.
@@ -1150,20 +1140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
-  /**
-   * Reads a fetch error response and builds a displayable message.
-   * @param {Response} res - Failed fetch response.
-   * @param {string} fallback - Message prefix used when the response has no JSON message.
-   * @returns {Promise<string>} Error message for alerts or thrown errors.
-   */
-  async function readResponseError(res, fallback) {
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const json = await res.json().catch(() => ({}));
-      if (json?.userMessage || json?.message) return json.userMessage || json.message;
-    }
-    return `${fallback} (${res.status})`;
-  }
 
   /**
    * Fetches announcement count for a user through the announcements collection endpoint.

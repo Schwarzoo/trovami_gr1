@@ -13,40 +13,6 @@ function showError(message) {
   banner.style.display = 'block';
 }
 
-/**
- * Builds authorization headers for admin moderation requests.
- * @returns {{'Content-Type': string, Authorization: string}} JSON request headers with the stored bearer token.
- */
-function authHeader() {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token || ''}`
-  };
-}
-
-/**
- * Fetches announcement by id data from the API.
- * @param {string} id - Announcement identifier to load.
- * @returns {Promise<Object>} Full announcement detail payload.
- * @throws {Error} When the announcement cannot be loaded.
- */
-async function fetchAnnouncementById(id) {
-  const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error('Errore caricamento annuncio');
-  return res.json();
-}
-
-/**
- * Reads an API error message, falling back to a status-aware default.
- * @param {Response} res - Failed fetch response.
- * @param {string} fallback - Message prefix used when the response body has no message.
- * @returns {Promise<string>} Error message suitable for display.
- */
-async function readResponseError(res, fallback) {
-  const json = await res.json().catch(() => ({}));
-  return json?.userMessage || json?.message || `${fallback} (${res.status})`;
-}
 
 /**
  * Sends an admin warning for the selected announcement publisher.
@@ -60,7 +26,7 @@ async function warnUser(userId) {
   const warnReason = reason.trim() || 'Ammonimento da moderazione account';
   const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/warnings`, {
     method: 'POST',
-    headers: authHeader(),
+    headers: authJsonHeaders(),
     body: JSON.stringify({ reason: warnReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore avvertimento'));
@@ -79,7 +45,7 @@ async function blockUser(userId) {
   const blockReason = reason.trim() || 'Account bloccato da admin';
   const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`, {
     method: 'PATCH',
-    headers: authHeader(),
+    headers: authJsonHeaders(),
     body: JSON.stringify({ status: 'blocked', reason: blockReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore blocco'));
@@ -131,7 +97,7 @@ function closeModal() {
 async function openModal(ann) {
   let data = ann;
   try {
-    data = await fetchAnnouncementById(ann._id);
+    data = await fetchAnnouncementById(ann._id, { throwOnError: true });
   } catch (err) {
     showError(err.message || 'Errore caricamento annuncio');
   }

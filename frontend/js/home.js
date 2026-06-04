@@ -6,37 +6,6 @@ const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/shelters?isPublic=true';
 const HOME_CURRENT_ROLE = localStorage.getItem('role') || '';
 
 /**
- * Fetches home announcements data from the API.
- * @returns {Promise<Array<Object>>} Announcement list for the home page, or an empty array on failure.
- */
-async function fetchHomeAnnouncements() {
-  try {
-    const res = await fetch(HOME_API);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    return Array.isArray(json) ? json : json.data || [];
-  } catch (err) {
-    console.error('Errore fetch annunci home', err);
-    return [];
-  }
-}
-
-/**
- * Fetches home announcement by id data from the API.
- * @param {string} id - Announcement identifier to load.
- * @returns {Promise<Object|null>} Announcement detail payload, or null when loading fails.
- */
-async function fetchHomeAnnouncementById(id) {
-  try {
-    const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (err) {
-    return null;
-  }
-}
-
-/**
  * Fetches public rifugi count data from the API.
  * @returns {Promise<number>} Number of public shelters returned by the API, or 0 on failure.
  */
@@ -117,102 +86,6 @@ function isSameDay(left, right) {
 function isWithinLast24Hours(date) {
   if (!date) return false;
   return Date.now() - date.getTime() <= 24 * 60 * 60 * 1000;
-}
-
-/**
- * Posts a new comment for an announcement shown on the home page.
- * @param {string} id - Announcement identifier receiving the comment.
- * @param {string} text - Comment text submitted by the user.
- * @returns {Promise<Object>} API response containing the new comment and updated comment list.
- * @throws {Error} When the user is not logged in or the API rejects the comment.
- */
-async function postHomeAnnouncementComment(id, text) {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('not logged in');
-
-  const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}/comments`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ text })
-  });
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(json?.userMessage || json?.message || 'Errore invio commento');
-  }
-  return json;
-}
-
-/**
- * Sends a report for a home announcement.
- * @param {string} id - Announcement identifier to report.
- * @param {string} reason - Report reason selected by the user.
- * @param {string} details - Additional report details.
- * @returns {Promise<Object>} Promise resolving to the API response JSON.
- * @throws {Error} When the user is not logged in or the API rejects the request.
- */
-async function postHomeAnnouncementReport(id, reason, details) {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('not logged in');
-
-  const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}/reports`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ reason, details })
-  });
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore invio segnalazione');
-  return json;
-}
-
-/**
- * Updates the moderation status of a home announcement.
- * @param {string} id - Announcement identifier.
- * @param {string} status - Status value to apply to the announcement.
- * @returns {Promise<Object>} Promise resolving to the API response JSON.
- * @throws {Error} When the user is not logged in or the API rejects the request.
- */
-async function patchHomeAnnouncementStatus(id, status) {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('not logged in');
-
-  const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ status })
-  });
-
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore aggiornamento stato');
-  return json;
-}
-
-/**
- * Fetches home public user data from the API.
- * @param {string} userId - User identifier whose public contact data should be loaded.
- * @returns {Promise<Object>} Public user payload containing visible contact fields.
- * @throws {Error} When the user is not logged in or the API rejects the request.
- */
-async function fetchHomePublicUser(userId) {
-  const token = localStorage.getItem('token');
-  if (!token) throw new Error('not logged in');
-
-  const res = await fetch(`/api/v1/users/${encodeURIComponent(userId)}/public`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore caricamento contatti');
-  return json;
 }
 
 /**
@@ -330,7 +203,7 @@ function renderCommentsHtml(comments) {
  */
 async function openHomeModal(ann) {
   const isLoggedIn = !!localStorage.getItem('token');
-  const full = await fetchHomeAnnouncementById(ann._id);
+  const full = await fetchAnnouncementById(ann._id);
   const data = full || ann;
   const animal = data.animalId;
   const publisher = data.publisherId;
@@ -556,7 +429,7 @@ async function openHomeModal(ann) {
       form.querySelector('.comment-submit').disabled = true;
 
       try {
-        const result = await postHomeAnnouncementComment(data._id, text);
+        const result = await postAnnouncementComment(data._id, text);
         const updated = Array.isArray(result.comments) ? result.comments : [];
         textarea.value = '';
         if (list) list.innerHTML = renderCommentsHtml(updated);
@@ -585,7 +458,7 @@ async function openHomeModal(ann) {
       submit.disabled = true;
 
       try {
-        await postHomeAnnouncementReport(data._id, reason, details);
+        await postAnnouncementReport(data._id, reason, details);
         if (message) {
           message.textContent = 'Segnalazione inviata agli admin';
           message.style.color = '#166534';
@@ -608,7 +481,7 @@ async function openHomeModal(ann) {
       if (!confirm('Segnare l\'annuncio come risolto?')) return;
       resolveButton.disabled = true;
       try {
-        await patchHomeAnnouncementStatus(data._id, 'RESOLVED');
+        await patchAnnouncementStatus(data._id, 'RESOLVED');
         window.dispatchEvent(new Event('announcements:resolved-updated'));
         closeHomeModal();
       } catch (err) {
@@ -644,7 +517,7 @@ async function openHomeModal(ann) {
       slot.innerHTML = '<div class="comment-text">Caricamento…</div>';
 
       try {
-        const u = await fetchHomePublicUser(userId);
+        const u = await fetchPublicUser(userId);
         const parts = [];
         if (u.phoneNumber) parts.push(`<a href="tel:${escapeHtml(u.phoneNumber)}">${escapeHtml(u.phoneNumber)}</a>`);
         if (u.email) parts.push(`<a href="mailto:${escapeHtml(u.email)}">${escapeHtml(u.email)}</a>`);
@@ -708,7 +581,7 @@ async function renderHomeStatsStrip() {
   if (!last24hCounter && !createdTodayCounter && !resolvedTotalCounter && !resolvedTotalInline) return;
 
   const [announcements, resolvedTotalCount] = await Promise.all([
-    fetchHomeAnnouncements(),
+    fetchAnnouncements(),
     fetchResolvedAnnouncementsCount()
   ]);
   const now = new Date();
@@ -744,7 +617,7 @@ async function initHomeAnnouncements() {
     if (event.key === 'Escape') closeHomeModal();
   });
 
-  const announcements = await fetchHomeAnnouncements();
+  const announcements = await fetchAnnouncements();
   const trimmed = announcements.slice(0, HOME_MAX_CARDS);
 
   if (trimmed.length === 0) {

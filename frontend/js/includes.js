@@ -1,4 +1,5 @@
 let notificationBadgeTimer = null;
+const ANNOUNCEMENTS_API = '/api/v1/announcements';
 
 /**
  * Escapes HTML-sensitive characters before inserting text into markup.
@@ -92,6 +93,152 @@ async function fetchAuthJson(url, options = {}) {
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.userMessage || json?.message || `HTTP ${res.status}`);
   return json;
+}
+
+/**
+ * Builds authorization headers for JSON API requests.
+ * @returns {{'Content-Type': string, Authorization: string}} JSON request headers with the stored bearer token.
+ */
+function authJsonHeaders() {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token || ''}`
+  };
+}
+
+/**
+ * Reads an API error message, falling back to a status-aware default.
+ * @param {Response} res - Failed fetch response.
+ * @param {string} fallback - Message prefix used when the response body has no message.
+ * @returns {Promise<string>} Error message suitable for display.
+ */
+async function readResponseError(res, fallback) {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    const json = await res.json().catch(() => ({}));
+    if (json?.userMessage || json?.message) return json.userMessage || json.message;
+  }
+  return `${fallback} (${res.status})`;
+}
+
+/**
+ * Fetches announcements from the public collection endpoint.
+ * @param {Object} [params={}] - Query parameters appended to the announcements API URL.
+ * @returns {Promise<Array<Object>>} Announcement list, or an empty list when loading fails.
+ */
+async function fetchAnnouncements(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const url = query ? `${ANNOUNCEMENTS_API}?${query}` : ANNOUNCEMENTS_API;
+
+  try {
+    const json = await fetchJson(url);
+    return Array.isArray(json) ? json : json.data || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+/**
+ * Fetches one announcement by id.
+ * @param {string} id - Announcement identifier to load.
+ * @param {Object} [options={}] - Error handling options.
+ * @param {boolean} [options.throwOnError=false] - Throw instead of returning null on failure.
+ * @param {string} [options.fallback='Errore caricamento annuncio'] - Error message prefix for failures.
+ * @returns {Promise<Object|null>} Announcement payload, or null when loading fails and throwing is disabled.
+ * @throws {Error} When `throwOnError` is true and the request fails.
+ */
+async function fetchAnnouncementById(id, options = {}) {
+  const { throwOnError = false, fallback = 'Errore caricamento annuncio' } = options;
+  try {
+    const res = await fetch(`${ANNOUNCEMENTS_API}/${encodeURIComponent(id)}`);
+    if (!res.ok) {
+      if (throwOnError) throw new Error(await readResponseError(res, fallback));
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    if (throwOnError) throw err;
+    return null;
+  }
+}
+
+/**
+ * Posts a comment to an announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} text - Comment text.
+ * @returns {Promise<Object>} API response JSON.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
+async function postAnnouncementComment(id, text) {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('not logged in');
+
+  return fetchAuthJson(`${ANNOUNCEMENTS_API}/${encodeURIComponent(id)}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ text })
+  }).catch((err) => {
+    if (err.message?.startsWith('HTTP ')) throw new Error('Errore invio commento');
+    throw err;
+  });
+}
+
+/**
+ * Sends a report for an announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} reason - Report reason.
+ * @param {string} details - Additional report details.
+ * @returns {Promise<Object>} API response JSON.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
+async function postAnnouncementReport(id, reason, details) {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('not logged in');
+
+  return fetchAuthJson(`${ANNOUNCEMENTS_API}/${encodeURIComponent(id)}/reports`, {
+    method: 'POST',
+    body: JSON.stringify({ reason, details })
+  }).catch((err) => {
+    if (err.message?.startsWith('HTTP ')) throw new Error('Errore invio segnalazione');
+    throw err;
+  });
+}
+
+/**
+ * Updates the moderation status of an announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} status - Status value to apply.
+ * @returns {Promise<Object>} API response JSON.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
+async function patchAnnouncementStatus(id, status) {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('not logged in');
+
+  return fetchAuthJson(`${ANNOUNCEMENTS_API}/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
+  }).catch((err) => {
+    if (err.message?.startsWith('HTTP ')) throw new Error('Errore aggiornamento stato');
+    throw err;
+  });
+}
+
+/**
+ * Fetches public contact data for a user.
+ * @param {string} userId - User identifier.
+ * @returns {Promise<Object>} Public user payload.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
+async function fetchPublicUser(userId) {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('not logged in');
+
+  return fetchAuthJson(`/api/v1/users/${encodeURIComponent(userId)}/public`)
+    .catch((err) => {
+      if (err.message?.startsWith('HTTP ')) throw new Error('Errore caricamento contatti');
+      throw err;
+    });
 }
 
 /**
