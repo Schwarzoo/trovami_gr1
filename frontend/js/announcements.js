@@ -5,6 +5,9 @@ let allAnnouncements = [];
 let currentLocation = null;
 let sortByProximity = false;
 const EMPTY_VALUE = '- -';
+const PER_PAGE = 9;
+let currentPageFiltered = [];
+let currentPageIndex = 1;
 
 /**
  * Formats a value for display, replacing null, undefined, or blank text with a placeholder.
@@ -150,27 +153,75 @@ async function fetchPublicUser(userId) {
 
 /**
  * Renders announcement cards into the announcements grid and toggles the empty state.
- * @param {Array<Object>} announcements - Announcements to render.
+ * @param {Array<Object>} announcements - Announcements to render (full filtered list).
  * @returns {void}
  */
 function renderCards(announcements) {
     const grid = document.getElementById('announcements-grid');
     const empty = document.getElementById('empty-state');
 
+    currentPageFiltered = announcements;
+    currentPageIndex = 1;
+
     grid.innerHTML = '';
 
     if (announcements.length === 0) {
         empty.style.display = 'flex';
+        updatePaginationControls();
         return;
     }
 
     empty.style.display = 'none';
 
-    announcements.forEach((ann, i) => {
+    const slice = announcements.slice(0, PER_PAGE);
+    slice.forEach((ann, i) => {
         const card = buildCard(ann);
         card.style.animationDelay = `${i * 60}ms`;
         grid.appendChild(card);
     });
+
+    updatePaginationControls();
+}
+
+/**
+ * Navigates to the specified page of the current filtered announcements.
+ * @param {number} page - Page number to navigate to (1-based).
+ * @returns {void}
+ */
+function goToPage(page) {
+    const totalPages = Math.ceil(currentPageFiltered.length / PER_PAGE);
+    if (page < 1 || page > totalPages) return;
+
+    currentPageIndex = page;
+
+    const start = (page - 1) * PER_PAGE;
+    const slice = currentPageFiltered.slice(start, start + PER_PAGE);
+
+    const grid = document.getElementById('announcements-grid');
+    grid.innerHTML = '';
+    slice.forEach((ann, i) => {
+        const card = buildCard(ann);
+        card.style.animationDelay = `${i * 60}ms`;
+        grid.appendChild(card);
+    });
+
+    updatePaginationControls();
+    updateCount(currentPageFiltered.length);
+}
+
+/**
+ * Updates the pagination navigation buttons and page indicator.
+ * @returns {void}
+ */
+function updatePaginationControls() {
+    const totalPages = Math.ceil(currentPageFiltered.length / PER_PAGE) || 1;
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const indicator = document.getElementById('page-indicator');
+
+    indicator.textContent = `Pagina ${currentPageIndex} di ${totalPages}`;
+    prevBtn.disabled = currentPageIndex <= 1;
+    nextBtn.disabled = currentPageIndex >= totalPages;
 }
 
 /**
@@ -434,19 +485,26 @@ async function openModal(ann) {
             <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
             <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
         </dl>
-        
+
 
         <div class="modal-contact">
             <div class="modal-contact-header">Contatti</div>
-            ${isLoggedIn
-                ? `<div class="modal-contact-name">Nome: ${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
+            ${data.isQuick && data.quickContact
+                ? `<div class="modal-contact-name">Nome: ${escapeHtml(data.quickContact.name || 'Segnalatore anonimo')}</div>
                    <div class="modal-contact-links">
-                       ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
-                       ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
+                       ${data.quickContact.phoneNumber ? `<a href="tel:${escapeHtml(data.quickContact.phoneNumber)}"> ${escapeHtml(data.quickContact.phoneNumber)}</a>` : ''}
+                       ${data.quickContact.email ? `<a href="mailto:${escapeHtml(data.quickContact.email)}">${escapeHtml(data.quickContact.email)}</a>` : ''}
                    </div>
-                   ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
-                   ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
-                : `<span class="contact-locked">🔒 Accedi per vedere i contatti del segnalante</span>`
+                   ${!data.quickContact.email && !data.quickContact.phoneNumber ? '<span class="contact-locked">Nessun contatto disponibile</span>' : ''}`
+                : (isLoggedIn
+                    ? `<div class="modal-contact-name">Nome: ${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
+                       <div class="modal-contact-links">
+                           ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
+                           ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
+                       </div>
+                       ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
+                       ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
+                    : `<span class="contact-locked">🔒 Accedi per vedere i contatti del segnalante</span>`)
             }
         </div>
 
@@ -811,7 +869,7 @@ function showError(msg) {
  * @returns {Promise<void>} Promise resolving when initial announcements are loaded and event handlers are bound.
  */
 document.addEventListener('DOMContentLoaded', async () => {
-    allAnnouncements = await fetchAnnouncements();
+    allAnnouncements = await fetchAnnouncements({ limit: 50 });
     allAnnouncements = sortAnnouncementsByDate(allAnnouncements);
     populateRifugioFilter(allAnnouncements);
     const initialRifugioId = new URLSearchParams(window.location.search).get('rifugioId');
@@ -825,6 +883,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('filter-type').addEventListener('change', applyFilters);
     document.getElementById('filter-species').addEventListener('input', applyFilters);
     document.getElementById('filter-rifugio')?.addEventListener('change', applyFilters);
+
+    document.getElementById('prev-page').addEventListener('click', () => {
+        goToPage(currentPageIndex - 1);
+    });
+    document.getElementById('next-page').addEventListener('click', () => {
+        goToPage(currentPageIndex + 1);
+    });
+
     document.getElementById('nearby-button').addEventListener('click', async () => {
         const button = document.getElementById('nearby-button');
         if (sortByProximity) {
