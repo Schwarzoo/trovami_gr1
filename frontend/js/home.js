@@ -3,6 +3,7 @@ const HOME_MAX_CARDS = 6;
 const HOME_EMPTY_VALUE = '- -';
 const HOME_RESOLVED_API = '/api/v1/announcements/count?status=resolved';
 const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/shelters?isPublic=true';
+const HOME_CURRENT_ROLE = localStorage.getItem('role') || '';
 
 /**
  * Formats a value for the home-page announcement UI.
@@ -155,6 +156,57 @@ async function postHomeAnnouncementComment(id, text) {
 }
 
 /**
+ * Sends a report for a home announcement.
+ * @param {string} id - Announcement identifier to report.
+ * @param {string} reason - Report reason selected by the user.
+ * @param {string} details - Additional report details.
+ * @returns {Promise<Object>} Promise resolving to the API response JSON.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
+async function postHomeAnnouncementReport(id, reason, details) {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('not logged in');
+
+  const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}/reports`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ reason, details })
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore invio segnalazione');
+  return json;
+}
+
+/**
+ * Updates the moderation status of a home announcement.
+ * @param {string} id - Announcement identifier.
+ * @param {string} status - Status value to apply to the announcement.
+ * @returns {Promise<Object>} Promise resolving to the API response JSON.
+ * @throws {Error} When the user is not logged in or the API rejects the request.
+ */
+async function patchHomeAnnouncementStatus(id, status) {
+  const token = localStorage.getItem('token');
+  if (!token) throw new Error('not logged in');
+
+  const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.userMessage || json?.message || 'Errore aggiornamento stato');
+  return json;
+}
+
+/**
  * Fetches home public user data from the API.
  * @param {string} userId - User identifier whose public contact data should be loaded.
  * @returns {Promise<Object>} Public user payload containing visible contact fields.
@@ -179,41 +231,31 @@ async function fetchHomePublicUser(userId) {
  */
 function buildHomeCard(ann) {
   const animal = ann.animalId;
+  const publisher = ann.publisherId;
   const isLost = ann.type === 'LostAnimal';
-  const photoUrl = `/api/v1/announcements/${ann._id}/photo`;
+  const isRifugioAnnouncement = publisher?.role === 'shelter';
+  const rifugioName = publisher?.role === 'shelter'
+    ? (publisher?.rifugioData?.rifugioName || publisher?.username)
+    : '';
+  const primaryTitle = animal?.name || animal?.breed || animal?.species || 'Animale';
+  const distanceLabel = typeof ann._distance === 'number'
+    ? `<div class="card-distance">${ann._distance < 1000 ? `${Math.round(ann._distance)} m` : `${(ann._distance / 1000).toFixed(1)} km`} da te</div>`
+    : '';
+
+  const photoUrl = `${HOME_API}/${encodeURIComponent(ann._id)}/photo`;
   const date = new Date(ann.date).toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
+    day: '2-digit', month: 'short', year: 'numeric'
   });
 
   const card = document.createElement('article');
   card.className = 'card';
   card.dataset.id = ann._id;
-  card.tabIndex = 0;
-  card.setAttribute('role', 'button');
-  card.setAttribute('aria-label', `Vedi dettagli annuncio ${animal?.species || 'animale'}`);
 
-  /**
-   * Opens the details UI.
-   * @returns {void}
-   */
-  const openDetails = () => openHomeModal(ann);
-
-  card.addEventListener('click', openDetails);
-  card.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      openDetails();
-    }
-  });
-
-  const description = ann.description || '';
   card.innerHTML = `
     <div class="card-image">
       <div class="card-image-placeholder"><span>…</span></div>
-      <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
-        ${isLost ? 'Smarrito' : 'Avvistato'}
+      <span class="badge badge--${isRifugioAnnouncement ? 'rifugio' : (isLost ? 'lost' : 'sighting')}">
+        ${isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? 'Smarrito' : 'Avvistato')}
       </span>
     </div>
     <div class="card-body">
@@ -221,10 +263,22 @@ function buildHomeCard(ann) {
         <span class="card-species">${animal?.species || 'Specie sconosciuta'}</span>
         <span class="card-date">${date}</span>
       </div>
-      <h3 class="card-breed">${animal?.breed || '—'}</h3>
-      <p class="card-description">${description}</p>
+      <h3 class="card-breed">${homeEscapeHtml(primaryTitle)}</h3>
+      ${animal?.name ? `<div class="card-distance">${homeEscapeHtml(animal?.species || '')}${animal?.breed ? ` · ${homeEscapeHtml(animal.breed)}` : ''}</div>` : ''}
+      <p class="card-description">${homeEscapeHtml(ann.description)}</p>
+      ${rifugioName ? `<div class="card-distance">🏠 Rifugio: ${homeEscapeHtml(rifugioName)}</div>` : ''}
+      ${ann.isQuick ? `<div class="card-distance">⚡ Segnalazione veloce</div>` : ''}
+      ${distanceLabel}
+      <div class="card-details">
+        <span class="card-detail-label">Colore</span><span>${homeDisplayValue(animal?.color)}</span>
+        <span class="card-detail-label">Salute</span><span>${homeDisplayValue(ann.healthCondition)}</span>
+        <span class="card-detail-label">Comportamento</span><span>${homeDisplayValue(ann.animalBehaviour)}</span>
+      </div>
+      <button class="card-cta" type="button">Vedi dettagli</button>
     </div>
   `;
+
+  card.addEventListener('click', () => openHomeModal(ann));
 
   (async () => {
     const container = card.querySelector('.card-image');
@@ -251,139 +305,20 @@ function buildHomeCard(ann) {
 }
 
 /**
- * Opens the home modal UI.
- * @param {Object} ann - Announcement summary used to seed the modal while details load.
- * @returns {Promise<void>} Promise resolving after the modal is populated and shown.
+ * Renders the comments section markup for a home announcement.
+ * @param {Array<Object>} comments - Comment objects to render.
+ * @returns {string} HTML string containing the rendered comments or the empty state.
  */
-async function openHomeModal(ann) {
-  const isLoggedIn = !!localStorage.getItem('token');
-  const full = await fetchHomeAnnouncementById(ann._id);
-  const data = full || ann;
-  const animal = data.animalId;
-  const publisher = data.publisherId;
-  const isLost = data.type === 'LostAnimal';
-  const comments = Array.isArray(data.comments) ? data.comments : [];
-  const coords = data.location?.coordinates;
-
-  const date = new Date(data.date).toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  const locationInfo = coords?.length === 2
-    ? `<dt>Posizione</dt><dd><a class="position-link" href="/pages/map.html?highlight=${encodeURIComponent(data._id)}"><em>trovami</em></a></dd>`
-    : '';
-
-  document.getElementById('modal-title').textContent =
-    isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`;
-
-  const gallery = document.getElementById('modal-gallery');
-  gallery.innerHTML = '<div class="modal-spinner">...</div>';
-  loadHomeModalPhoto(gallery, data._id);
-
-  const commentBoxHtml = isLoggedIn
-    ? `
-      <form class="comment-form" data-announcement-id="${homeEscapeHtml(data._id)}">
-        <label class="comment-label" for="home-comment-text">Commento</label>
-        <textarea id="home-comment-text" class="comment-textarea" rows="3" maxlength="500" placeholder="Scrivi un aggiornamento (es. direzione)..."></textarea>
-        <div class="comment-actions">
-          <span class="comment-hint">Max 500 caratteri</span>
-          <button type="submit" class="comment-submit">Invia</button>
-        </div>
-        <div class="comment-error" role="status" aria-live="polite"></div>
-      </form>
-    `
-    : `<div class="comments-locked">Accedi per commentare</div>`;
-
-  document.getElementById('modal-body').innerHTML = `
-    <dl class="detail-list">
-      <dt>Specie</dt><dd>${homeDisplayValue(animal?.species)}</dd>
-      <dt>Razza</dt><dd>${homeDisplayValue(animal?.breed)}</dd>
-      <dt>Colore</dt><dd>${homeDisplayValue(animal?.color)}</dd>
-      <dt>Sesso</dt><dd>${homeDisplayValue(animal?.gender)}</dd>
-      <dt>Lunghezza pelo</dt><dd>${homeDisplayValue(animal?.lunghezzaPelo)}</dd>
-      <dt>Segni particolari</dt><dd>${homeDisplayValue(animal?.distinctiveFeatures)}</dd>
-      <dt>Microchip</dt><dd>${homeDisplayValue(animal?.microchipId)}</dd>
-      ${locationInfo}
-      <dt>Data</dt><dd>${date}</dd>
-      <dt>Condizioni</dt><dd>${homeDisplayValue(data.healthCondition)}</dd>
-      <dt>Comportamento</dt><dd>${homeDisplayValue(data.animalBehaviour)}</dd>
-    </dl>
-    <p class="modal-description">${homeEscapeHtml(data.description)}</p>
-
-    <section class="comments-section" aria-label="Commenti">
-      <div class="comments-header">
-        <h3>Commenti</h3>
-        <span class="comments-count">${comments.length}</span>
-      </div>
-      ${commentBoxHtml}
-      <div id="comments-list" class="comments-list">
-        ${renderHomeCommentsHtml(comments)}
-      </div>
-    </section>
-
-    <div class="modal-contact">
-      ${isLoggedIn
-        ? `<strong>Contatto:</strong>
-           <span>${homeEscapeHtml(publisher?.username || '-')}</span>
-           ${publisher?.phoneNumber ? `<a href="tel:${homeEscapeHtml(publisher.phoneNumber)}">${homeEscapeHtml(publisher.phoneNumber)}</a>` : ''}
-           ${publisher?.email ? `<a href="mailto:${homeEscapeHtml(publisher.email)}">${homeEscapeHtml(publisher.email)}</a>` : ''}`
-        : `<span class="contact-locked">Accedi per vedere i contatti</span>`
-      }
-    </div>
-  `;
-
-  bindHomeCommentForm(data._id);
-  bindHomeCommentContacts();
-
-  document.getElementById('modal-overlay').classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-/**
- * Loads home modal photo data and updates the UI.
- * @param {HTMLElement} gallery - Modal gallery element that receives the image or empty state.
- * @param {string} id - Announcement identifier whose photo should be loaded.
- * @returns {Promise<void>} Promise resolving after the gallery is updated.
- */
-async function loadHomeModalPhoto(gallery, id) {
-  try {
-    const res = await fetch(`${HOME_API}/${encodeURIComponent(id)}/photo`, { method: 'GET' });
-    if (!res.ok) throw new Error('no image');
-    const ct = res.headers.get('content-type') || '';
-    if (!ct.startsWith('image')) throw new Error('not image');
-    const blob = await res.blob();
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(blob);
-    img.alt = 'foto animale';
-    img.onload = () => { URL.revokeObjectURL(img.src); };
-    gallery.innerHTML = '';
-    gallery.appendChild(img);
-  } catch (err) {
-    gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
-  }
-}
-
-/**
- * Renders home comments html into the current page.
- * @param {Array<Object>} comments - Comment records attached to the announcement.
- * @returns {string} HTML markup for the comments list or empty state.
- */
-function renderHomeCommentsHtml(comments) {
+function renderCommentsHtml(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return `<div class="comments-empty">Nessun commento</div>`;
   }
 
   const sorted = [...comments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   return sorted.map((c) => {
-    const when = c?.createdAt
-      ? new Date(c.createdAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      : '';
+    const when = c?.createdAt ? new Date(c.createdAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     const uid = (c?.userId && typeof c.userId === 'object') ? (c.userId._id || c.userId.id) : c?.userId;
-    const slotId = `home-comment-contact-${homeEscapeHtml(c?._id || uid || Math.random().toString(16).slice(2))}`;
+    const slotId = `comment-contact-${homeEscapeHtml(c?._id || uid || Math.random().toString(16).slice(2))}`;
     return `
       <div class="comment-item">
         <div class="comment-meta">
@@ -398,89 +333,346 @@ function renderHomeCommentsHtml(comments) {
 }
 
 /**
- * Binds the comment form inside the currently open home announcement modal.
- * @param {string} announcementId - Announcement identifier used when submitting the comment.
- * @returns {void}
+ * Opens the home modal UI.
+ * @param {Object} ann - Announcement summary used to seed the modal while details load.
+ * @returns {Promise<void>} Promise resolving after the modal is populated and shown.
  */
-function bindHomeCommentForm(announcementId) {
-  const form = document.querySelector('#modal-body .comment-form');
-  if (!form) return;
+async function openHomeModal(ann) {
+  const isLoggedIn = !!localStorage.getItem('token');
+  const full = await fetchHomeAnnouncementById(ann._id);
+  const data = full || ann;
+  const animal = data.animalId;
+  const publisher = data.publisherId;
+  const isLost = data.type === 'LostAnimal';
+  const isRifugioAnnouncement = publisher?.role === 'shelter';
+  const comments = Array.isArray(data.comments) ? data.comments : [];
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const textarea = form.querySelector('.comment-textarea');
-    const errorBox = form.querySelector('.comment-error');
-    const list = document.getElementById('comments-list');
-    const count = document.querySelector('#modal-body .comments-count');
-    const submit = form.querySelector('.comment-submit');
-    const text = (textarea?.value ?? '').trim();
-
-    if (!text) {
-      errorBox.textContent = 'Scrivi testo';
-      return;
-    }
-
-    errorBox.textContent = '';
-    submit.disabled = true;
-
-    try {
-      const result = await postHomeAnnouncementComment(announcementId, text);
-      const updated = Array.isArray(result.comments) ? result.comments : [];
-      textarea.value = '';
-      if (list) list.innerHTML = renderHomeCommentsHtml(updated);
-      if (count) count.textContent = String(updated.length);
-    } catch (err) {
-      errorBox.textContent = err.message || 'Errore invio commento';
-    } finally {
-      submit.disabled = false;
-    }
+  const date = new Date(data.date).toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
-}
 
-/**
- * Binds click handlers that reveal public contact data for comment authors.
- * @returns {void}
- */
-function bindHomeCommentContacts() {
-  const modalBody = document.getElementById('modal-body');
-  if (!modalBody || modalBody.dataset.homeCommentContactsBound === 'true') return;
+  let locationInfo = '';
+  const coords = data.location?.coordinates;
 
-  modalBody.dataset.homeCommentContactsBound = 'true';
-  modalBody.addEventListener('click', async (event) => {
-    const btn = event.target?.closest?.('.comment-user-link');
-    if (!btn) return;
-    const userId = btn.getAttribute('data-user-id');
-    const slot = document.getElementById(btn.getAttribute('data-slot-id'));
-    if (!userId || !slot) return;
+  if (coords?.length === 2) {
+    const link = `/pages/map.html?highlight=${encodeURIComponent(data._id)}`;
+    locationInfo = `<dt>Posizione</dt><dd><a class="modal-map-btn" href="${link}">Vedi sulla mappa</a></dd>`;
+  }
 
-    if (slot.dataset.loaded === 'true') {
-      slot.dataset.loaded = 'false';
-      slot.innerHTML = '';
-      slot.style.display = 'none';
-      return;
-    }
+  const rifugioAddress = [publisher?.rifugioData?.address, publisher?.rifugioData?.city]
+    .filter(Boolean)
+    .join(', ');
+  const rifugioCoords = publisher?.rifugioData?.location?.coordinates;
+  const rifugioLocationHtml = publisher?.role === 'shelter'
+    ? `
+      ${rifugioAddress ? `<span>${homeEscapeHtml(rifugioAddress)}</span>` : ''}
+      ${Array.isArray(rifugioCoords) && rifugioCoords.length === 2 ? `<a href="/pages/map.html?rifugioId=${encodeURIComponent(publisher._id)}">Vedi posizione rifugio</a>` : ''}
+    `
+    : '';
+  const shelterAnimalLinkHtml = isRifugioAnnouncement && animal?._id
+    ? `<a class="position-link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher?._id || publisher)}&animalId=${encodeURIComponent(animal._id)}">Apri scheda animale</a>`
+    : '';
 
-    slot.dataset.loaded = 'true';
-    slot.style.display = 'block';
-    slot.innerHTML = '<div class="comment-text">Caricamento...</div>';
+  const rifugioLink = isRifugioAnnouncement && animal?._id
+    ? `/pages/rifugio.html?rifugioId=${encodeURIComponent(publisher?._id || publisher)}&animalId=${encodeURIComponent(animal._id)}`
+    : null;
 
+  const shelterName = publisher?.rifugioData?.rifugioName || publisher?.username;
+  if (isRifugioAnnouncement) {
+    const displayName = shelterName || 'il rifugio';
+    document.getElementById('modal-title').textContent = `Questo animale si trova attualmente al rifugio ${displayName}`;
+  } else {
+    document.getElementById('modal-title').textContent =
+      (animal?.name || (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
+  }
+
+  const gallery = document.getElementById('modal-gallery');
+  gallery.innerHTML = '<div class="modal-spinner">…</div>';
+
+  (async () => {
+    const photoUrl = `${HOME_API}/${encodeURIComponent(data._id)}/photo`;
     try {
-      const user = await fetchHomePublicUser(userId);
-      const parts = [];
-      if (user.phoneNumber) parts.push(`<a href="tel:${homeEscapeHtml(user.phoneNumber)}">${homeEscapeHtml(user.phoneNumber)}</a>`);
-      if (user.email) parts.push(`<a href="mailto:${homeEscapeHtml(user.email)}">${homeEscapeHtml(user.email)}</a>`);
-      slot.innerHTML = `
-        <div class="modal-contact" style="margin-top:8px;">
-          <strong>Contatto:</strong>
-          <span>${homeEscapeHtml(user.username || '-')}</span>
-          ${parts.join('')}
-          ${parts.length === 0 ? '<span class="contact-locked">Nessun contatto pubblico</span>' : ''}
+      const res = await fetch(photoUrl, { method: 'GET' });
+      if (!res.ok) throw new Error('no image');
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.startsWith('image')) throw new Error('not image');
+      const blob = await res.blob();
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(blob);
+      img.alt = 'foto animale';
+      img.onload = () => { URL.revokeObjectURL(img.src); };
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'modal-gallery-wrapper';
+      wrapper.appendChild(img);
+
+      if (rifugioLink) {
+        const btn = document.createElement('button');
+        btn.className = 'modal-open-animal-btn';
+        btn.type = 'button';
+        btn.textContent = 'Scheda animale';
+        btn.setAttribute('aria-label', 'Apri scheda animale');
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          window.location.href = rifugioLink;
+        });
+        wrapper.appendChild(btn);
+      }
+
+      gallery.innerHTML = '';
+      gallery.appendChild(wrapper);
+    } catch (err) {
+      if (rifugioLink) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'modal-gallery-wrapper';
+        const noPhoto = document.createElement('div');
+        noPhoto.className = 'modal-no-photo';
+        noPhoto.textContent = 'Non è presente alcuna foto';
+        wrapper.appendChild(noPhoto);
+        const btn = document.createElement('button');
+        btn.className = 'modal-open-animal-btn';
+        btn.type = 'button';
+        btn.textContent = 'Scheda animale';
+        btn.setAttribute('aria-label', 'Apri scheda animale');
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          window.location.href = rifugioLink;
+        });
+        wrapper.appendChild(btn);
+        gallery.innerHTML = '';
+        gallery.appendChild(wrapper);
+      } else {
+        gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
+      }
+    }
+  })();
+
+  const commentBoxHtml = isLoggedIn
+    ? `
+      <form class="comment-form" data-announcement-id="${homeEscapeHtml(data._id)}">
+        <label class="comment-label" for="comment-text">Commento</label>
+        <textarea id="comment-text" class="comment-textarea" rows="3" maxlength="500" placeholder="Scrivi un aggiornamento (es. direzione)…"></textarea>
+        <div class="comment-actions">
+          <span class="comment-hint">Max 500 caratteri</span>
+          <button type="submit" class="comment-submit">Invia</button>
         </div>
-      `;
-    } catch (err) {
-      slot.innerHTML = `<div class="comment-error">${homeEscapeHtml(err.message || 'Errore')}</div>`;
-    }
-  });
+        <div class="comment-error" role="status" aria-live="polite"></div>
+      </form>
+    `
+    : `<div class="comments-locked">🔒 Accedi per commentare</div>`;
+
+  const reportBoxHtml = isLoggedIn
+    ? `
+      <section class="comments-section" aria-label="Segnala annuncio">
+        <div class="comments-header">
+          <h3>Segnala annuncio</h3>
+        </div>
+        <form class="report-form" data-announcement-id="${homeEscapeHtml(data._id)}">
+          <label class="comment-label" for="report-reason">Motivo</label>
+          <select id="report-reason" class="report-select">
+            <option value="troll">Troll</option>
+            <option value="offensivo">Offensivo</option>
+            <option value="falso">Non reale</option>
+            <option value="altro">Altro</option>
+          </select>
+          <label class="comment-label" for="report-details">Dettagli</label>
+          <textarea id="report-details" class="comment-textarea" rows="2" maxlength="500" placeholder="Aggiungi dettagli utili"></textarea>
+          <div class="comment-actions">
+            <span class="comment-hint">Visibile agli admin</span>
+            <button type="submit" class="comment-submit">Segnala</button>
+          </div>
+          <div class="report-message comment-error" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+    `
+    : '';
+
+  const adminResolveBoxHtml = HOME_CURRENT_ROLE === 'admin' && data.status !== 'RESOLVED'
+    ? `
+      <section class="comments-section" aria-label="Moderazione annuncio">
+        <div class="comments-header">
+          <h3>Moderazione</h3>
+        </div>
+        <button type="button" class="comment-submit" id="admin-resolve-announcement">Segna come risolto</button>
+      </section>
+    `
+    : '';
+
+  document.getElementById('modal-body').innerHTML = `
+    <dl class="detail-list">
+      ${animal?.name ? `<dt>Nome</dt><dd>${homeEscapeHtml(animal.name)}</dd>` : ''}
+      <dt>Specie</dt><dd>${homeDisplayValue(animal?.species)}</dd>
+      <dt>Razza</dt><dd>${homeDisplayValue(animal?.breed)}</dd>
+      <dt>Colore</dt><dd>${homeDisplayValue(animal?.color)}</dd>
+      <dt>Sesso</dt><dd>${homeDisplayValue(animal?.gender)}</dd>
+      <dt>Lunghezza pelo</dt><dd>${homeDisplayValue(animal?.lunghezzaPelo)}</dd>
+      <dt>Segni particolari</dt><dd>${homeDisplayValue(animal?.distinctiveFeatures)}</dd>
+      <dt>Microchip</dt><dd>${homeDisplayValue(animal?.microchipId)}</dd>
+      ${locationInfo}
+      <dt>Data</dt><dd>${date}</dd>
+      <dt>Condizioni</dt><dd>${homeDisplayValue(data.healthCondition)}</dd>
+      <dt>Comportamento</dt><dd>${homeDisplayValue(data.animalBehaviour)}</dd>
+    </dl>
+
+    <div class="modal-contact">
+      <div class="modal-contact-header">Contatti</div>
+      ${isLoggedIn
+        ? `<div class="modal-contact-name">Nome: ${homeEscapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
+           <div class="modal-contact-links">
+             ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${homeEscapeHtml(publisher.phoneNumber)}</a>` : ''}
+             ${publisher?.email ? `<a href="mailto:${publisher.email}">${homeEscapeHtml(publisher.email)}</a>` : ''}
+           </div>
+           ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
+           ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
+        : `<span class="contact-locked">🔒 Accedi per vedere i contatti del segnalante</span>`
+      }
+    </div>
+
+    <section class="comments-section" aria-label="Commenti">
+      <div class="comments-header">
+        <h3>Commenti</h3>
+        <span class="comments-count">${comments.length}</span>
+      </div>
+      ${commentBoxHtml}
+      <div id="comments-list" class="comments-list">
+        ${renderCommentsHtml(comments)}
+      </div>
+    </section>
+    ${reportBoxHtml}
+    ${adminResolveBoxHtml}
+  `;
+
+  const form = document.querySelector('.comment-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const textarea = form.querySelector('.comment-textarea');
+      const errorBox = form.querySelector('.comment-error');
+      const list = document.getElementById('comments-list');
+      const count = document.querySelector('.comments-count');
+
+      const text = (textarea?.value ?? '').trim();
+      if (!text) {
+        errorBox.textContent = 'Scrivi testo';
+        return;
+      }
+
+      errorBox.textContent = '';
+      form.querySelector('.comment-submit').disabled = true;
+
+      try {
+        const result = await postHomeAnnouncementComment(data._id, text);
+        const updated = Array.isArray(result.comments) ? result.comments : [];
+        textarea.value = '';
+        if (list) list.innerHTML = renderCommentsHtml(updated);
+        if (count) count.textContent = String(updated.length);
+      } catch (err) {
+        errorBox.textContent = err.message || 'Errore invio commento';
+      } finally {
+        form.querySelector('.comment-submit').disabled = false;
+      }
+    });
+  }
+
+  const reportForm = document.querySelector('.report-form');
+  if (reportForm) {
+    reportForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const reason = reportForm.querySelector('#report-reason')?.value || 'altro';
+      const details = reportForm.querySelector('#report-details')?.value.trim() || '';
+      const message = reportForm.querySelector('.report-message');
+      const submit = reportForm.querySelector('.comment-submit');
+
+      if (message) {
+        message.textContent = '';
+        message.classList.remove('success');
+      }
+      submit.disabled = true;
+
+      try {
+        await postHomeAnnouncementReport(data._id, reason, details);
+        if (message) {
+          message.textContent = 'Segnalazione inviata agli admin';
+          message.style.color = '#166534';
+        }
+        reportForm.reset();
+      } catch (err) {
+        if (message) {
+          message.textContent = err.message || 'Errore invio segnalazione';
+          message.style.color = '';
+        }
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+
+  const resolveButton = document.getElementById('admin-resolve-announcement');
+  if (resolveButton) {
+    resolveButton.addEventListener('click', async () => {
+      if (!confirm('Segnare l\'annuncio come risolto?')) return;
+      resolveButton.disabled = true;
+      try {
+        await patchHomeAnnouncementStatus(data._id, 'RESOLVED');
+        window.dispatchEvent(new Event('announcements:resolved-updated'));
+        closeHomeModal();
+      } catch (err) {
+        alert(err.message || 'Errore aggiornamento stato');
+      } finally {
+        resolveButton.disabled = false;
+      }
+    });
+  }
+
+  const modalBody = document.getElementById('modal-body');
+  if (modalBody && modalBody.dataset.commentContactsBound !== 'true') {
+    modalBody.dataset.commentContactsBound = 'true';
+    modalBody.addEventListener('click', async (e) => {
+      const btn = e.target?.closest?.('.comment-user-link');
+      if (!btn) return;
+      const userId = btn.getAttribute('data-user-id');
+      if (!userId) return;
+
+      const slotId = btn.getAttribute('data-slot-id');
+      const slot = slotId ? document.getElementById(slotId) : null;
+      if (!slot) return;
+
+      if (slot.dataset.loaded === 'true') {
+        slot.dataset.loaded = 'false';
+        slot.innerHTML = '';
+        slot.style.display = 'none';
+        return;
+      }
+
+      slot.dataset.loaded = 'true';
+      slot.style.display = 'block';
+      slot.innerHTML = '<div class="comment-text">Caricamento…</div>';
+
+      try {
+        const u = await fetchHomePublicUser(userId);
+        const parts = [];
+        if (u.phoneNumber) parts.push(`<a href="tel:${homeEscapeHtml(u.phoneNumber)}">${homeEscapeHtml(u.phoneNumber)}</a>`);
+        if (u.email) parts.push(`<a href="mailto:${homeEscapeHtml(u.email)}">${homeEscapeHtml(u.email)}</a>`);
+        slot.innerHTML = `
+          <div class="modal-contact" style="margin-top:8px;">
+            <strong>Contatto:</strong>
+            <span>${homeEscapeHtml(u.username || '—')}</span>
+            ${parts.join('')}
+            ${parts.length === 0 ? '<span class="contact-locked">Nessun contatto pubblico</span>' : ''}
+          </div>
+        `;
+      } catch (err) {
+        slot.innerHTML = `<div class="comment-error">${homeEscapeHtml(err.message || 'Errore')}</div>`;
+      }
+    });
+  }
+
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 /**
