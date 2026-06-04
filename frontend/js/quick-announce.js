@@ -21,9 +21,16 @@ function isUserLoggedIn() {
 
 /**
  * Opens the quick-announcement modal.
+ * Logged-in users are redirected to their profile with the announcement form open.
+ * Anonymous users see the quick-announce modal inline.
  * @returns {void}
  */
 function openQuickAnnounceModal() {
+  if (isUserLoggedIn()) {
+    window.location.href = '/pages/profile.html?newAnnouncement=1';
+    return;
+  }
+
   if (!QUICK_ANNOUNCE_MODAL) {
     window.location.href = '/?quick-announce=1';
     return;
@@ -187,6 +194,7 @@ async function handleQuickAnnounceSubmit(e) {
   const contactEmail = document.getElementById('qa-contact-email')?.value.trim();
   const contactPhone = document.getElementById('qa-contact-phone')?.value.trim();
   const description = document.getElementById('qa-description')?.value.trim() || '';
+  const animalName = document.getElementById('qa-name')?.value.trim() || '';
   const photoFile = QUICK_ANNOUNCE_PHOTO_INPUT?.files?.[0] || null;
 
   if (!species || !color || !healthCondition || !type) {
@@ -215,7 +223,8 @@ async function handleQuickAnnounceSubmit(e) {
     contactPhone: formData.get('contactPhone') || '',
     coordinates: currentLocation.coordinates,
     address: currentLocation.address || null,
-    photo: photoFile
+    photo: photoFile,
+    animalName: animalName
   };
 
   try {
@@ -246,7 +255,8 @@ async function submitQuickAnnounce(data) {
     healthCondition: data.healthCondition,
     contactEmail: data.contactEmail,
     contactPhone: data.contactPhone,
-    lastSeenDate: new Date().toISOString()
+    lastSeenDate: new Date().toISOString(),
+    animalName: data.animalName || undefined
   };
 
   try {
@@ -265,6 +275,7 @@ async function submitQuickAnnounce(data) {
       announcementForm.append('healthCondition', announcementPayload.healthCondition);
       announcementForm.append('lastSeenDate', announcementPayload.lastSeenDate);
       announcementForm.append('photo', data.photo);
+      if (announcementPayload.animalName) announcementForm.append('animalName', announcementPayload.animalName);
 
       announcementRes = await fetch('/api/v1/announcements', {
         method: 'POST',
