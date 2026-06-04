@@ -2,16 +2,6 @@ const API_BASE = '/api/v1/announcements';
 const ADMIN_BASE = '/api/v1/admin';
 
 /**
- * Formats a value for UI display, replacing empty values with a placeholder.
- * @param {*} value - Field value shown in the announcement details UI.
- * @returns {string} Trimmed display text or the empty-value placeholder.
- */
-function displayValue(value) {
-  const text = String(value ?? '').trim();
-  return text || '- -';
-}
-
-/**
  * Shows an error message in the page error area.
  * @param {string} message - Error text displayed in the page banner.
  * @returns {void}

@@ -664,15 +664,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
-   * Returns rifugio name.
-   * @param {Object} rifugio - Followed shelter payload.
-   * @returns {string} Best available shelter display name.
-   */
-  function getRifugioName(rifugio) {
-    return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
-  }
-
-  /**
    * Renders followed shelters into the current page.
    * @param {Array<Object>} list - Shelters followed by the current user.
    * @returns {void}

@@ -4,21 +4,9 @@ const CURRENT_ROLE = localStorage.getItem('role') || '';
 let allAnnouncements = [];
 let currentLocation = null;
 let sortByProximity = false;
-const EMPTY_VALUE = '- -';
 const PER_PAGE = 9;
 let currentPageFiltered = [];
 let currentPageIndex = 1;
-
-/**
- * Formats a value for display, replacing null, undefined, or blank text with a placeholder.
- * @param {*} value - Value to format for UI display.
- * @returns {string} The formatted display value or the empty-value placeholder.
- */
-function displayValue(value) {
-    if (value === null || value === undefined) return EMPTY_VALUE;
-    const text = String(value).trim();
-    return text ? text : EMPTY_VALUE;
-}
 
 /**
  * Fetches the announcements list from the API using optional query parameters.

@@ -23,72 +23,12 @@ const rifugioIcon = L.divIcon({
 });
 
 /**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {*} input - Value that will be interpolated into shelter-directory markup.
- * @returns {string} HTML-safe string representation of the value.
- */
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-/**
- * Formats a numeric shelter-directory statistic for Italian UI display.
- * @param {*} value - Numeric value or numeric string to format.
- * @returns {string} Localized number string, or `0` for invalid values.
- */
-function formatNumber(value) {
-  return Number.isFinite(Number(value)) ? Number(value).toLocaleString('it-IT') : '0';
-}
-
-/**
- * Returns rifugio name.
- * @param {Object} rifugio - Shelter user object from the public shelters API.
- * @returns {string} Best available shelter display name.
- */
-function getRifugioName(rifugio) {
-  return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
-}
-
-/**
  * Returns rifugio address.
  * @param {Object} rifugio - Shelter user object containing address fields.
  * @returns {string} Joined public shelter address.
  */
 function getRifugioAddress(rifugio) {
   return [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
-}
-
-/**
- * Returns coordinates.
- * @param {Object} rifugio - Shelter user object containing location data.
- * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when unavailable.
- */
-function getCoordinates(rifugio) {
-  const coords = rifugio?.rifugioData?.location?.coordinates;
-  if (!Array.isArray(coords) || coords.length !== 2) return null;
-  const [lng, lat] = coords.map(Number);
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-  return [lng, lat];
-}
-
-/**
- * Fetches JSON from an API endpoint and throws on HTTP failures.
- * @param {string} url - API endpoint to request.
- * @returns {Promise<Object|Array<Object>>} Parsed JSON response.
- * @throws {Error} When the API response is not successful.
- */
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json?.userMessage || json?.message || `HTTP ${res.status}`);
-  }
-  return await res.json();
 }
 
 /**

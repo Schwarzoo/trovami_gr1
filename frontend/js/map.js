@@ -387,21 +387,6 @@ function renderAnnouncements(announcements) {
 }
 
 /**
- * Escapes HTML-sensitive characters before inserting text into markup.
- * @param {*} input - Value interpolated into popup markup.
- * @returns {string} HTML-safe string representation of the value.
- */
-function escapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-
-/**
  * Builds select options from unique filter values.
  * @param {HTMLSelectElement|null} selectEl - Filter select element to populate.
  * @param {string[]} values - Sorted option labels to insert.

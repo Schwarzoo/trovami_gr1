@@ -169,17 +169,6 @@ async function reverseGeocode(lat, lon) {
 }
 
 /**
- * Escapes HTML special characters for safe insertion into innerHTML.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, function (s) {
-    return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[s];
-  });
-}
-
-/**
  * Handles quick-announcement form submission and API creation.
  * @param {Event} e - Browser event object.
  * @returns {Promise<void>} Promise resolving after validation and submission handling finish.

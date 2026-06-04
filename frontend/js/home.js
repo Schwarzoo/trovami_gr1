@@ -1,35 +1,9 @@
 const HOME_API = '/api/v1/announcements';
 const HOME_MAX_CARDS = 6;
-const HOME_EMPTY_VALUE = '- -';
 const HOME_RESOLVED_API = '/api/v1/announcements/count?status=resolved';
 const HOME_ACTIVE_API = '/api/v1/announcements/count?status=active';
 const HOME_PUBLIC_RIFUGI_API = '/api/v1/users/shelters?isPublic=true';
 const HOME_CURRENT_ROLE = localStorage.getItem('role') || '';
-
-/**
- * Formats a value for the home-page announcement UI.
- * @param {*} value - Announcement field value to display.
- * @returns {string} Trimmed display text or the home empty-value placeholder.
- */
-function homeDisplayValue(value) {
-  if (value === null || value === undefined) return HOME_EMPTY_VALUE;
-  const text = String(value).trim();
-  return text ? text : HOME_EMPTY_VALUE;
-}
-
-/**
- * Escapes HTML-sensitive characters before inserting text into home markup.
- * @param {*} input - Value that will be interpolated into HTML.
- * @returns {string} HTML-safe string representation of the value.
- */
-function homeEscapeHtml(input) {
-  return String(input ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 /**
  * Fetches home announcements data from the API.
@@ -280,16 +254,16 @@ function buildHomeCard(ann) {
         <span class="card-species">${animal?.species || 'Specie sconosciuta'}</span>
         <span class="card-date">${date}</span>
       </div>
-      <h3 class="card-breed">${homeEscapeHtml(primaryTitle)}</h3>
-      ${animal?.name ? `<div class="card-distance">${homeEscapeHtml(animal?.species || '')}${animal?.breed ? ` · ${homeEscapeHtml(animal.breed)}` : ''}</div>` : ''}
-      <p class="card-description">${homeEscapeHtml(ann.description)}</p>
-      ${rifugioName ? `<div class="card-distance">🏠 Rifugio: ${homeEscapeHtml(rifugioName)}</div>` : ''}
+      <h3 class="card-breed">${escapeHtml(primaryTitle)}</h3>
+      ${animal?.name ? `<div class="card-distance">${escapeHtml(animal?.species || '')}${animal?.breed ? ` · ${escapeHtml(animal.breed)}` : ''}</div>` : ''}
+      <p class="card-description">${escapeHtml(ann.description)}</p>
+      ${rifugioName ? `<div class="card-distance">🏠 Rifugio: ${escapeHtml(rifugioName)}</div>` : ''}
       ${ann.isQuick ? `<div class="card-distance">⚡ Segnalazione veloce</div>` : ''}
       ${distanceLabel}
       <div class="card-details">
-        <span class="card-detail-label">Colore</span><span>${homeDisplayValue(animal?.color)}</span>
-        <span class="card-detail-label">Salute</span><span>${homeDisplayValue(ann.healthCondition)}</span>
-        <span class="card-detail-label">Comportamento</span><span>${homeDisplayValue(ann.animalBehaviour)}</span>
+        <span class="card-detail-label">Colore</span><span>${displayValue(animal?.color)}</span>
+        <span class="card-detail-label">Salute</span><span>${displayValue(ann.healthCondition)}</span>
+        <span class="card-detail-label">Comportamento</span><span>${displayValue(ann.animalBehaviour)}</span>
       </div>
       <button class="card-cta" type="button">Vedi dettagli</button>
     </div>
@@ -335,14 +309,14 @@ function renderCommentsHtml(comments) {
   return sorted.map((c) => {
     const when = c?.createdAt ? new Date(c.createdAt).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     const uid = (c?.userId && typeof c.userId === 'object') ? (c.userId._id || c.userId.id) : c?.userId;
-    const slotId = `comment-contact-${homeEscapeHtml(c?._id || uid || Math.random().toString(16).slice(2))}`;
+    const slotId = `comment-contact-${escapeHtml(c?._id || uid || Math.random().toString(16).slice(2))}`;
     return `
       <div class="comment-item">
         <div class="comment-meta">
-          <button type="button" class="comment-user-link comment-user" data-user-id="${homeEscapeHtml(uid || '')}" data-slot-id="${slotId}">${homeEscapeHtml(c?.username || 'utente')}</button>
-          <span class="comment-date">${homeEscapeHtml(when)}</span>
+          <button type="button" class="comment-user-link comment-user" data-user-id="${escapeHtml(uid || '')}" data-slot-id="${slotId}">${escapeHtml(c?.username || 'utente')}</button>
+          <span class="comment-date">${escapeHtml(when)}</span>
         </div>
-        <div class="comment-text">${homeEscapeHtml(c?.text || '')}</div>
+        <div class="comment-text">${escapeHtml(c?.text || '')}</div>
         <div id="${slotId}" class="comment-contact-slot"></div>
       </div>
     `;
@@ -386,7 +360,7 @@ async function openHomeModal(ann) {
   const rifugioCoords = publisher?.rifugioData?.location?.coordinates;
   const rifugioLocationHtml = publisher?.role === 'shelter'
     ? `
-      ${rifugioAddress ? `<span>${homeEscapeHtml(rifugioAddress)}</span>` : ''}
+      ${rifugioAddress ? `<span>${escapeHtml(rifugioAddress)}</span>` : ''}
       ${Array.isArray(rifugioCoords) && rifugioCoords.length === 2 ? `<a href="/pages/map.html?rifugioId=${encodeURIComponent(publisher._id)}">Vedi posizione rifugio</a>` : ''}
     `
     : '';
@@ -470,7 +444,7 @@ async function openHomeModal(ann) {
 
   const commentBoxHtml = isLoggedIn
     ? `
-      <form class="comment-form" data-announcement-id="${homeEscapeHtml(data._id)}">
+      <form class="comment-form" data-announcement-id="${escapeHtml(data._id)}">
         <label class="comment-label" for="comment-text">Commento</label>
         <textarea id="comment-text" class="comment-textarea" rows="3" maxlength="500" placeholder="Scrivi un aggiornamento (es. direzione)…"></textarea>
         <div class="comment-actions">
@@ -488,7 +462,7 @@ async function openHomeModal(ann) {
         <div class="comments-header">
           <h3>Segnala annuncio</h3>
         </div>
-        <form class="report-form" data-announcement-id="${homeEscapeHtml(data._id)}">
+        <form class="report-form" data-announcement-id="${escapeHtml(data._id)}">
           <label class="comment-label" for="report-reason">Motivo</label>
           <select id="report-reason" class="report-select">
             <option value="troll">Troll</option>
@@ -521,27 +495,27 @@ async function openHomeModal(ann) {
 
   document.getElementById('modal-body').innerHTML = `
     <dl class="detail-list">
-      ${animal?.name ? `<dt>Nome</dt><dd>${homeEscapeHtml(animal.name)}</dd>` : ''}
-      <dt>Specie</dt><dd>${homeDisplayValue(animal?.species)}</dd>
-      <dt>Razza</dt><dd>${homeDisplayValue(animal?.breed)}</dd>
-      <dt>Colore</dt><dd>${homeDisplayValue(animal?.color)}</dd>
-      <dt>Sesso</dt><dd>${homeDisplayValue(animal?.gender)}</dd>
-      <dt>Lunghezza pelo</dt><dd>${homeDisplayValue(animal?.lunghezzaPelo)}</dd>
-      <dt>Segni particolari</dt><dd>${homeDisplayValue(animal?.distinctiveFeatures)}</dd>
-      <dt>Microchip</dt><dd>${homeDisplayValue(animal?.microchipId)}</dd>
+      ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
+      <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
+      <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
+      <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
+      <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
+      <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
+      <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
+      <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
       ${locationInfo}
       <dt>Data</dt><dd>${date}</dd>
-      <dt>Condizioni</dt><dd>${homeDisplayValue(data.healthCondition)}</dd>
-      <dt>Comportamento</dt><dd>${homeDisplayValue(data.animalBehaviour)}</dd>
+      <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
+      <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
     </dl>
 
     <div class="modal-contact">
       <div class="modal-contact-header">Contatti</div>
       ${isLoggedIn
-        ? `<div class="modal-contact-name">Nome: ${homeEscapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
+        ? `<div class="modal-contact-name">Nome: ${escapeHtml(publisher?.rifugioData?.rifugioName || publisher?.username || '—')}</div>
            <div class="modal-contact-links">
-             ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${homeEscapeHtml(publisher.phoneNumber)}</a>` : ''}
-             ${publisher?.email ? `<a href="mailto:${publisher.email}">${homeEscapeHtml(publisher.email)}</a>` : ''}
+             ${publisher?.phoneNumber ? `<a href="tel:${publisher.phoneNumber}">📞 ${escapeHtml(publisher.phoneNumber)}</a>` : ''}
+             ${publisher?.email ? `<a href="mailto:${publisher.email}">${escapeHtml(publisher.email)}</a>` : ''}
            </div>
            ${rifugioLocationHtml || shelterAnimalLinkHtml ? `<div class="modal-contact-extra">${rifugioLocationHtml}${shelterAnimalLinkHtml}</div>` : ''}
            ${!publisher?.phoneNumber && !publisher?.email ? '<span class="contact-locked">Nessun contatto pubblico disponibile</span>' : ''}`
@@ -672,18 +646,18 @@ async function openHomeModal(ann) {
       try {
         const u = await fetchHomePublicUser(userId);
         const parts = [];
-        if (u.phoneNumber) parts.push(`<a href="tel:${homeEscapeHtml(u.phoneNumber)}">${homeEscapeHtml(u.phoneNumber)}</a>`);
-        if (u.email) parts.push(`<a href="mailto:${homeEscapeHtml(u.email)}">${homeEscapeHtml(u.email)}</a>`);
+        if (u.phoneNumber) parts.push(`<a href="tel:${escapeHtml(u.phoneNumber)}">${escapeHtml(u.phoneNumber)}</a>`);
+        if (u.email) parts.push(`<a href="mailto:${escapeHtml(u.email)}">${escapeHtml(u.email)}</a>`);
         slot.innerHTML = `
           <div class="modal-contact modal-contact--inline">
             <strong>Contatto:</strong>
-            <span>${homeEscapeHtml(u.username || '—')}</span>
+            <span>${escapeHtml(u.username || '—')}</span>
             ${parts.join('')}
             ${parts.length === 0 ? '<span class="contact-locked">Nessun contatto pubblico</span>' : ''}
           </div>
         `;
       } catch (err) {
-        slot.innerHTML = `<div class="comment-error">${homeEscapeHtml(err.message || 'Errore')}</div>`;
+        slot.innerHTML = `<div class="comment-error">${escapeHtml(err.message || 'Errore')}</div>`;
       }
     });
   }
@@ -791,3 +765,4 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('announcements:resolved-updated', renderHeroStats);
   setInterval(renderHeroStats, 30000);
 });
+
