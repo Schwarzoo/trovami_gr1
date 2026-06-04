@@ -41,11 +41,13 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
   const typeSelect = document.getElementById('modal-type');
   if (!typeSelect) return;
 
+  const typeTabs = document.querySelector('.type-tabs');
   const isRifugio = currentUser?.role === 'shelter';
   if (isRifugio) {
     typeSelect.innerHTML = '<option value="Sighting">In rifugio</option>';
     typeSelect.value = 'Sighting';
     typeSelect.disabled = true;
+    if (typeTabs) typeTabs.style.display = 'none';
     return;
   }
 
@@ -53,8 +55,8 @@ function configureTypeFieldForAccount(defaultType = 'LostAnimal') {
   typeSelect.innerHTML = `
     <option value="LostAnimal">Smarrito</option>
     <option value="Sighting">Avvistamento</option>
-  `;
-  typeSelect.value = defaultType || 'LostAnimal';
+  `;  typeSelect.value = defaultType || 'LostAnimal';
+  if (typeTabs) typeTabs.style.display = '';
 }
 
 /**
@@ -149,7 +151,7 @@ function configureModalFieldsForType(type) {
   }
   if (typeHint) {
     typeHint.textContent = isSighting
-      ? 'Avvistamento: compila solo i dati che conosci, il nome non è obbligatorio.'
+      ? 'Avvistamento: compila solo i dati che conosci, il nome non Ã¨ obbligatorio.'
       : 'Smarrito: inserisci i dati dell animale che stai cercando.';
   }
 }
@@ -709,7 +711,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="comment-text">${escapeHtml(city || 'Rifugio seguito')}</div>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
           <a class="btn btn--ghost followed-shelter-link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}">Vai alla pagina rifugio</a>
-          <button type="button" class="btn btn--ghost" data-follow-action="unfollow" data-shelter-id="${escapeHtml(id)}">Non seguire più</button>
+          <button type="button" class="btn btn--ghost" data-follow-action="unfollow" data-shelter-id="${escapeHtml(id)}">Non seguire piÃ¹</button>
         </div>
       `;
       container.appendChild(item);
@@ -855,7 +857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       ? (savedAddress
         ? `Posizione salvata: ${savedAddress}. Puoi modificarla dalla mappa.`
         : 'Posizione salvata. Puoi modificarla dalla mappa.')
-      : 'Aggiungi la posizione del rifugio: puoi cercarla per indirizzo e città, usare la tua posizione o scegliere un punto sulla mappa.';
+      : 'Aggiungi la posizione del rifugio: puoi cercarla per indirizzo e cittÃ , usare la tua posizione o scegliere un punto sulla mappa.';
     button.textContent = coords ? 'Modifica posizione' : 'Aggiungi posizione';
     if (message) message.textContent = coords ? '' : 'Prima di creare annunci rifugio salva un punto sulla mappa o cerca l\'indirizzo.';
     setRifugioPositionEditingState(document.getElementById('profile-section')?.classList.contains('is-editing'));
@@ -986,7 +988,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const message = document.getElementById('rifugio-position-message');
 
     if (!query) {
-      if (message) message.textContent = 'Inserisci almeno indirizzo o città.';
+      if (message) message.textContent = 'Inserisci almeno indirizzo o cittÃ .';
       return;
     }
 
@@ -1877,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('deleteAccount')?.addEventListener('click', async () => {
     const confirmed = await showProfileConfirm({
       title: 'Elimina account',
-      message: 'Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non è reversibile.',
+      message: 'Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione non Ã¨ reversibile.',
       confirmLabel: 'Elimina',
       danger: true
     });
@@ -1915,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statusClass = a.status === 'RESOLVED' ? 'is-resolved' : 'is-active';
     const titleText = a.animalId?.name ? `${escapeHtml(a.animalId.name)} - ${escapeHtml(a.animalId.species || '')}` : escapeHtml(a.animalId?.species || 'Animale');
     div.innerHTML = `
-      <div class="card-image"><div class="card-image-placeholder"><span>…</span></div></div>
+      <div class="card-image"><div class="card-image-placeholder"><span>â€¦</span></div></div>
       <div class="card-body">
         <div class="profile-announcement-card__meta">
           <span class="profile-announcement-status ${statusClass}">${statusLabel}</span>
@@ -1949,7 +1951,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (placeholder) placeholder.replaceWith(img);
       } catch (err) {
         const placeholder = container.querySelector('.card-image-placeholder');
-        if (placeholder) placeholder.innerHTML = '🐾';
+        if (placeholder) placeholder.innerHTML = 'ðŸ¾';
       }
     })();
   });
@@ -1962,7 +1964,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const id = closeButton.dataset.id;
         const confirmed = await showProfileConfirm({
           title: 'Segna come risolto',
-          message: 'Segni l\'annuncio come risolto? Non comparirà più nella lista pubblica.',
+          message: 'Segni l\'annuncio come risolto? Non comparirÃ  piÃ¹ nella lista pubblica.',
           confirmLabel: 'Segna come risolto',
           danger: false
         });
@@ -2060,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const placeholder = container.querySelector('.card-image-placeholder');
         const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
         if (!photo) {
-          if (placeholder) placeholder.innerHTML = '🐾';
+          if (placeholder) placeholder.innerHTML = 'ðŸ¾';
           return;
         }
         (async () => {
@@ -2077,7 +2079,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             img.onload = () => { URL.revokeObjectURL(img.src); };
             if (placeholder) placeholder.replaceWith(img);
           } catch (err) {
-            if (placeholder) placeholder.innerHTML = '🐾';
+            if (placeholder) placeholder.innerHTML = 'ðŸ¾';
           }
         })();
       });
@@ -2249,7 +2251,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         gallery.innerHTML = '';
         gallery.appendChild(img);
       } catch (err) {
-        gallery.innerHTML = '<div class="view-modal-no-photo">Non è presente alcuna foto</div>';
+        gallery.innerHTML = '<div class="view-modal-no-photo">Non Ã¨ presente alcuna foto</div>';
       }
     })();
 
@@ -2356,7 +2358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       card.innerHTML = `
         <div class="card-image">
-          <div class="card-image-placeholder"><span>…</span></div>
+          <div class="card-image-placeholder"><span>â€¦</span></div>
           <span class="badge badge--${isLost ? 'lost' : 'sighting'}">
             ${isLost ? 'Smarrito' : 'Avvistato'}
           </span>
@@ -2492,7 +2494,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (type === 'LostAnimal' && !animalName) {
-      alert('Per un annuncio di smarrimento il nome dell animale è obbligatorio se lo conosci.');
+      alert('Per un annuncio di smarrimento il nome dell animale Ã¨ obbligatorio se lo conosci.');
       return;
     }
 
@@ -2689,7 +2691,7 @@ function normalizeCoordsFromInput(input) {
   };
 
   let a = null, b = null;
-  if (/[°'"NSWE]/i.test(input)) {
+  if (/[Â°'"NSWE]/i.test(input)) {
     const raw = input.split(',');
     if (raw.length !== 2) return null;
     const p1 = tryDms(raw[0].trim());
@@ -2720,7 +2722,7 @@ function dmsToDecimal(str) {
   const m = s.match(/[NnSsEeWw]/);
   if (m) hemi = m[0].toUpperCase();
   const cleaned = s.replace(/[NnSsEeWw]/g, '').trim();
-  const dmsMatch = cleaned.match(/(\d+)[°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"\s]*/);
+  const dmsMatch = cleaned.match(/(\d+)[Â°\s]+(\d+)[\'\s]+(\d+(?:\.\d+)?)[\"\s]*/);
   if (dmsMatch) {
     const deg = parseFloat(dmsMatch[1]);
     const min = parseFloat(dmsMatch[2]);
@@ -2729,7 +2731,7 @@ function dmsToDecimal(str) {
     if (hemi === 'S' || hemi === 'W') dec = -dec;
     return dec;
   }
-  const dmMatch = cleaned.match(/(\d+)[°\s]+(\d+(?:\.\d+)?)[\'\s]*/);
+  const dmMatch = cleaned.match(/(\d+)[Â°\s]+(\d+(?:\.\d+)?)[\'\s]*/);
   if (dmMatch) {
     const deg = parseFloat(dmMatch[1]);
     const min = parseFloat(dmMatch[2]);
@@ -2762,7 +2764,7 @@ function decimalToDMS(dec, type) {
   let hemi = '';
   if (type === 'lat') hemi = dec >= 0 ? 'N' : 'S';
   if (type === 'lng') hemi = dec >= 0 ? 'E' : 'W';
-  return `${deg}°${min}'${sec}"${hemi}`;
+  return `${deg}Â°${min}'${sec}"${hemi}`;
 }
 
 /**
@@ -2957,7 +2959,7 @@ let wizStep = 1;
 			const line = document.getElementById('wiz-line'+i);
 			
 			if (i < wizStep) {
-				circle.className = 'step-circle done'; circle.textContent = '✓';
+				circle.className = 'step-circle done'; circle.textContent = 'âœ“';
 				label.className = 'step-label done';
 			} else if (i === wizStep) {
 				circle.className = 'step-circle active'; circle.textContent = i;
@@ -2985,12 +2987,12 @@ let wizStep = 1;
       const species = (document.getElementById('modal-species') || {}).value || '';
       const gender = (document.getElementById('modal-gender') || {}).value || '';
       document.getElementById('summary-base').textContent = (species && gender)
-        ? `✔️ Dati base inseriti: ${species} • ${gender}`
-        : '❌ Dati base inseriti (Specie e Genere)';
+        ? `âœ”ï¸ Dati base inseriti: ${species} â€¢ ${gender}`
+        : 'âŒ Dati base inseriti (Specie e Genere)';
 
       const color = (document.getElementById('modal-color') || {}).value || '';
       const fur = (document.getElementById('modal-lunghezzaPelo') || {}).value || '';
-      document.getElementById('summary-aspect').textContent = (color || fur) ? `✔️ Aspetto: ${color || '—'} • ${fur || '—'}` : '❌ Dettagli aspetto completati';
+      document.getElementById('summary-aspect').textContent = (color || fur) ? `âœ”ï¸ Aspetto: ${color || 'â€”'} â€¢ ${fur || 'â€”'}` : 'âŒ Dettagli aspetto completati';
 
       const coords = (document.getElementById('modal-coords') || {}).value || '';
       const lastSeenInput = document.getElementById('modal-lastSeenDate');
@@ -2999,8 +3001,8 @@ let wizStep = 1;
       const hasValidDate = customDateSelected ? Boolean(lastSeen) : true;
       const dateLabel = customDateSelected ? lastSeen : 'oggi';
       document.getElementById('summary-location').textContent = (coords && hasValidDate)
-        ? `✔️ Posizione: impostata • Data: ${dateLabel}`
-        : '❌ Posizione e data impostate';
+        ? `âœ”ï¸ Posizione: impostata â€¢ Data: ${dateLabel}`
+        : 'âŒ Posizione e data impostate';
     } catch (e) {}
 	}
 
@@ -3013,7 +3015,7 @@ let wizStep = 1;
 		el.classList.add('active');
 		const select = document.getElementById('modal-type');
 		select.value = val;
-		// Lancia l'evento "change" manuale così il tuo profile.js originale se ne accorge
+		// Lancia l'evento "change" manuale cosÃ¬ il tuo profile.js originale se ne accorge
 		select.dispatchEvent(new Event('change')); 
 	}
 
