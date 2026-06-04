@@ -9,7 +9,7 @@ Piattaforma web community-driven per la segnalazione in tempo reale di animali s
 ### Obiettivi Principali
 
 -  **Segnalazione in Tempo Reale**: Proprietari possono segnalare rapidamente animali smarriti con foto e dettagli
--  **Matching Intelligente**: Algoritmo smart matching che abbina automaticamente animali smarriti con avvistamenti basato su caratteristiche e posizione
+-  **Matching Intelligente**: Algoritmo smart matching che abbina automaticamente animali smarriti con avvistamenti basato su caratteristiche
 -  **Localizzazione Geografica**: Sistema di geolocalizzazione per trovare rifugi e avvistamenti vicini
 -  **Gestione Rifugi**: Interfaccia dedicata per rifugi e veterinari per segnalare animali trovati
 -  **Community Collaboration**: Gli utenti possono segnalare avvistamenti e ricevere notifiche real-time
@@ -113,7 +113,7 @@ trovami_gr1/
 ### 3. **Smart Matching Engine**
 - Confronto automatico tra segnalazioni di smarrimento e avvistamenti
 - Utilizzo di embeddings IA (Hugging Face) per semantic similarity
-- Ranking per vicinanza geografica e somiglianza caratteristiche
+- Ranking somiglianza caratteristiche
 - Suggerimenti automatici agli utenti
 
 ### 4. **Sistema di Contatti**
@@ -141,12 +141,11 @@ trovami_gr1/
 
 ##  Come Funziona il Matching Intelligente
 
-1. **Acquisizione Dati**: Il sistema raccoglie foto, descrizione, localizzazione
-2. **Embedding IA**: Converte le descrizioni in vettori numerici usando modelli Hugging Face
+1. **Acquisizione Dati**: Il sistema raccoglie foto
+2. **Embedding IA**: Converte le foto in vettori numerici usando modelli Hugging Face
 3. **Confronto Semantico**: Confronta embedding di segnalazioni diverse
-4. **Scoring Geografico**: Calcola distanza tra localizzazioni
-5. **Ranking**: Combina score semantico e geografico
-6. **Notifica**: Suggerisce i migliori match agli utenti interessati
+4. **Ranking**: Combina score semantico e geografico
+5. **Notifica**: Suggerisce i migliori match agli utenti interessati
 
 ---
 
@@ -264,6 +263,6 @@ Questo è un progetto attualmente universitario in sviluppo attivo per il corso 
 ##  Corso
 
 **Ingegneria del Software** — Prof. Sandro Fiore
-**A.A. 2025/2026** — Università di Trento
+**A.A. 2026** — Università di Trento
 
 ---
