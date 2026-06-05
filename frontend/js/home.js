@@ -54,41 +54,6 @@ async function fetchActiveAnnouncementsCount() {
 }
 
 /**
- * Returns home announcement date.
- * @param {Object} announcement - Announcement record that may contain date fields.
- * @returns {Date|null} Parsed announcement date, or null when no valid date exists.
- */
-function getHomeAnnouncementDate(announcement) {
-  const rawDate = announcement?.createdAt || announcement?.date || announcement?.updatedAt;
-  if (!rawDate) return null;
-  const date = new Date(rawDate);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-/**
- * Checks whether same day.
- * @param {Date|null} left - First date to compare.
- * @param {Date|null} right - Second date to compare.
- * @returns {boolean} True when both dates fall on the same calendar day.
- */
-function isSameDay(left, right) {
-  if (!left || !right) return false;
-  return left.getFullYear() === right.getFullYear()
-    && left.getMonth() === right.getMonth()
-    && left.getDate() === right.getDate();
-}
-
-/**
- * Checks whether within last24 hours.
- * @param {Date|null} date - Date to compare with the current time.
- * @returns {boolean} True when the date is within the last 24 hours.
- */
-function isWithinLast24Hours(date) {
-  if (!date) return false;
-  return Date.now() - date.getTime() <= 24 * 60 * 60 * 1000;
-}
-
-/**
  * Builds a home-page announcement card and wires detail-opening interactions.
  * @param {Object} ann - Announcement record to render.
  * @returns {HTMLElement} Interactive card element for the home announcement grid.
@@ -570,32 +535,16 @@ async function renderHeroStats() {
 }
 
 /**
- * Renders home stats strip into the current page.
- * @returns {Promise<void>} Promise resolving after the home stats strip is refreshed.
+ * Renders impact-card stats into the current page.
+ * @returns {Promise<void>} Promise resolving after the impact counters are refreshed.
  */
-async function renderHomeStatsStrip() {
-  const last24hCounter = document.getElementById('home-last-24h-count');
-  const createdTodayCounter = document.getElementById('home-created-today-count');
+async function renderHomeImpactStats() {
   const resolvedTotalCounter = document.getElementById('home-resolved-total-count');
   const resolvedTotalInline = document.getElementById('home-resolved-total-inline');
-  if (!last24hCounter && !createdTodayCounter && !resolvedTotalCounter && !resolvedTotalInline) return;
+  if (!resolvedTotalCounter && !resolvedTotalInline) return;
 
-  const [announcements, resolvedTotalCount] = await Promise.all([
-    fetchAnnouncements(),
-    fetchResolvedAnnouncementsCount()
-  ]);
-  const now = new Date();
+  const resolvedTotalCount = await fetchResolvedAnnouncementsCount();
 
-  const last24hCount = Array.isArray(announcements)
-    ? announcements.filter((announcement) => isWithinLast24Hours(getHomeAnnouncementDate(announcement))).length
-    : 0;
-
-  const createdTodayCount = Array.isArray(announcements)
-    ? announcements.filter((announcement) => isSameDay(getHomeAnnouncementDate(announcement), now)).length
-    : 0;
-
-  if (last24hCounter) last24hCounter.textContent = String(last24hCount);
-  if (createdTodayCounter) createdTodayCounter.textContent = String(createdTodayCount);
   if (resolvedTotalCounter) resolvedTotalCounter.textContent = String(resolvedTotalCount);
   if (resolvedTotalInline) resolvedTotalInline.textContent = String(resolvedTotalCount);
 }
@@ -634,8 +583,9 @@ async function initHomeAnnouncements() {
  * @returns {Promise<void>} Promise resolving when the initial home widgets are loaded.
  */
 document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([initHomeAnnouncements(), renderHeroStats(), renderHomeStatsStrip()]);
+  await Promise.all([initHomeAnnouncements(), renderHeroStats(), renderHomeImpactStats()]);
   window.addEventListener('announcements:resolved-updated', renderHeroStats);
+  window.addEventListener('announcements:resolved-updated', renderHomeImpactStats);
   setInterval(renderHeroStats, 30000);
 });
 

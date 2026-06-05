@@ -383,46 +383,6 @@ body::after {
   border-radius: 18px;
 }
 
-.home-stats-strip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.6rem;
-  padding: 0.9rem 1.2rem;
-  border-radius: 4px;
-  background: #1f1713;
-  color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-}
-
-.home-stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  white-space: nowrap;
-  font-size: 0.95rem;
-  line-height: 1.2;
-}
-
-.home-stat-pill__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-
-.home-stat-pill__dot--amber {
-  background: #c85a2a;
-}
-
-.home-stat-pill__dot--green {
-  background: #44a06a;
-}
-
-.home-stat-pill__label {
-  color: rgba(255, 255, 255, 0.86);
-}
-
 .home-impact-card {
   position: relative;
   display: grid;

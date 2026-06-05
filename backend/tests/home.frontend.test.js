@@ -75,4 +75,28 @@ describe('home frontend stats', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/announcements/count?status=active');
     expect(elements['active-announcements-count'].textContent).toBe('13');
   });
+
+  test('updates the impact-card resolved total without loading strip-only counters', async () => {
+    const elements = {
+      'home-resolved-total-count': { textContent: '0' },
+      'home-resolved-total-inline': { textContent: '0' }
+    };
+    const fetchMock = jest.fn(async (url) => {
+      if (url === '/api/v1/announcements/count?status=resolved') {
+        return {
+          ok: true,
+          json: async () => ({ count: 8 })
+        };
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    const context = loadHomeScript({ fetchMock, elements });
+    await context.renderHomeImpactStats();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/announcements/count?status=resolved');
+    expect(elements['home-resolved-total-count'].textContent).toBe('8');
+    expect(elements['home-resolved-total-inline'].textContent).toBe('8');
+  });
 });
