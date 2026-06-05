@@ -117,8 +117,8 @@ trovami_gr1/
 - Suggerimenti automatici agli utenti
 
 ### 4. **Sistema di Contatti**
-- Richieste di contatto tra utenti
-- Chat integrata per coordinamento
+- Richieste di adozione tra rifugio-user
+- Chat integrata per coordinamento sull'annuncio
 - Tracking dello status (pending, accepted, resolved)
 
 ### 5. **Gestione Rifugi**
