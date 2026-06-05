@@ -28,6 +28,51 @@ function displayValue(value, fallback = '- -') {
 }
 
 /**
+ * Renders the shared animal/announcement details list used by announcement modals.
+ * @param {Object} animal - Animal fields to render.
+ * @param {Object} announcement - Announcement fields to render.
+ * @param {Object} [options={}] - Detail-list rendering options.
+ * @param {string} [options.className=''] - Extra classes added to the `detail-list` element.
+ * @param {string} [options.date] - Already formatted announcement date.
+ * @param {boolean} [options.includeStatus=false] - Whether to include the announcement status row.
+ * @param {string} [options.extraLocationHtml=''] - Trusted `<dt>/<dd>` location markup inserted after microchip.
+ * @param {Function} [options.formatValue=displayValue] - Value formatter used for optional fields.
+ * @returns {string} Detail-list HTML.
+ */
+function renderAnimalDetailsListHtml(animal = {}, announcement = {}, options = {}) {
+  const {
+    className = '',
+    date,
+    includeStatus = false,
+    extraLocationHtml = '',
+    formatValue = displayValue
+  } = options;
+  const classes = ['detail-list', String(className || '').trim()].filter(Boolean).join(' ');
+  const format = typeof formatValue === 'function' ? formatValue : displayValue;
+  const renderRow = (label, value) => `<dt>${escapeHtml(label)}</dt><dd>${format(value)}</dd>`;
+  const rows = [];
+
+  if (animal?.name) rows.push(`<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>`);
+  rows.push(renderRow('Specie', animal?.species));
+  rows.push(renderRow('Razza', animal?.breed));
+  rows.push(renderRow('Colore', animal?.color));
+  rows.push(renderRow('Sesso', animal?.gender));
+  rows.push(renderRow('Lunghezza pelo', animal?.lunghezzaPelo));
+  rows.push(renderRow('Segni particolari', animal?.distinctiveFeatures));
+  rows.push(renderRow('Microchip', animal?.microchipId));
+  if (extraLocationHtml) rows.push(extraLocationHtml);
+  if (date !== undefined) rows.push(`<dt>Data</dt><dd>${escapeHtml(date)}</dd>`);
+  rows.push(renderRow('Condizioni', announcement?.healthCondition));
+  rows.push(renderRow('Comportamento', announcement?.animalBehaviour));
+  if (includeStatus) rows.push(renderRow('Stato', announcement?.status));
+
+  return `
+    <dl class="${escapeHtml(classes)}">
+      ${rows.join('\n      ')}
+    </dl>`;
+}
+
+/**
  * Formats a numeric value for Italian UI display.
  * @param {*} value - Numeric value or numeric string to format.
  * @returns {string} Localized number string, or `0` for invalid values.
@@ -602,20 +647,10 @@ async function openAnnouncementModal(ann) {
     : '';
 
   document.getElementById('modal-body').innerHTML = `
-    <dl class="detail-list">
-      ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
-      <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
-      <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
-      <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
-      <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
-      <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
-      <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
-      <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
-      ${locationInfo}
-      <dt>Data</dt><dd>${date}</dd>
-      <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
-      <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
-    </dl>
+    ${renderAnimalDetailsListHtml(animal, data, {
+      date,
+      extraLocationHtml: locationInfo
+    })}
     ${contactHtml}
     <section class="comments-section" aria-label="Commenti">
       <div class="comments-header">
