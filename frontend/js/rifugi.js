@@ -57,12 +57,6 @@ function updateCounters() {
   document.getElementById('stat-rifugi').textContent = formatNumber(rifugiCount);
   document.getElementById('stat-animali').textContent = formatNumber(adoptableCount);
   document.getElementById('rifugi-count').textContent = `${formatNumber(rifugiCount)} rifugi trovati`;
-  updateAdoptionsCount(getVisibleAdoptableAnimals().length);
-}
-
-function updateAdoptionsCount(count) {
-  document.getElementById('adoptions-count').textContent =
-    `${formatNumber(count)} ${count === 1 ? 'animale' : 'animali'}`;
 }
 
 function setEmptyState(container, message) {
@@ -111,10 +105,6 @@ function renderRifugiGrid() {
           </div>
         </div>
         <p class="rifugio-description">${escapeHtml(description)}</p>
-        <div class="rifugio-meta">
-          <div class="meta-row"><strong>Animali adottabili</strong><span>${escapeHtml(adoptableAnimals)}</span></div>
-          <div class="meta-row"><strong>Contatti</strong><span>${escapeHtml(rifugio?.phoneNumber || rifugio?.email || 'Non pubblici')}</span></div>
-        </div>
         <div class="card-actions">
           <a class="primary" href="${rifugioLink}">Apri pagina rifugio</a>
         </div>
@@ -167,8 +157,6 @@ function renderAdoptions() {
   const animals = getVisibleAdoptableAnimals()
     .slice()
     .sort((a, b) => new Date(b.dateArrived || b.createdAt || 0) - new Date(a.dateArrived || a.createdAt || 0));
-
-  updateAdoptionsCount(animals.length);
 
   if (animals.length === 0) {
     setEmptyState(grid, 'Nessun animale adottabile disponibile al momento.');

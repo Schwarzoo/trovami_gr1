@@ -189,13 +189,12 @@ function summarizeAnimals(animals) {
  */
 function renderStats(rifugio, animals) {
   const stats = document.getElementById('shelter-stats');
-  const { total, available } = summarizeAnimals(animals);
+  const { available } = summarizeAnimals(animals);
 
   stats.innerHTML = `
     <div class="stat-card">
-      <span>Animali adottabili</span>
+      <span>Animali adottabili:</span>
       <strong>${escapeHtml(available)}</strong>
-      <span>su ${escapeHtml(total)} animali registrati</span>
     </div>
   `;
 }

@@ -211,6 +211,10 @@ body::after {
   margin-bottom: 1.2rem;
 }
 
+.section-head--adoptions {
+  justify-content: space-between;
+}
+
 .section-head h2 {
   margin: 0;
   font-family: var(--font-display);
@@ -358,29 +362,6 @@ body::after {
   color: var(--text-muted);
   line-height: 1.6;
   font-size: 0.93rem;
-}
-
-.rifugio-meta {
-  display: grid;
-  gap: 0.7rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  padding-top: 0.15rem;
-}
-
-.meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.meta-row strong {
-  color: var(--text);
-}
-
-.meta-row span {
-  text-align: right;
 }
 
 .card-actions {
