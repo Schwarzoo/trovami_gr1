@@ -154,7 +154,6 @@ function renderRifugiGrid() {
     const availableAnimals = countAvailableAnimalsForRifugio(id);
     const announcementCount = countAnnouncementsForRifugio(id);
     const rifugioLink = `/pages/rifugio.html?rifugioId=${encodeURIComponent(id)}`;
-    const announcementsLink = `/pages/announcements.html?rifugioId=${encodeURIComponent(id)}`;
 
     return `
       <article class="rifugio-card" data-id="${escapeHtml(id)}" tabindex="0" role="button" aria-label="Apri pagina di ${escapeHtml(name)}">
@@ -175,7 +174,6 @@ function renderRifugiGrid() {
         </div>
         <div class="card-actions">
           <a class="primary" href="${rifugioLink}">Apri pagina rifugio</a>
-          <a href="${announcementsLink}">Vedi annunci</a>
         </div>
       </article>
     `;
@@ -329,7 +327,6 @@ function renderMap() {
         <div class="rifugi-popup__count">Animali disponibili: ${escapeHtml(availableAnimals)}</div>
         <div class="rifugi-popup__actions">
           <a class="rifugi-popup__link" href="/pages/rifugio.html?rifugioId=${encodeURIComponent(rifugio._id)}">Apri pagina rifugio</a>
-          <a class="rifugi-popup__link" href="/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}">Vedi annunci</a>
         </div>
       </div>
     `;

@@ -213,7 +213,6 @@ function renderInfo(rifugio, animals) {
   const address = [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
   const { total, available } = summarizeAnimals(animals);
   const contacts = getAllContacts(rifugio) || 'Contatti non pubblici';
-  const websiteLink = `/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}`;
 
   container.innerHTML = `
     <div class="info-tile">
@@ -228,7 +227,6 @@ function renderInfo(rifugio, animals) {
     <div class="info-tile">
       <span>Contatti</span>
       <strong>${escapeHtml(contacts)}</strong>
-      <a href="${websiteLink}">Vai agli annunci del rifugio</a>
     </div>
     <div class="info-tile">
       <span>Descrizione</span>
