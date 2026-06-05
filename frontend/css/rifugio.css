@@ -75,6 +75,27 @@
   display: none;
 }
 
+#animal-modal-close {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#animal-modal-close:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 .hero-actions-secondary {
   display: flex;
   gap: 0.75rem;
@@ -188,27 +209,85 @@
 
 .hero-stats {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
+  align-self: start;
+  justify-self: end;
+  width: min(100%, 460px);
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.78);
+  position: relative;
+  min-height: 154px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 250, 244, 0.88));
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 1rem 1.1rem;
+  border-radius: 22px;
+  padding: 1rem;
   display: grid;
-  gap: 0.35rem;
+  place-items: center;
+  gap: 0.65rem;
+  text-align: center;
+  box-shadow: 0 14px 28px rgba(26, 14, 8, 0.08);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  right: -34px;
+  top: -34px;
+  width: 92px;
+  height: 92px;
+  border-radius: 999px;
+  background: rgba(200, 90, 42, 0.12);
+}
+
+.stat-card::after {
+  content: '';
+  position: relative;
+  z-index: 1;
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.stat-card--accent {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 247, 255, 0.88));
+}
+
+.stat-card--accent::before {
+  background: rgba(42, 110, 200, 0.13);
+}
+
+.stat-card--accent::after {
+  background: var(--accent-2);
 }
 
 .stat-card strong {
+  position: relative;
+  z-index: 1;
   font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 400;
+  font-size: clamp(2.4rem, 4vw, 3.2rem);
+  font-weight: 500;
+  line-height: 1;
 }
 
 .stat-card span {
+  position: relative;
+  z-index: 1;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+.stat-card span:first-child {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .section-card {
@@ -295,6 +374,17 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.25rem;
+}
+
+.shelter-page .adoptable-animal-card {
+  background: linear-gradient(180deg, #fff, #fcfaf7);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.shelter-page .adoptable-animal-card .card-image {
+  height: 180px;
 }
 
 .adoption-card {
@@ -453,28 +543,108 @@
     flex-direction: column;
   }
 
+  .section-badge {
+    align-self: flex-start;
+  }
+
+  .hero-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .stat-card {
+    min-height: 118px;
+    padding: 0.85rem 0.75rem;
+    border-radius: 16px;
+  }
+
+  .stat-card strong {
+    font-size: clamp(2rem, 9vw, 2.45rem);
+  }
+
+  .stat-card span:first-child {
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+  }
+
   #shelter-map {
     height: 300px;
   }
 
   .hero-actions {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
   }
 
   .button {
     width: 100%;
+    min-height: 46px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.84rem;
   }
 
   .hero-actions-main,
-  .hero-actions-secondary,
   .contact-request-actions {
     flex-direction: column;
     width: 100%;
   }
 
+  .hero-actions-secondary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    width: 100%;
+  }
+
+  #shelter-animals-grid.adoptions-grid {
+    display: flex;
+    gap: 0.9rem;
+    --shelter-animal-card-mobile-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -1rem;
+    padding: 0 max(1rem, calc((100vw - var(--shelter-animal-card-mobile-width)) / 2)) 0.35rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #shelter-animals-grid .adoptable-animal-card {
+    flex: 0 0 var(--shelter-animal-card-mobile-width);
+    width: var(--shelter-animal-card-mobile-width);
+    max-width: var(--shelter-animal-card-mobile-width);
+    scroll-snap-align: center;
+  }
+
   .contact-request-actions .button,
   .contact-request-actions button {
     width: 100%;
+  }
+
+  #animal-modal-overlay.modal-overlay {
+    align-items: flex-end;
+    padding: 0 0.85rem 0.85rem;
+  }
+
+  #animal-modal-overlay .modal-card {
+    width: 100%;
+    height: auto;
+    max-width: none;
+    max-height: calc(88svh - 0.85rem);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  #animal-modal-overlay .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--surface);
+  }
+
+  #animal-modal-overlay .modal-body {
+    overflow-y: auto;
   }
 }
 
@@ -487,6 +657,16 @@
     height: 260px;
   }
 
+  #shelter-animals-grid.adoptions-grid {
+    --shelter-animal-card-mobile-width: calc(100vw - 4.8rem);
+    margin-inline: -0.85rem;
+    padding-inline: max(0.85rem, calc((100vw - var(--shelter-animal-card-mobile-width)) / 2));
+  }
+
+  .shelter-page .adoptable-animal-card .card-image {
+    height: 165px;
+  }
+
   .follow-modal-overlay {
     align-items: flex-end;
     padding: 0;
@@ -494,5 +674,13 @@
 
   .follow-modal {
     border-radius: 18px 18px 0 0;
+  }
+
+  #animal-modal-overlay.modal-overlay {
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  #animal-modal-overlay .modal-card {
+    max-height: calc(88svh - 0.75rem);
   }
 }

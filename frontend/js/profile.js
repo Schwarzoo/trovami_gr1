@@ -264,6 +264,27 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
 }
 
 /**
+ * Keeps the profile details disclosure compact on mobile and open on desktop.
+ * @returns {void}
+ */
+function initProfileDetailsDisclosure() {
+  const details = document.getElementById('profile-section');
+  if (!details || details.dataset.disclosureBound === 'true') return;
+
+  const sync = () => {
+    if (window.innerWidth <= 720) {
+      details.open = false;
+    } else {
+      details.open = true;
+    }
+  };
+
+  details.dataset.disclosureBound = 'true';
+  sync();
+  window.addEventListener('resize', sync);
+}
+
+/**
  * Initializes the authenticated profile page after the DOM is ready.
  * @returns {Promise<void>} Promise resolving when the profile UI and event handlers are initialized.
  */
@@ -273,6 +294,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/pages/login.html';
     return;
   }
+
+  initProfileDetailsDisclosure();
 
   const autoOpenNewAnnouncement = new URLSearchParams(window.location.search).get('newAnnouncement') === '1';
 

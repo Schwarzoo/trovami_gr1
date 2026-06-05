@@ -1142,13 +1142,79 @@ button#nearby-button:disabled {
     padding-right: 1rem;
   }
   .modal {
-    border-radius: 12px 12px 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: calc(88svh - 0.85rem);
+    border-radius: 18px;
     align-self: flex-end;
-    max-height: 85vh;
+    overflow-y: auto;
   }
   #modal-overlay {
     align-items: flex-end;
-    padding: 0;
+    padding: 0 0.85rem 0.85rem;
+  }
+  .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--surface);
+  }
+  #modal-title {
+    font-size: 1.15rem;
+    line-height: 1.2;
+  }
+  #modal-close {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: var(--bg);
+  }
+  .modal-gallery-wrapper {
+    height: 210px;
+    border-radius: 14px;
+  }
+  #modal-gallery img {
+    height: 210px;
+    border-radius: 14px;
+  }
+  .detail-list {
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.35rem 0.75rem;
+  }
+  .detail-list dt {
+    white-space: nowrap;
+  }
+  .detail-list dd {
+    min-width: 0;
+    margin: 0;
+  }
+  .modal-contact {
+    padding: 0.9rem;
+  }
+  .modal-contact-links a,
+  .position-link,
+  .modal-map-btn,
+  .modal-open-animal-btn {
+    width: auto;
+    max-width: 100%;
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.78rem;
+  }
+  .comments-header {
+    align-items: center;
+    flex-direction: row;
+  }
+  .comment-submit {
+    width: auto;
+    min-height: 40px;
+    padding: 0.55rem 0.9rem;
+    align-self: flex-start;
+    font-size: 0.86rem;
   }
 }
 
@@ -1157,11 +1223,12 @@ button#nearby-button:disabled {
     padding-inline: 0.8rem;
   }
 
-  .modal-contact-links a,
-  .position-link,
-  .modal-map-btn {
-    width: 100%;
-    justify-content: center;
+  #modal-overlay {
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  .modal {
+    max-height: calc(88svh - 0.75rem);
   }
 }
 

@@ -155,23 +155,59 @@ body::after {
 
 .hero-aside {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
+  align-content: stretch;
+  align-self: start;
+  width: min(100%, 460px);
+  justify-self: end;
 }
 
 .hero-card {
-  background: rgba(255, 255, 255, 0.75);
+  position: relative;
+  min-height: 152px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 244, 0.86));
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 1rem 1.1rem;
+  border-radius: 22px;
+  padding: 1rem;
   display: grid;
-  gap: 0.35rem;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+  place-items: center;
+  gap: 0.85rem;
+  text-align: center;
+  box-shadow: 0 14px 28px rgba(26, 14, 8, 0.08);
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  right: -34px;
+  top: -34px;
+  width: 92px;
+  height: 92px;
+  border-radius: 999px;
+  background: rgba(200, 90, 42, 0.12);
+}
+
+.hero-card::after {
+  content: '';
+  position: relative;
+  z-index: 1;
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.55;
 }
 
 .hero-card strong {
-  font-size: 2rem;
+  position: relative;
+  z-index: 1;
+  font-size: clamp(2.35rem, 4vw, 3.2rem);
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1;
   color: var(--text);
 }
 
@@ -182,6 +218,8 @@ body::after {
 }
 
 .hero-card-label {
+  position: relative;
+  z-index: 1;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -190,7 +228,16 @@ body::after {
 }
 
 .hero-card.accent {
-  background: linear-gradient(135deg, rgba(200, 90, 42, 0.13), rgba(255, 255, 255, 0.86));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 247, 255, 0.88));
+}
+
+.hero-card.accent::before {
+  background: rgba(42, 110, 200, 0.13);
+}
+
+.hero-card.accent::after {
+  background: var(--accent-2);
 }
 
 .hero-card.muted {
@@ -665,8 +712,45 @@ body::after {
     border-radius: 20px;
   }
 
+  .hero-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .hero-card {
+    min-width: 0;
+    min-height: 118px;
+    padding: 0.85rem 0.75rem;
+    border-radius: 16px;
+  }
+
+  .hero-card strong {
+    font-size: clamp(2rem, 9vw, 2.45rem);
+    line-height: 1;
+  }
+
+  .hero-card-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+  }
+
+  .hero-card::before {
+    right: -42px;
+    top: -42px;
+  }
+
+  .hero-card::after {
+    width: 30px;
+  }
+
   .section-head {
     flex-direction: column;
+  }
+
+  #rifugi-count {
+    align-self: flex-start;
   }
 
   .section-tools,
@@ -675,22 +759,71 @@ body::after {
     align-items: stretch;
   }
 
+  #adoptions-grid,
+  .adoptions-grid {
+    display: flex;
+    gap: 0.9rem;
+    --adoption-card-mobile-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -1rem;
+    padding: 0 max(1rem, calc((100vw - var(--adoption-card-mobile-width)) / 2)) 0.35rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .adoptable-animal-card {
+    flex: 0 0 var(--adoption-card-mobile-width);
+    width: var(--adoption-card-mobile-width);
+    max-width: var(--adoption-card-mobile-width);
+    scroll-snap-align: center;
+  }
+
+  .adoptable-animal-card .card-image {
+    height: 180px;
+    min-height: 180px;
+  }
+
   #rifugi-map {
     height: 360px;
   }
 
   .hero-actions {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
   .button {
     width: 100%;
+    min-height: 46px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.84rem;
   }
 
   .rifugio-card-hero,
   .meta-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .rifugi-grid {
+    display: flex;
+    gap: 0.9rem;
+    --rifugio-card-mobile-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -1rem;
+    padding: 0 max(1rem, calc((100vw - var(--rifugio-card-mobile-width)) / 2)) 0.35rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rifugio-card {
+    flex: 0 0 var(--rifugio-card-mobile-width);
+    width: var(--rifugio-card-mobile-width);
+    max-width: var(--rifugio-card-mobile-width);
+    scroll-snap-align: center;
   }
 
   .rifugio-chip-stack {
@@ -715,6 +848,24 @@ body::after {
 
   #rifugi-map {
     height: 300px;
+  }
+
+  #adoptions-grid,
+  .adoptions-grid {
+    --adoption-card-mobile-width: calc(100vw - 4.8rem);
+    margin-inline: -0.85rem;
+    padding-inline: max(0.85rem, calc((100vw - var(--adoption-card-mobile-width)) / 2));
+  }
+
+  .adoptable-animal-card .card-image {
+    height: 165px;
+    min-height: 165px;
+  }
+
+  .rifugi-grid {
+    --rifugio-card-mobile-width: calc(100vw - 4.8rem);
+    margin-inline: -0.85rem;
+    padding-inline: max(0.85rem, calc((100vw - var(--rifugio-card-mobile-width)) / 2));
   }
 
   .rifugi-popup {

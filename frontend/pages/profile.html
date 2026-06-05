@@ -22,8 +22,10 @@
 		</div>
 
 		<div class="profile-grid">
-			<section id="profile-section" class="section-card">
-				<h2>Dati profilo</h2>
+			<details id="profile-section" class="section-card profile-details" open>
+				<summary class="profile-details-summary">
+					<h2>Dati profilo</h2>
+				</summary>
 				<form id="profileForm" class="form-stack">
 					<div class="field">
 						<label>Username</label>
@@ -99,7 +101,7 @@
 						<button id="deleteAccount" class="btn btn--danger">Elimina account</button>
 					</div>
 				</form>
-			</section>
+			</details>
 
 			<div class="profile-right">
 				<section id="notifications-section" class="section-card">

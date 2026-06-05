@@ -193,9 +193,12 @@ function renderStats(rifugio, animals) {
 
   stats.innerHTML = `
     <div class="stat-card">
-      <span>Animali adottabili</span>
+      <span>Animali</span>
+      <strong>${escapeHtml(total)}</strong>
+    </div>
+    <div class="stat-card stat-card--accent">
+      <span>Adottabili</span>
       <strong>${escapeHtml(available)}</strong>
-      <span>su ${escapeHtml(total)} animali registrati</span>
     </div>
   `;
 }

@@ -99,6 +99,18 @@ body::after {
   font-size: 1.1rem;
 }
 
+.profile-details-summary {
+  list-style: none;
+}
+
+.profile-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+#profile-section .profile-details-summary h2 {
+  margin: 0;
+}
+
 #profileForm {
   display: flex;
   flex-direction: column;
@@ -914,6 +926,32 @@ body::after {
   }
   #profile-section {
     max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .profile-details-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+  }
+
+  .profile-details-summary::after {
+    content: '+';
+    color: var(--accent);
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .profile-details[open] .profile-details-summary {
+    margin-bottom: 1rem;
+  }
+
+  .profile-details[open] .profile-details-summary::after {
+    content: '-';
   }
 }
 
@@ -1815,5 +1853,69 @@ body::after {
   .wiz-btn-next,
   .wiz-btn-publish {
     width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  #announcements-grid,
+  #my-animals-grid {
+    display: flex;
+    gap: 0.9rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #announcements-grid {
+    --profile-announcement-card-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -0.85rem;
+    padding: 0 max(0.85rem, calc((100vw - var(--profile-announcement-card-width)) / 2)) 0.35rem;
+  }
+
+  #announcements-grid .profile-announcement-card {
+    flex: 0 0 var(--profile-announcement-card-width);
+    width: var(--profile-announcement-card-width);
+    max-width: var(--profile-announcement-card-width);
+    scroll-snap-align: center;
+  }
+
+  #announcements-grid .profile-announcement-card .card-image {
+    height: 165px;
+  }
+
+  #announcements-grid .profile-announcement-card__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #announcements-grid .profile-announcement-card__button,
+  #announcements-grid .profile-announcement-card__link {
+    width: 100%;
+    margin-left: 0;
+    text-align: center;
+  }
+
+  #my-animals .section-badge {
+    float: none;
+    display: inline-flex;
+    margin: 0 0 0.75rem;
+  }
+
+  #my-animals-grid {
+    --profile-animal-card-width: min(260px, calc(100vw - 5.2rem));
+    margin-inline: -0.85rem;
+    padding: 0 max(0.85rem, calc((100vw - var(--profile-animal-card-width)) / 2)) 0.35rem;
+  }
+
+  #my-animals-grid .card {
+    flex: 0 0 var(--profile-animal-card-width);
+    width: var(--profile-animal-card-width);
+    max-width: var(--profile-animal-card-width);
+    scroll-snap-align: center;
+  }
+
+  #my-animals-grid .card-image {
+    height: 150px;
   }
 }
