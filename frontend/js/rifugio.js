@@ -287,25 +287,16 @@ async function renderAnimalsForShelter(rifugioId) {
       const placeholder = container.querySelector('.card-image-placeholder');
       const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
       if (!photo) {
-        if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(a.species?.[0] || '?')}</span>`;
+        setImagePlaceholderFallback(placeholder, a.species?.[0] || '?');
         return;
       }
       (async () => {
-        try {
-          const res = await fetch(photo, { method: 'GET' });
-          if (!res.ok) throw new Error('no image');
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.startsWith('image')) throw new Error('not image');
-          const blob = await res.blob();
-          const img = document.createElement('img');
-          img.src = URL.createObjectURL(blob);
-          img.alt = a.species || 'Animale';
-          img.loading = 'lazy';
-          img.onload = () => { URL.revokeObjectURL(img.src); };
-          if (placeholder) placeholder.replaceWith(img);
-        } catch (err) {
-          if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(a.species?.[0] || '?')}</span>`;
-        }
+        await loadImageIntoPlaceholder({
+          container,
+          url: photo,
+          alt: a.species || 'Animale',
+          fallbackText: a.species?.[0] || '?'
+        });
       })();
     });
     grid.addEventListener('click', (e) => {
@@ -444,23 +435,13 @@ async function openShelterAnimalModal(animalId) {
       gallery.innerHTML = '';
       const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
       if (photo) {
-        try {
-          const res = await fetch(photo, { method: 'GET' });
-          if (!res.ok) throw new Error('no image');
-          const contentType = res.headers.get('content-type') || '';
-          if (!contentType.startsWith('image')) throw new Error('not image');
-          const blob = await res.blob();
-          const img = document.createElement('img');
-          img.src = URL.createObjectURL(blob);
-          img.alt = a.species || 'Animale';
-          img.loading = 'lazy';
-          img.style.maxWidth = '100%';
-          img.style.borderRadius = '8px';
-          img.onload = () => URL.revokeObjectURL(img.src);
-          gallery.appendChild(img);
-        } catch (err) {
-          gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
-        }
+        await loadImageIntoGallery({
+          gallery,
+          url: photo,
+          alt: a.species || 'Animale',
+          fallbackText: 'Non è presente alcuna foto',
+          style: { maxWidth: '100%', borderRadius: '8px' }
+        });
       } else {
         gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
       }

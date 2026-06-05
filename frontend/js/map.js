@@ -226,6 +226,34 @@ function updateCount(n) {
 }
 
 /**
+ * Loads an announcement image into a Leaflet popup, preserving its fallback media block.
+ * @param {Object} marker - Leaflet marker owning the popup.
+ * @param {string} popupHTML - Original popup HTML with fallback media.
+ * @param {string} photoUrl - Announcement photo URL.
+ * @returns {Promise<void>} Promise resolving after the popup image attempt.
+ */
+async function setMarkerPopupImage(marker, popupHTML, photoUrl) {
+  try {
+    const imgUrl = await fetchImageObjectUrl(photoUrl);
+    const imgBlock = `<img src="${imgUrl}" class="map-popup-img" alt="Foto annuncio" />`;
+    const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
+    marker.getPopup().setContent(newPopup);
+    if (marker._imgUrl) URL.revokeObjectURL(marker._imgUrl);
+    marker._imgUrl = imgUrl;
+    if (!marker._imgCloseBound) {
+      marker._imgCloseBound = true;
+      marker.on('popupclose', () => {
+        if (marker._imgUrl) {
+          URL.revokeObjectURL(marker._imgUrl);
+          marker._imgUrl = null;
+        }
+      });
+    }
+  } catch (err) {
+  }
+}
+
+/**
  * Renders announcements into the current list view.
  * @param {Array<Object>} announcements - Filtered announcements to place on the Leaflet map.
  * @returns {void}
@@ -287,42 +315,9 @@ function renderAnnouncements(announcements) {
   const marker = L.marker([lat, lng], { icon: markerIcon })
     .addTo(map)
     .bindPopup(popupHTML, { maxWidth: 280, className: 'custom-popup' });
-  (async () => {
-    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
-    try {
-      const res = await fetch(photoUrl, { method: 'GET' });
-      if (!res.ok) throw new Error('no image');
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.startsWith('image')) throw new Error('not image');
-      const blob = await res.blob();
-      const imgUrl = URL.createObjectURL(blob);
-      const imgBlock = `<img src="${imgUrl}" class="map-popup-img" alt="Foto annuncio" />`;
-      const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
-      marker.getPopup().setContent(newPopup);
-      marker._imgUrl = imgUrl;
-      marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
-    } catch (err) {
-    }
-  })();
-
-  marker.on('popupopen', async () => {
-    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
-    try {
-      const res = await fetch(photoUrl, { method: 'GET' });
-      if (!res.ok) throw new Error('no image');
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.startsWith('image')) throw new Error('not image');
-      const blob = await res.blob();
-      const imgUrl = URL.createObjectURL(blob);
-      const imgBlock = `<img src="${imgUrl}" class="map-popup-img" alt="Foto annuncio" />`;
-      const newPopup = popupHTML.replace(/<div class="popup-media"[\s\S]*?<\/div>/, imgBlock);
-      marker.getPopup().setContent(newPopup);
-      if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); }
-      marker._imgUrl = imgUrl;
-      marker.on('popupclose', () => { if (marker._imgUrl) { URL.revokeObjectURL(marker._imgUrl); marker._imgUrl = null; } });
-    } catch (err) {
-    }
-  });
+  const photoUrl = `/api/v1/announcements/${a._id}/photo`;
+  setMarkerPopupImage(marker, popupHTML, photoUrl);
+  marker.on('popupopen', () => setMarkerPopupImage(marker, popupHTML, photoUrl));
 
   allRifugi.forEach((rifugio) => {
     const coords = rifugio.rifugioData?.location?.coordinates;

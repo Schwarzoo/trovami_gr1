@@ -1065,14 +1065,16 @@ body::after {
   display: flex;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 #view-modal-gallery img {
+  width: 100%;
   height: 200px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
+  background: var(--bg);
 }
 
 .view-modal-no-photo {
@@ -1276,14 +1278,16 @@ body::after {
   display: flex;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 #admin-modal-gallery img {
+  width: 100%;
   height: 200px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
+  background: var(--bg);
 }
 
 #admin-announcement-body {

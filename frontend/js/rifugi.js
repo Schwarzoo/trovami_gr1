@@ -253,26 +253,17 @@ function renderAdoptions() {
     if (!card) return;
 
     const media = card.querySelector('.adoption-media');
-    const placeholder = media?.querySelector('.adoption-media-placeholder');
     const animal = announcement.animalId || {};
     const photoUrl = `/api/v1/announcements/${announcement._id}/photo`;
 
     (async () => {
-      try {
-        const res = await fetch(photoUrl, { method: 'GET' });
-        if (!res.ok) throw new Error('no image');
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.startsWith('image')) throw new Error('not image');
-        const blob = await res.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        img.alt = animal?.species || 'Animale';
-        img.loading = 'lazy';
-        img.onload = () => { URL.revokeObjectURL(img.src); };
-        if (placeholder) placeholder.replaceWith(img);
-      } catch (err) {
-        if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(animal?.species?.[0] || '?')}</span>`;
-      }
+      await loadImageIntoPlaceholder({
+        container: media,
+        url: photoUrl,
+        placeholderSelector: '.adoption-media-placeholder',
+        alt: animal?.species || 'Animale',
+        fallbackText: animal?.species?.[0] || '?'
+      });
     })();
 
     const publisher = announcement.publisherId || {};

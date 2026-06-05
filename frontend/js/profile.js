@@ -1340,21 +1340,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     title.textContent = animal?.name || (isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
     gallery.innerHTML = '<div class="modal-spinner">...</div>';
     (async () => {
-      try {
-        const res = await fetch(photoUrl, { method: 'GET' });
-        if (!res.ok) throw new Error('no image');
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.startsWith('image')) throw new Error('not image');
-        const blob = await res.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        img.alt = 'foto animale';
-        img.onload = () => { URL.revokeObjectURL(img.src); };
-        gallery.innerHTML = '';
-        gallery.appendChild(img);
-      } catch (err) {
-        gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
-      }
+      await loadImageIntoGallery({
+        gallery,
+        url: photoUrl,
+        loading: null
+      });
     })();
 
     body.innerHTML = `
@@ -1906,21 +1896,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     (async () => {
       const container = div.querySelector('.card-image');
-      try {
-        const res = await fetch(photoUrl, { method: 'GET' });
-        if (!res.ok) throw new Error('no image');
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.startsWith('image')) throw new Error('not image');
-        const blob = await res.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        img.onload = () => { URL.revokeObjectURL(img.src); };
-        const placeholder = container.querySelector('.card-image-placeholder');
-        if (placeholder) placeholder.replaceWith(img);
-      } catch (err) {
-        const placeholder = container.querySelector('.card-image-placeholder');
-        if (placeholder) placeholder.innerHTML = '🐾';
-      }
+      await loadImageIntoPlaceholder({
+        container,
+        url: photoUrl,
+        alt: a.animalId?.species || 'Animale',
+        fallbackText: a.animalId?.species?.[0] || 'Animale'
+      });
     })();
   });
 
@@ -2030,25 +2011,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const placeholder = container.querySelector('.card-image-placeholder');
         const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
         if (!photo) {
-          if (placeholder) placeholder.innerHTML = '🐾';
+          setImagePlaceholderFallback(placeholder, a.species?.[0] || '?');
           return;
         }
         (async () => {
-          try {
-            const res = await fetch(photo, { method: 'GET' });
-            if (!res.ok) throw new Error('no image');
-            const ct = res.headers.get('content-type') || '';
-            if (!ct.startsWith('image')) throw new Error('not image');
-            const blob = await res.blob();
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(blob);
-            img.alt = a.species || 'Animale';
-            img.loading = 'lazy';
-            img.onload = () => { URL.revokeObjectURL(img.src); };
-            if (placeholder) placeholder.replaceWith(img);
-          } catch (err) {
-            if (placeholder) placeholder.innerHTML = '🐾';
-          }
+          await loadImageIntoPlaceholder({
+            container,
+            url: photo,
+            alt: a.species || 'Animale',
+            fallbackText: a.species?.[0] || '?'
+          });
         })();
       });
 
@@ -2206,21 +2178,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     gallery.innerHTML = '<div class="view-modal-no-photo">Caricamento...</div>';
     (async () => {
       const photoUrl = `/api/v1/announcements/${data._id}/photo`;
-      try {
-        const res = await fetch(photoUrl, { method: 'GET' });
-        if (!res.ok) throw new Error('no image');
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.startsWith('image')) throw new Error('not image');
-        const blob = await res.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        img.alt = 'foto animale';
-        img.onload = () => { URL.revokeObjectURL(img.src); };
-        gallery.innerHTML = '';
-        gallery.appendChild(img);
-      } catch (err) {
-        gallery.innerHTML = '<div class="view-modal-no-photo">Non è presente alcuna foto</div>';
-      }
+      await loadImageIntoGallery({
+        gallery,
+        url: photoUrl,
+        fallbackText: 'Non è presente alcuna foto',
+        fallbackClassName: 'view-modal-no-photo',
+        loading: null
+      });
     })();
 
     document.getElementById('view-modal-body').innerHTML = `
@@ -2346,23 +2310,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       (async () => {
         const container = card.querySelector('.card-image');
-        try {
-          const res = await fetch(`/api/v1/announcements/${ann._id}/photo`, { method: 'GET' });
-          if (!res.ok) throw new Error('no image');
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.startsWith('image')) throw new Error('not image');
-          const blob = await res.blob();
-          const img = document.createElement('img');
-          img.src = URL.createObjectURL(blob);
-          img.alt = animal?.species || 'Animale';
-          img.loading = 'lazy';
-          img.onload = () => { URL.revokeObjectURL(img.src); };
-          const placeholder = container.querySelector('.card-image-placeholder');
-          if (placeholder) placeholder.replaceWith(img);
-        } catch (err) {
-          const placeholder = container.querySelector('.card-image-placeholder');
-          if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(animal?.species?.[0] || '?')}</span>`;
-        }
+        await loadImageIntoPlaceholder({
+          container,
+          url: `/api/v1/announcements/${ann._id}/photo`,
+          alt: animal?.species || 'Animale',
+          fallbackText: animal?.species?.[0] || '?'
+        });
       })();
 
       grid.appendChild(card);

@@ -129,21 +129,11 @@ async function openModal(ann) {
   const gallery = document.getElementById('modal-gallery');
   gallery.innerHTML = '<div class="modal-spinner">...</div>';
   (async () => {
-    try {
-      const res = await fetch(`${API_BASE}/${encodeURIComponent(data._id)}/photo`);
-      if (!res.ok) throw new Error('no image');
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.startsWith('image')) throw new Error('not image');
-      const blob = await res.blob();
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      img.alt = 'foto animale';
-      img.onload = () => URL.revokeObjectURL(img.src);
-      gallery.innerHTML = '';
-      gallery.appendChild(img);
-    } catch (err) {
-      gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
-    }
+    await loadImageIntoGallery({
+      gallery,
+      url: `${API_BASE}/${encodeURIComponent(data._id)}/photo`,
+      loading: null
+    });
   })();
 
   document.getElementById('modal-body').innerHTML = `
@@ -227,19 +217,12 @@ function buildCard(ann) {
   const photoUrl = `${API_BASE}/${encodeURIComponent(ann._id)}/photo`;
   (async () => {
     const container = card.querySelector('.card-image');
-    try {
-      const res = await fetch(photoUrl);
-      if (!res.ok) throw new Error('no image');
-      const blob = await res.blob();
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      img.alt = animal.species || 'Animale';
-      img.onload = () => URL.revokeObjectURL(img.src);
-      container.querySelector('.card-image-placeholder')?.replaceWith(img);
-    } catch (err) {
-      const placeholder = container.querySelector('.card-image-placeholder');
-      if (placeholder) placeholder.innerHTML = `<span>${escapeHtml((animal.species || '?')[0])}</span>`;
-    }
+    await loadImageIntoPlaceholder({
+      container,
+      url: photoUrl,
+      alt: animal.species || 'Animale',
+      fallbackText: (animal.species || '?')[0]
+    });
   })();
 
   return card;

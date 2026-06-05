@@ -123,6 +123,151 @@ async function readResponseError(res, fallback) {
 }
 
 /**
+ * Fetches an image resource, verifies its content type, and returns an object URL.
+ * @param {string} url - Image endpoint or absolute image URL.
+ * @param {Object} [fetchOptions={}] - Fetch options for the image request.
+ * @returns {Promise<string>} Browser object URL for the fetched image blob.
+ * @throws {Error} When the response is not an image.
+ */
+async function fetchImageObjectUrl(url, fetchOptions = {}) {
+  const res = await fetch(url, { method: 'GET', ...fetchOptions });
+  if (!res.ok) throw new Error('no image');
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.startsWith('image')) throw new Error('not image');
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
+/**
+ * Creates an image element backed by an object URL and revokes the URL after load.
+ * @param {string} objectUrl - Object URL returned by `fetchImageObjectUrl`.
+ * @param {Object} [options={}] - Image rendering options.
+ * @param {string} [options.alt=''] - Image alt text.
+ * @param {string} [options.className=''] - Optional image class.
+ * @param {string|null} [options.loading='lazy'] - Optional loading attribute.
+ * @param {Object} [options.style] - Inline styles to apply.
+ * @returns {HTMLImageElement} Configured image element.
+ */
+function createObjectUrlImage(objectUrl, options = {}) {
+  const {
+    alt = '',
+    className = '',
+    loading = 'lazy',
+    style = null
+  } = options;
+  const img = document.createElement('img');
+  img.src = objectUrl;
+  img.alt = alt;
+  if (className) img.className = className;
+  if (loading) img.loading = loading;
+  if (style && typeof style === 'object') Object.assign(img.style, style);
+  img.onload = () => { URL.revokeObjectURL(img.src); };
+  return img;
+}
+
+/**
+ * Sets a placeholder fallback using escaped text wrapped in a span.
+ * @param {HTMLElement|null} placeholder - Placeholder element to update.
+ * @param {string} fallbackText - Text or initial to show.
+ * @returns {void}
+ */
+function setImagePlaceholderFallback(placeholder, fallbackText) {
+  if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(fallbackText || '?')}</span>`;
+}
+
+/**
+ * Loads an image into a card/placeholder slot, falling back to an initial or text.
+ * @param {Object} options - Placeholder image options.
+ * @param {HTMLElement} options.container - Parent element containing the placeholder.
+ * @param {string} options.url - Image URL to fetch.
+ * @param {string} [options.placeholderSelector='.card-image-placeholder'] - Placeholder selector.
+ * @param {string} [options.alt='Animale'] - Image alt text.
+ * @param {string} [options.fallbackText='?'] - Fallback text or initial.
+ * @param {string} [options.className=''] - Optional image class.
+ * @param {string|null} [options.loading='lazy'] - Optional image loading mode.
+ * @param {Object} [options.style] - Inline styles for the image.
+ * @param {Object} [options.fetchOptions] - Fetch options for the image request.
+ * @returns {Promise<HTMLImageElement|null>} Inserted image, or null on fallback.
+ */
+async function loadImageIntoPlaceholder(options) {
+  const {
+    container,
+    url,
+    placeholderSelector = '.card-image-placeholder',
+    alt = 'Animale',
+    fallbackText = '?',
+    className = '',
+    loading = 'lazy',
+    style = null,
+    fetchOptions = {}
+  } = options;
+  const placeholder = container?.querySelector(placeholderSelector);
+  if (!placeholder || !url) {
+    setImagePlaceholderFallback(placeholder, fallbackText);
+    return null;
+  }
+
+  try {
+    const objectUrl = await fetchImageObjectUrl(url, fetchOptions);
+    const img = createObjectUrlImage(objectUrl, { alt, className, loading, style });
+    placeholder.replaceWith(img);
+    return img;
+  } catch (err) {
+    setImagePlaceholderFallback(placeholder, fallbackText);
+    return null;
+  }
+}
+
+/**
+ * Loads an image into a gallery-like container, replacing loading content with image or fallback.
+ * @param {Object} options - Gallery image options.
+ * @param {HTMLElement} options.gallery - Gallery container to replace.
+ * @param {string} options.url - Image URL to fetch.
+ * @param {string} [options.alt='foto animale'] - Image alt text.
+ * @param {string} [options.fallbackText='Non e presente alcuna foto'] - Fallback message.
+ * @param {string} [options.fallbackClassName='modal-no-photo'] - Fallback element class.
+ * @param {string} [options.className=''] - Optional image class.
+ * @param {string|null} [options.loading=null] - Optional image loading mode.
+ * @param {Object} [options.style] - Inline styles for the image.
+ * @param {Function} [options.wrapContent] - Optional wrapper factory for image/fallback.
+ * @param {Object} [options.fetchOptions] - Fetch options for the image request.
+ * @returns {Promise<HTMLImageElement|null>} Inserted image, or null on fallback.
+ */
+async function loadImageIntoGallery(options) {
+  const {
+    gallery,
+    url,
+    alt = 'foto animale',
+    fallbackText = 'Non e presente alcuna foto',
+    fallbackClassName = 'modal-no-photo',
+    className = '',
+    loading = null,
+    style = null,
+    wrapContent = (content) => content,
+    fetchOptions = {}
+  } = options;
+  if (!gallery) return null;
+
+  try {
+    if (!url) throw new Error('no image');
+    const objectUrl = await fetchImageObjectUrl(url, fetchOptions);
+    const img = createObjectUrlImage(objectUrl, { alt, className, loading, style });
+    gallery.innerHTML = '';
+    gallery.appendChild(wrapContent(img));
+    return img;
+  } catch (err) {
+    const fallback = document.createElement('div');
+    fallback.className = fallbackClassName;
+    fallback.textContent = fallbackText;
+    gallery.innerHTML = '';
+    gallery.appendChild(wrapContent(fallback));
+    return null;
+  }
+}
+
+/**
  * Fetches announcements from the public collection endpoint.
  * @param {Object} [params={}] - Query parameters appended to the announcements API URL.
  * @returns {Promise<Array<Object>>} Announcement list, or an empty list when loading fails.
@@ -313,23 +458,12 @@ function loadAnnouncementCardImage(card, ann) {
     const animal = ann.animalId;
     const container = card.querySelector('.card-image');
     const photoUrl = `${ANNOUNCEMENTS_API}/${encodeURIComponent(ann._id)}/photo`;
-    try {
-      const res = await fetch(photoUrl, { method: 'GET' });
-      if (!res.ok) throw new Error('no image');
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.startsWith('image')) throw new Error('not image');
-      const blob = await res.blob();
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      img.alt = animal?.species || 'Animale';
-      img.loading = 'lazy';
-      img.onload = () => { URL.revokeObjectURL(img.src); };
-      const placeholder = container.querySelector('.card-image-placeholder');
-      if (placeholder) placeholder.replaceWith(img);
-    } catch (err) {
-      const placeholder = container.querySelector('.card-image-placeholder');
-      if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(animal?.species?.[0] || '?')}</span>`;
-    }
+    await loadImageIntoPlaceholder({
+      container,
+      url: photoUrl,
+      alt: animal?.species || 'Animale',
+      fallbackText: animal?.species?.[0] || '?'
+    });
   })();
 }
 
@@ -513,29 +647,12 @@ function renderAnnouncementModalGallery(data, rifugioLink) {
   gallery.innerHTML = '<div class="modal-spinner">...</div>';
   (async () => {
     const photoUrl = `${ANNOUNCEMENTS_API}/${encodeURIComponent(data._id)}/photo`;
-    try {
-      const res = await fetch(photoUrl, { method: 'GET' });
-      if (!res.ok) throw new Error('no image');
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.startsWith('image')) throw new Error('not image');
-      const blob = await res.blob();
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      img.alt = 'foto animale';
-      img.onload = () => { URL.revokeObjectURL(img.src); };
-      gallery.innerHTML = '';
-      gallery.appendChild(createAnnouncementGalleryWrapper(img, rifugioLink));
-    } catch (err) {
-      if (rifugioLink) {
-        const noPhoto = document.createElement('div');
-        noPhoto.className = 'modal-no-photo';
-        noPhoto.textContent = 'Non e presente alcuna foto';
-        gallery.innerHTML = '';
-        gallery.appendChild(createAnnouncementGalleryWrapper(noPhoto, rifugioLink));
-      } else {
-        gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
-      }
-    }
+    await loadImageIntoGallery({
+      gallery,
+      url: photoUrl,
+      loading: null,
+      wrapContent: (content) => createAnnouncementGalleryWrapper(content, rifugioLink)
+    });
   })();
 }
 
