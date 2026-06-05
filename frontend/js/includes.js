@@ -28,6 +28,51 @@ function displayValue(value, fallback = '- -') {
 }
 
 /**
+ * Renders the shared animal/announcement details list used by announcement modals.
+ * @param {Object} animal - Animal fields to render.
+ * @param {Object} announcement - Announcement fields to render.
+ * @param {Object} [options={}] - Detail-list rendering options.
+ * @param {string} [options.className=''] - Extra classes added to the `detail-list` element.
+ * @param {string} [options.date] - Already formatted announcement date.
+ * @param {boolean} [options.includeStatus=false] - Whether to include the announcement status row.
+ * @param {string} [options.extraLocationHtml=''] - Trusted `<dt>/<dd>` location markup inserted after microchip.
+ * @param {Function} [options.formatValue=displayValue] - Value formatter used for optional fields.
+ * @returns {string} Detail-list HTML.
+ */
+function renderAnimalDetailsListHtml(animal = {}, announcement = {}, options = {}) {
+  const {
+    className = '',
+    date,
+    includeStatus = false,
+    extraLocationHtml = '',
+    formatValue = displayValue
+  } = options;
+  const classes = ['detail-list', String(className || '').trim()].filter(Boolean).join(' ');
+  const format = typeof formatValue === 'function' ? formatValue : displayValue;
+  const renderRow = (label, value) => `<dt>${escapeHtml(label)}</dt><dd>${format(value)}</dd>`;
+  const rows = [];
+
+  if (animal?.name) rows.push(`<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>`);
+  rows.push(renderRow('Specie', animal?.species));
+  rows.push(renderRow('Razza', animal?.breed));
+  rows.push(renderRow('Colore', animal?.color));
+  rows.push(renderRow('Sesso', animal?.gender));
+  rows.push(renderRow('Lunghezza pelo', animal?.lunghezzaPelo));
+  rows.push(renderRow('Segni particolari', animal?.distinctiveFeatures));
+  rows.push(renderRow('Microchip', animal?.microchipId));
+  if (extraLocationHtml) rows.push(extraLocationHtml);
+  if (date !== undefined) rows.push(`<dt>Data</dt><dd>${escapeHtml(date)}</dd>`);
+  rows.push(renderRow('Condizioni', announcement?.healthCondition));
+  rows.push(renderRow('Comportamento', announcement?.animalBehaviour));
+  if (includeStatus) rows.push(renderRow('Stato', announcement?.status));
+
+  return `
+    <dl class="${escapeHtml(classes)}">
+      ${rows.join('\n      ')}
+    </dl>`;
+}
+
+/**
  * Formats a numeric value for Italian UI display.
  * @param {*} value - Numeric value or numeric string to format.
  * @returns {string} Localized number string, or `0` for invalid values.
@@ -218,6 +263,69 @@ async function loadImageIntoPlaceholder(options) {
     setImagePlaceholderFallback(placeholder, fallbackText);
     return null;
   }
+}
+
+/**
+ * Creates the shared card markup for an adoptable shelter animal.
+ * @param {Object} animal - Adoptable animal data from the animals API.
+ * @param {Object} [options={}] - Card rendering options.
+ * @param {Object|null} [options.rifugio=null] - Shelter that owns the animal.
+ * @returns {string} HTML string for the adoptable animal card.
+ */
+function createAdoptableAnimalCard(animal = {}, options = {}) {
+  const { rifugio = null } = options;
+  const name = animal.name || animal.breed || animal.species || 'Animale';
+  const status = animal.adoptable === true ? 'Adottabile' : 'Non disponibile';
+  const details = [animal.breed, animal.color, animal.age].filter(Boolean).join(' - ');
+  const rifugioName = rifugio ? getRifugioName(rifugio) : '';
+
+  return `
+    <article class="card adoptable-animal-card" data-id="${escapeHtml(animal._id || '')}" data-rifugio-id="${escapeHtml(normalizeAnimalShelterId(animal) || '')}" tabindex="0" role="button" aria-label="Apri scheda animale ${escapeHtml(name)}">
+      <div class="card-image">
+        <div class="card-image-placeholder"><span>${escapeHtml(animal?.species?.[0] || 'A')}</span></div>
+      </div>
+      <div class="card-body">
+        <div class="card-meta"><span class="card-species">${escapeHtml(animal.species || 'Specie sconosciuta')}</span></div>
+        <h3 class="card-breed">${escapeHtml(name)}</h3>
+        ${details ? `<p class="card-description">${escapeHtml(details)}</p>` : `<p class="card-description">${escapeHtml(animal.distinctiveFeatures || '')}</p>`}
+        ${rifugioName ? `<div class="card-distance">Rifugio: ${escapeHtml(rifugioName)}</div>` : ''}
+        <div class="animal-status">${escapeHtml(status)}</div>
+      </div>
+    </article>
+  `;
+}
+
+/**
+ * Loads the first available animal photo into a shared adoptable animal card.
+ * @param {HTMLElement} card - Card created by createAdoptableAnimalCard.
+ * @param {Object} animal - Animal data with optional photos.
+ * @returns {Promise<void>} Promise resolving after image hydration or fallback.
+ */
+async function hydrateAdoptableAnimalCardImage(card, animal = {}) {
+  const container = card?.querySelector('.card-image');
+  const placeholder = container?.querySelector('.card-image-placeholder');
+  const photo = Array.isArray(animal.photos) && animal.photos.length ? animal.photos[0] : null;
+  if (!container) return;
+  if (!photo) {
+    setImagePlaceholderFallback(placeholder, animal.species?.[0] || '?');
+    return;
+  }
+  await loadImageIntoPlaceholder({
+    container,
+    url: photo,
+    alt: animal.species || 'Animale',
+    fallbackText: animal.species?.[0] || '?'
+  });
+}
+
+/**
+ * Normalizes the shelter id saved on an animal.
+ * @param {Object} animal - Animal data from the API.
+ * @returns {string} Shelter id or an empty string.
+ */
+function normalizeAnimalShelterId(animal = {}) {
+  const shelterId = animal?.shelterId?._id || animal?.shelterId;
+  return shelterId ? String(shelterId) : '';
 }
 
 /**
@@ -604,20 +712,10 @@ async function openAnnouncementModal(ann) {
     : '';
 
   document.getElementById('modal-body').innerHTML = `
-    <dl class="detail-list">
-      ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
-      <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
-      <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
-      <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
-      <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
-      <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
-      <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
-      <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
-      ${locationInfo}
-      <dt>Data</dt><dd>${date}</dd>
-      <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
-      <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
-    </dl>
+    ${renderAnimalDetailsListHtml(animal, data, {
+      date,
+      extraLocationHtml: locationInfo
+    })}
     ${contactHtml}
     <details class="comments-section modal-accordion">
       <summary class="comments-header">

@@ -76,42 +76,12 @@ function updatePaginationControls() {
 }
 
 /**
- * Populates the shelter filter with unique shelter publishers found in announcements.
- * @param {Array<Object>} announcements - Announcements used to derive shelter filter options.
- * @returns {void}
- */
-function populateRifugioFilter(announcements) {
-  const select = document.getElementById('filter-rifugio');
-  if (!select) return;
-
-  const rifugi = new Map();
-  announcements.forEach((ann) => {
-    const publisher = ann.publisherId;
-    const id = publisher?._id || publisher;
-    if (!id || publisher?.role !== 'shelter') return;
-    const name = publisher?.rifugioData?.rifugioName || publisher?.username || 'Rifugio';
-    rifugi.set(id, name);
-  });
-
-  select.innerHTML = '<option value="">Tutti</option>';
-  [...rifugi.entries()]
-    .sort((a, b) => a[1].localeCompare(b[1], 'it'))
-    .forEach(([id, name]) => {
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = name;
-      select.appendChild(option);
-    });
-}
-
-/**
  * Applies the current UI filter state to the cached announcements list.
  * @returns {Array<Object>} Filtered announcements, optionally sorted by proximity.
  */
 function getFilteredAnnouncements() {
   const type = document.getElementById('filter-type').value;
   const species = document.getElementById('filter-species').value.trim();
-  const rifugioId = document.getElementById('filter-rifugio')?.value || '';
 
   let filtered = [...allAnnouncements];
 
@@ -119,7 +89,6 @@ function getFilteredAnnouncements() {
   if (species) {
     filtered = filtered.filter(a => a.animalId?.species?.toLowerCase().includes(species.toLowerCase()));
   }
-  if (rifugioId) filtered = filtered.filter(a => (a.publisherId?._id || a.publisherId) === rifugioId);
 
   if (sortByProximity && currentLocation) {
     filtered = sortAnnouncementsByDistance(filtered, currentLocation);
@@ -278,12 +247,6 @@ function openHighlightedAnnouncement() {
 document.addEventListener('DOMContentLoaded', async () => {
   allAnnouncements = await fetchAnnouncements({ limit: 50 });
   allAnnouncements = sortAnnouncementsByDate(allAnnouncements);
-  populateRifugioFilter(allAnnouncements);
-
-  const initialRifugioId = new URLSearchParams(window.location.search).get('rifugioId');
-  if (initialRifugioId && document.getElementById('filter-rifugio')) {
-    document.getElementById('filter-rifugio').value = initialRifugioId;
-  }
 
   const initialFiltered = getFilteredAnnouncements();
   renderCards(initialFiltered);
@@ -291,7 +254,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('filter-type').addEventListener('change', applyFilters);
   document.getElementById('filter-species').addEventListener('input', applyFilters);
-  document.getElementById('filter-rifugio')?.addEventListener('change', applyFilters);
   document.getElementById('prev-page').addEventListener('click', () => goToPage(currentPageIndex - 1));
   document.getElementById('next-page').addEventListener('click', () => goToPage(currentPageIndex + 1));
   document.getElementById('nearby-button').addEventListener('click', async () => {

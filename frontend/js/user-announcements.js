@@ -137,21 +137,11 @@ async function openModal(ann) {
   })();
 
   document.getElementById('modal-body').innerHTML = `
-    <dl class="detail-list">
-      ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
-      <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
-      <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
-      <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
-      <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
-      <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
-      <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
-      <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
-      ${locationInfo}
-      <dt>Data</dt><dd>${escapeHtml(date)}</dd>
-      <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
-      <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
-      <dt>Stato</dt><dd>${displayValue(data.status)}</dd>
-    </dl>
+    ${renderAnimalDetailsListHtml(animal, data, {
+      date,
+      extraLocationHtml: locationInfo,
+      includeStatus: true
+    })}
     <p class="modal-description">${escapeHtml(data.description || '')}</p>
 
     <section class="comments-section" aria-label="Commenti">

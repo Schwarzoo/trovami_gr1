@@ -1,5 +1,4 @@
 const API_RIFUGI = '/api/v1/users/shelters?isPublic=true';
-const API_ANNOUNCEMENTS = '/api/v1/announcements';
 const API_ANIMALS = '/api/v1/animals';
 const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
@@ -194,7 +193,7 @@ function renderStats(rifugio, animals) {
 
   stats.innerHTML = `
     <div class="stat-card">
-      <span>Animali disponibili</span>
+      <span>Animali adottabili</span>
       <strong>${escapeHtml(available)}</strong>
       <span>su ${escapeHtml(total)} animali registrati</span>
     </div>
@@ -213,7 +212,6 @@ function renderInfo(rifugio, animals) {
   const address = [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
   const { total, available } = summarizeAnimals(animals);
   const contacts = getAllContacts(rifugio) || 'Contatti non pubblici';
-  const websiteLink = `/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}`;
 
   container.innerHTML = `
     <div class="info-tile">
@@ -221,14 +219,13 @@ function renderInfo(rifugio, animals) {
       <strong>${escapeHtml(address || 'Non disponibile')}</strong>
     </div>
     <div class="info-tile">
-      <span>Animali disponibili</span>
+      <span>Animali adottabili</span>
       <strong>${escapeHtml(available)} / ${escapeHtml(total)}</strong>
       <p>Animali adottabili rispetto al totale registrato.</p>
     </div>
     <div class="info-tile">
       <span>Contatti</span>
       <strong>${escapeHtml(contacts)}</strong>
-      <a href="${websiteLink}">Vai agli annunci del rifugio</a>
     </div>
     <div class="info-tile">
       <span>Descrizione</span>
@@ -265,38 +262,12 @@ async function renderAnimalsForShelter(rifugioId) {
       grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
       return;
     }
-    grid.innerHTML = list.map(a => {
-      const name = a.name || a.breed || a.species || 'Animale';
-      const status = a.adoptable ? 'Adottabile' : 'Non disponibile';
-      return `
-        <article class="card" data-id="${escapeHtml(a._id)}">
-          <div class="card-image"><div class="card-image-placeholder"><span>${escapeHtml((a.species||'A')[0])}</span></div></div>
-          <div class="card-body">
-            <div class="card-meta"><span class="card-species">${escapeHtml(a.species || '')}</span></div>
-            <h3 class="card-breed">${escapeHtml(name)}</h3>
-            <p class="card-description">${escapeHtml(a.distinctiveFeatures || '')}</p>
-            <div class="animal-status">${escapeHtml(status)}</div>
-          </div>
-        </article>
-      `;
-    }).join('');
+    grid.innerHTML = list.map(a => createAdoptableAnimalCard(a, { rifugio: currentRifugio })).join('');
     list.forEach(a => {
       const card = grid.querySelector(`.card[data-id="${a._id}"]`);
       if (!card) return;
-      const container = card.querySelector('.card-image');
-      const placeholder = container.querySelector('.card-image-placeholder');
-      const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
-      if (!photo) {
-        setImagePlaceholderFallback(placeholder, a.species?.[0] || '?');
-        return;
-      }
       (async () => {
-        await loadImageIntoPlaceholder({
-          container,
-          url: photo,
-          alt: a.species || 'Animale',
-          fallbackText: a.species?.[0] || '?'
-        });
+        await hydrateAdoptableAnimalCardImage(card, a);
       })();
     });
     grid.addEventListener('click', (e) => {
