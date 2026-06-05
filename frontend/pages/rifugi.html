@@ -16,15 +16,14 @@
     <section class="rifugi-hero">
       <div class="hero-copy">
         <div class="eyebrow">Rifugi nel territorio</div>
-        <h1>Controlla i rifugi, gli animali disponibili e le adozioni in un’unica pagina.</h1>
+        <h1>Controlla i rifugi e gli animali adottabili in un’unica pagina.</h1>
         <p>
-          Consulta i rifugi già attivi, verifica gli animali disponibili, scopri gli animali in cerca di casa
+          Consulta i rifugi già attivi, verifica gli animali adottabili, scopri gli animali in cerca di casa
           e apri la mappa per raggiungere rapidamente ogni struttura.
         </p>
         <div class="hero-actions">
           <a class="button primary" href="#rifugi-lista">Esplora rifugi</a>
           <a class="button" href="#mappa-rifugi">Apri mappa</a>
-          <a class="button" href="/pages/announcements.html">Vai agli annunci</a>
         </div>
       </div>
       <div class="hero-aside">
@@ -34,14 +33,9 @@
           <span>strutture approvate e visibili pubblicamente</span>
         </div>
         <div class="hero-card accent">
-          <span class="hero-card-label">Animali disponibili</span>
+          <span class="hero-card-label">Animali adottabili</span>
           <strong id="stat-animali">0</strong>
           <span>animali adottabili attualmente registrati dai rifugi</span>
-        </div>
-        <div class="hero-card muted">
-          <span class="hero-card-label">Adozioni in evidenza</span>
-          <strong id="stat-adozioni">0</strong>
-          <span>annunci pubblicati dai rifugi presenti in piattaforma</span>
         </div>
       </div>
     </section>
@@ -50,9 +44,17 @@
       <div class="section-head">
         <div>
           <h2>Adozioni in evidenza</h2>
-          <p>Ultimi annunci pubblicati dai rifugi per facilitare adozioni e accoglienza.</p>
+          <p>Animali adottabili pubblicati dai rifugi per facilitare adozioni e accoglienza.</p>
         </div>
-        <span id="adoptions-count" class="section-badge">0</span>
+        <div class="section-tools">
+          <label class="filter-control" for="adoptions-rifugio-filter">
+            <span>Rifugio</span>
+            <select id="adoptions-rifugio-filter">
+              <option value="">Tutti i rifugi</option>
+            </select>
+          </label>
+          <span id="adoptions-count" class="section-badge">0 animali</span>
+        </div>
       </div>
       <div id="adoptions-grid" class="adoptions-grid" aria-live="polite"></div>
     </section>
@@ -61,7 +63,7 @@
       <div class="section-head">
         <div>
           <h2>Rifugi esistenti</h2>
-          <p>Apri la pagina dedicata di ogni rifugio per leggere informazioni, contatti e disponibilità.</p>
+          <p>Apri la pagina dedicata di ogni rifugio per leggere informazioni, contatti e animali adottabili.</p>
         </div>
         <span id="rifugi-count" class="section-badge">Caricamento…</span>
       </div>

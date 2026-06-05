@@ -236,6 +236,44 @@ body::after {
   white-space: nowrap;
 }
 
+.section-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 190px;
+}
+
+.filter-control span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.filter-control select {
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.filter-control select.is-placeholder {
+  color: var(--text-muted);
+}
+
 .rifugi-layout {
   display: grid;
   grid-template-columns: 1fr;
@@ -405,7 +443,7 @@ body::after {
   gap: 1.25rem;
 }
 
-.adoption-card {
+.adoptable-animal-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 24px;
@@ -416,17 +454,17 @@ body::after {
   animation: adoptionFadeUp 0.4s ease both;
 }
 
-.adoption-card:hover {
+.adoptable-animal-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.adoption-card:focus-visible {
+.adoptable-animal-card:focus-visible {
   outline: 3px solid rgba(26, 115, 232, 0.45);
   outline-offset: 3px;
 }
 
-.adoption-media {
+.adoptable-animal-card .card-image {
   position: relative;
   height: 180px;
   background: var(--bg);
@@ -438,14 +476,14 @@ body::after {
   font-family: var(--font-display);
 }
 
-.adoption-media img {
+.adoptable-animal-card .card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.adoption-media-placeholder {
+.adoptable-animal-card .card-image-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
@@ -457,19 +495,19 @@ body::after {
   text-align: center;
 }
 
-.adoption-media .badge {
+.adoptable-animal-card .badge {
   position: absolute;
   top: 10px;
   left: 10px;
 }
 
-.adoption-body {
+.adoptable-animal-card .card-body {
   padding: 1rem 1.1rem 1.2rem;
   display: grid;
   gap: 0.6rem;
 }
 
-.adoption-meta {
+.adoptable-animal-card .card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -480,18 +518,21 @@ body::after {
   font-weight: 600;
 }
 
-.adoption-species {
+.adoptable-animal-card .card-species {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
-.adoption-date {
+.adoptable-animal-card .card-date,
+.adoptable-animal-card .card-distance,
+.adoptable-animal-card .animal-status {
   white-space: nowrap;
+  color: var(--text-muted);
 }
 
-.adoption-body h3 {
+.adoptable-animal-card .card-breed {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 400;
@@ -499,25 +540,11 @@ body::after {
   line-height: 1.15;
 }
 
-.adoption-body p {
+.adoptable-animal-card .card-description {
   margin: 0;
   color: var(--text-muted);
   line-height: 1.6;
   font-size: 0.95rem;
-}
-
-.adoption-details {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
-.adoption-kicker {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
 }
 
 @keyframes adoptionFadeUp {
@@ -637,6 +664,12 @@ body::after {
 
   .section-head {
     flex-direction: column;
+  }
+
+  .section-tools,
+  .filter-control {
+    width: 100%;
+    align-items: stretch;
   }
 
   #rifugi-map {

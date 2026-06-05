@@ -266,6 +266,69 @@ async function loadImageIntoPlaceholder(options) {
 }
 
 /**
+ * Creates the shared card markup for an adoptable shelter animal.
+ * @param {Object} animal - Adoptable animal data from the animals API.
+ * @param {Object} [options={}] - Card rendering options.
+ * @param {Object|null} [options.rifugio=null] - Shelter that owns the animal.
+ * @returns {string} HTML string for the adoptable animal card.
+ */
+function createAdoptableAnimalCard(animal = {}, options = {}) {
+  const { rifugio = null } = options;
+  const name = animal.name || animal.breed || animal.species || 'Animale';
+  const status = animal.adoptable === true ? 'Adottabile' : 'Non disponibile';
+  const details = [animal.breed, animal.color, animal.age].filter(Boolean).join(' - ');
+  const rifugioName = rifugio ? getRifugioName(rifugio) : '';
+
+  return `
+    <article class="card adoptable-animal-card" data-id="${escapeHtml(animal._id || '')}" data-rifugio-id="${escapeHtml(normalizeAnimalShelterId(animal) || '')}" tabindex="0" role="button" aria-label="Apri scheda animale ${escapeHtml(name)}">
+      <div class="card-image">
+        <div class="card-image-placeholder"><span>${escapeHtml(animal?.species?.[0] || 'A')}</span></div>
+      </div>
+      <div class="card-body">
+        <div class="card-meta"><span class="card-species">${escapeHtml(animal.species || 'Specie sconosciuta')}</span></div>
+        <h3 class="card-breed">${escapeHtml(name)}</h3>
+        ${details ? `<p class="card-description">${escapeHtml(details)}</p>` : `<p class="card-description">${escapeHtml(animal.distinctiveFeatures || '')}</p>`}
+        ${rifugioName ? `<div class="card-distance">Rifugio: ${escapeHtml(rifugioName)}</div>` : ''}
+        <div class="animal-status">${escapeHtml(status)}</div>
+      </div>
+    </article>
+  `;
+}
+
+/**
+ * Loads the first available animal photo into a shared adoptable animal card.
+ * @param {HTMLElement} card - Card created by createAdoptableAnimalCard.
+ * @param {Object} animal - Animal data with optional photos.
+ * @returns {Promise<void>} Promise resolving after image hydration or fallback.
+ */
+async function hydrateAdoptableAnimalCardImage(card, animal = {}) {
+  const container = card?.querySelector('.card-image');
+  const placeholder = container?.querySelector('.card-image-placeholder');
+  const photo = Array.isArray(animal.photos) && animal.photos.length ? animal.photos[0] : null;
+  if (!container) return;
+  if (!photo) {
+    setImagePlaceholderFallback(placeholder, animal.species?.[0] || '?');
+    return;
+  }
+  await loadImageIntoPlaceholder({
+    container,
+    url: photo,
+    alt: animal.species || 'Animale',
+    fallbackText: animal.species?.[0] || '?'
+  });
+}
+
+/**
+ * Normalizes the shelter id saved on an animal.
+ * @param {Object} animal - Animal data from the API.
+ * @returns {string} Shelter id or an empty string.
+ */
+function normalizeAnimalShelterId(animal = {}) {
+  const shelterId = animal?.shelterId?._id || animal?.shelterId;
+  return shelterId ? String(shelterId) : '';
+}
+
+/**
  * Loads an image into a gallery-like container, replacing loading content with image or fallback.
  * @param {Object} options - Gallery image options.
  * @param {HTMLElement} options.gallery - Gallery container to replace.
