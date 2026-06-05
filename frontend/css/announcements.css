@@ -8,6 +8,8 @@
 
 html {
     background-color: #1A0E08;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 
@@ -21,6 +23,8 @@ body {
     radial-gradient(ellipse 70% 60% at 50% 50%, #2C1208 0%, transparent 70%);
   position: relative;
   isolation: isolate;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body::before,
@@ -55,6 +59,7 @@ body::after {
 /* PAGE LAYOUT */
 .page {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
 }
@@ -186,6 +191,7 @@ input[type="date"] {
     border-color 0.2s,
     box-shadow 0.2s;
   min-width: 160px;
+  max-width: 100%;
   height: 42px;
 }
 
@@ -622,6 +628,7 @@ button#nearby-button:disabled {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   animation: modalIn 0.25s ease;
+  min-width: 0;
 }
 
 @keyframes modalIn {
@@ -770,6 +777,36 @@ button#nearby-button:disabled {
   margin-bottom: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+.modal-accordion {
+  display: block;
+}
+
+.modal-accordion summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.modal-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.modal-accordion .comments-header::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.modal-accordion[open] .comments-header::after {
+  content: '-';
+}
+
+.modal-accordion__body {
+  padding-top: 0.75rem;
 }
 
 .comments-header {
@@ -1068,6 +1105,12 @@ button#nearby-button:disabled {
     flex-direction: column;
     align-items: stretch;
   }
+  .filter-group,
+  .filters select,
+  .filters input,
+  button#nearby-button {
+    width: 100%;
+  }
   #result-count {
     margin-left: 0;
     align-self: flex-start;
@@ -1075,6 +1118,28 @@ button#nearby-button:disabled {
   .pagination-nav {
     margin-left: 0;
     align-self: center;
+  }
+  #announcements-grid {
+    grid-template-columns: 1fr;
+  }
+  .card-meta,
+  .comment-meta,
+  .comment-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .card-details,
+  .detail-list {
+    grid-template-columns: 1fr;
+  }
+  .card-details span:nth-child(even) {
+    white-space: normal;
+  }
+  #modal-gallery,
+  #modal-body,
+  .modal-header {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   .modal {
     border-radius: 12px 12px 0 0;
@@ -1084,6 +1149,19 @@ button#nearby-button:disabled {
   #modal-overlay {
     align-items: flex-end;
     padding: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .page {
+    padding-inline: 0.8rem;
+  }
+
+  .modal-contact-links a,
+  .position-link,
+  .modal-map-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 

@@ -567,27 +567,29 @@ async function openAnnouncementModal(ann) {
     : '<div class="comments-locked">Accedi per commentare</div>';
   const reportBoxHtml = isLoggedIn
     ? `
-      <section class="comments-section" aria-label="Segnala annuncio">
-        <div class="comments-header">
+      <details class="comments-section modal-accordion">
+        <summary class="comments-header">
           <h3>Segnala annuncio</h3>
+        </summary>
+        <div class="modal-accordion__body">
+          <form class="report-form" data-announcement-id="${escapeHtml(data._id)}">
+            <label class="comment-label" for="report-reason">Motivo</label>
+            <select id="report-reason" class="report-select">
+              <option value="troll">Troll</option>
+              <option value="offensivo">Offensivo</option>
+              <option value="falso">Non reale</option>
+              <option value="altro">Altro</option>
+            </select>
+            <label class="comment-label" for="report-details">Dettagli</label>
+            <textarea id="report-details" class="comment-textarea" rows="2" maxlength="500" placeholder="Aggiungi dettagli utili"></textarea>
+            <div class="comment-actions">
+              <span class="comment-hint">Visibile agli admin</span>
+              <button type="submit" class="comment-submit">Segnala</button>
+            </div>
+            <div class="report-message comment-error" role="status" aria-live="polite"></div>
+          </form>
         </div>
-        <form class="report-form" data-announcement-id="${escapeHtml(data._id)}">
-          <label class="comment-label" for="report-reason">Motivo</label>
-          <select id="report-reason" class="report-select">
-            <option value="troll">Troll</option>
-            <option value="offensivo">Offensivo</option>
-            <option value="falso">Non reale</option>
-            <option value="altro">Altro</option>
-          </select>
-          <label class="comment-label" for="report-details">Dettagli</label>
-          <textarea id="report-details" class="comment-textarea" rows="2" maxlength="500" placeholder="Aggiungi dettagli utili"></textarea>
-          <div class="comment-actions">
-            <span class="comment-hint">Visibile agli admin</span>
-            <button type="submit" class="comment-submit">Segnala</button>
-          </div>
-          <div class="report-message comment-error" role="status" aria-live="polite"></div>
-        </form>
-      </section>
+      </details>
     `
     : '';
   const adminResolveBoxHtml = currentRole === 'admin' && data.status !== 'RESOLVED'
@@ -617,16 +619,18 @@ async function openAnnouncementModal(ann) {
       <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
     </dl>
     ${contactHtml}
-    <section class="comments-section" aria-label="Commenti">
-      <div class="comments-header">
+    <details class="comments-section modal-accordion">
+      <summary class="comments-header">
         <h3>Commenti</h3>
         <span class="comments-count">${comments.length}</span>
+      </summary>
+      <div class="modal-accordion__body">
+        ${commentBoxHtml}
+        <div id="comments-list" class="comments-list">
+          ${renderAnnouncementCommentsHtml(comments)}
+        </div>
       </div>
-      ${commentBoxHtml}
-      <div id="comments-list" class="comments-list">
-        ${renderAnnouncementCommentsHtml(comments)}
-      </div>
-    </section>
+    </details>
     ${reportBoxHtml}
     ${adminResolveBoxHtml}
   `;
@@ -929,6 +933,7 @@ async function loadPartials() {
 
   personalizeNav();
   setActiveNav();
+  initMobileNav();
   startNotificationBadgeUpdates();
 }
 
@@ -965,9 +970,53 @@ function personalizeNav() {
     if (token) {
       a.setAttribute('href', target);
       a.setAttribute('title', 'Profilo');
+      a.setAttribute('aria-label', 'Profilo');
+      const label = a.querySelector('.nav-icon__label');
+      if (label) label.textContent = 'Profilo';
     } else {
       a.setAttribute('href', '/pages/login.html?next=' + encodeURIComponent(target));
+      a.setAttribute('title', 'Accedi');
+      a.setAttribute('aria-label', 'Accedi');
+      const label = a.querySelector('.nav-icon__label');
+      if (label) label.textContent = 'Accedi';
     }
+  });
+}
+
+/**
+ * Binds the off-canvas mobile navigation loaded from the shared header partial.
+ * @returns {void}
+ */
+function initMobileNav() {
+  const toggle = document.querySelector('.nav-menu-toggle');
+  const nav = document.getElementById('site-nav');
+  if (!toggle || !nav || toggle.dataset.bound === 'true') return;
+
+  const setOpen = (open) => {
+    document.body.classList.toggle('nav-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Chiudi menu' : 'Apri menu');
+  };
+
+  toggle.dataset.bound = 'true';
+  toggle.addEventListener('click', () => {
+    setOpen(!document.body.classList.contains('nav-open'));
+  });
+
+  document.querySelectorAll('[data-nav-close]').forEach((button) => {
+    button.addEventListener('click', () => setOpen(false));
+  });
+
+  nav.addEventListener('click', (event) => {
+    if (event.target?.closest?.('a, button')) setOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setOpen(false);
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 700) setOpen(false);
   });
 }
 

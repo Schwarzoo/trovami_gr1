@@ -58,6 +58,7 @@ body::after {
 
 .rifugi-page {
   max-width: 1240px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   display: flex;
@@ -79,6 +80,7 @@ body::after {
     radial-gradient(circle at bottom left, rgba(42, 110, 200, 0.12), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(251, 247, 241, 0.95));
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .hero-copy {
@@ -275,6 +277,7 @@ body::after {
   gap: 1rem;
   padding-bottom: 0.8rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  min-width: 0;
 }
 
 .rifugio-name {
@@ -649,6 +652,40 @@ body::after {
 
   .button {
     width: 100%;
+  }
+
+  .rifugio-card-hero,
+  .meta-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rifugio-chip-stack {
+    justify-content: flex-start;
+  }
+
+  .meta-row span {
+    text-align: left;
+  }
+
+  .card-actions a,
+  .card-actions button {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .rifugi-page {
+    padding-inline: 0.85rem;
+  }
+
+  #rifugi-map {
+    height: 300px;
+  }
+
+  .rifugi-popup {
+    width: min(250px, calc(100vw - 64px));
   }
 }
 
