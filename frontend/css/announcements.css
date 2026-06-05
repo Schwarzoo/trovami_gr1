@@ -330,7 +330,7 @@ button#nearby-button:disabled {
 /* GRID */
 #announcements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
   gap: 1.25rem;
 }
 
@@ -370,7 +370,7 @@ button#nearby-button:disabled {
 
 .card-image {
   position: relative;
-  height: 180px;
+  height: 185px;
   background: var(--bg);
   overflow: hidden;
 }
@@ -430,7 +430,7 @@ button#nearby-button:disabled {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  margin-top: auto;
+  margin-top: 0.95rem;
   padding: 0.55rem 1rem;
   background: var(--accent);
   color: #fff;
@@ -502,7 +502,9 @@ button#nearby-button:disabled {
 }
 
 .card-body {
-  padding: 1rem 1.1rem 1.2rem;
+  padding: 1.15rem 1.2rem 1.3rem;
+  display: flex;
+  flex-direction: column;
 }
 .card-meta {
   display: flex;
@@ -544,6 +546,7 @@ button#nearby-button:disabled {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
 }
 .card-detail-label {
   font-weight: 600;
