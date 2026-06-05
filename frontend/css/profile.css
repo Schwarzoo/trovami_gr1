@@ -487,12 +487,14 @@ body::after {
   grid-template-columns: 360px 1fr;
   gap: 1.5rem;
   align-items: start;
+  min-width: 0;
 }
 
 .profile-right {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 .section-card {
@@ -1371,10 +1373,39 @@ body::after {
     justify-content: stretch;
     flex-direction: column;
   }
+  .view-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .view-modal {
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+  }
+  #view-modal-gallery,
+  #view-modal-body,
+  .view-modal-header,
+  .view-modal-similar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
   #admin-announcement-overlay {
     align-items: flex-end;
     padding: 0;
   }
+}
+
+@media (max-width: 420px) {
+  .section-card,
+  #profile-section {
+    padding: 0.85rem;
+  }
+
+  #my-animals .section-badge {
+    float: none;
+    display: inline-flex;
+    margin: 0 0 0.75rem;
+  }
+
 }
 
 :root {
@@ -1725,4 +1756,64 @@ body::after {
   font-weight: 700;
   cursor: pointer;
   display: none;
+}
+
+@media (max-width: 700px) {
+  .form-grid,
+  .field-grid,
+  .wiz-grid,
+  .admin-user-details {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-section-head,
+  .profile-form-footer,
+  .profile-actions-row,
+  .profile-announcement-card__actions,
+  .animal-modal-actions,
+  .admin-user-actions,
+  .wizard-position-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-section-head .btn,
+  .profile-form-footer .btn,
+  .profile-actions-row .btn,
+  .profile-announcement-card__button,
+  .animal-modal-actions .btn,
+  .admin-user-actions .btn,
+  .wizard-position-actions .btn {
+    width: 100%;
+  }
+
+  .stepper {
+    padding-inline: 14px;
+  }
+
+  .step-label {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .type-tabs,
+  .wizard-header,
+  .step-content,
+  .wiz-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .wiz-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .wiz-btn-back,
+  .wiz-btn-next,
+  .wiz-btn-publish {
+    width: 100%;
+  }
 }

@@ -1,6 +1,14 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html, body {
   margin: 0;
   padding: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 html {
@@ -70,5 +78,22 @@ body::after {
   flex-direction: column;
   position: relative;
   z-index: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
 }
 

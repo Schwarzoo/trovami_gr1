@@ -2,6 +2,7 @@
 
 .shelter-page {
   max-width: 1240px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   display: flex;
@@ -23,6 +24,7 @@
     radial-gradient(circle at bottom left, rgba(42, 110, 200, 0.12), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(251, 247, 241, 0.96));
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .shelter-hero-copy {
@@ -80,8 +82,8 @@
 
 .hero-actions-secondary {
   display: flex;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 @media (max-width: 520px) {
@@ -470,5 +472,36 @@
 
   .button {
     width: 100%;
+  }
+
+  .hero-actions-main,
+  .hero-actions-secondary,
+  .contact-request-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .contact-request-actions .button,
+  .contact-request-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .shelter-page {
+    padding-inline: 0.85rem;
+  }
+
+  #shelter-map {
+    height: 260px;
+  }
+
+  .follow-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .follow-modal {
+    border-radius: 18px 18px 0 0;
   }
 }
