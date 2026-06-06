@@ -122,6 +122,9 @@ function configureModalLabelsForAccount() {
       ? 'Posizione del rifugio gia impostata. Puoi modificarla selezionando un altro punto.'
       : 'Scegli un punto sulla mappa o usa la posizione attuale.';
   }
+
+  const step3Label = document.getElementById('wiz-sl3');
+  if (step3Label) step3Label.textContent = isRifugio ? 'Immagine' : 'Luogo';
 }
 
 /**
@@ -264,27 +267,6 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
 }
 
 /**
- * Keeps the profile details disclosure compact on mobile and open on desktop.
- * @returns {void}
- */
-function initProfileDetailsDisclosure() {
-  const details = document.getElementById('profile-section');
-  if (!details || details.dataset.disclosureBound === 'true') return;
-
-  const sync = () => {
-    if (window.innerWidth <= 720) {
-      details.open = false;
-    } else {
-      details.open = true;
-    }
-  };
-
-  details.dataset.disclosureBound = 'true';
-  sync();
-  window.addEventListener('resize', sync);
-}
-
-/**
  * Initializes the authenticated profile page after the DOM is ready.
  * @returns {Promise<void>} Promise resolving when the profile UI and event handlers are initialized.
  */
@@ -294,8 +276,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '/pages/login.html';
     return;
   }
-
-  initProfileDetailsDisclosure();
 
   const autoOpenNewAnnouncement = new URLSearchParams(window.location.search).get('newAnnouncement') === '1';
 
@@ -438,6 +418,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     return data;
   }
 
+  /**
+   * Fetches announcement by id data from the API.
+   * @param {string} id - Announcement identifier to load.
+   * @returns {Promise<Object|null>} Announcement payload, or null when it cannot be loaded.
+   */
+  async function fetchAnnouncementById(id) {
+    const res = await fetch(`/api/v1/announcements/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  }
 
   /**
    * Fetches similar announcements data from the API.
@@ -674,6 +664,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       container.appendChild(item);
     });
+  }
+
+  /**
+   * Returns rifugio name.
+   * @param {Object} rifugio - Followed shelter payload.
+   * @returns {string} Best available shelter display name.
+   */
+  function getRifugioName(rifugio) {
+    return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
   }
 
   /**
@@ -1163,6 +1162,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Array.isArray(json) ? json : [];
   }
 
+  /**
+   * Reads a fetch error response and builds a displayable message.
+   * @param {Response} res - Failed fetch response.
+   * @param {string} fallback - Message prefix used when the response has no JSON message.
+   * @returns {Promise<string>} Error message for alerts or thrown errors.
+   */
+  async function readResponseError(res, fallback) {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const json = await res.json().catch(() => ({}));
+      if (json?.userMessage || json?.message) return json.userMessage || json.message;
+    }
+    return `${fallback} (${res.status})`;
+  }
 
   /**
    * Fetches announcement count for a user through the announcements collection endpoint.
@@ -1363,19 +1376,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     title.textContent = animal?.name || (isRifugioAnnouncement ? 'Animale in rifugio' : (isLost ? `${animal?.species} smarrito/a` : `Avvistamento: ${animal?.species}`));
     gallery.innerHTML = '<div class="modal-spinner">...</div>';
     (async () => {
-      await loadImageIntoGallery({
-        gallery,
-        url: photoUrl,
-        loading: null
-      });
+      try {
+        const res = await fetch(photoUrl, { method: 'GET' });
+        if (!res.ok) throw new Error('no image');
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.startsWith('image')) throw new Error('not image');
+        const blob = await res.blob();
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.alt = 'foto animale';
+        img.onload = () => { URL.revokeObjectURL(img.src); };
+        gallery.innerHTML = '';
+        gallery.appendChild(img);
+      } catch (err) {
+        gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
+      }
     })();
 
     body.innerHTML = `
-      ${renderAnimalDetailsListHtml(animal, ann, {
-        date: dateLabel,
-        extraLocationHtml: locationInfo,
-        formatValue: displayValue
-      })}
+      <dl class="detail-list">
+        ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
+        <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
+        <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
+        <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
+        <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
+        <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
+        <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
+        <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
+        ${locationInfo}
+        <dt>Data</dt><dd>${escapeHtml(dateLabel)}</dd>
+        <dt>Condizioni</dt><dd>${displayValue(ann?.healthCondition)}</dd>
+        <dt>Comportamento</dt><dd>${displayValue(ann?.animalBehaviour)}</dd>
+      </dl>
       <p class="modal-description">${escapeHtml(ann?.description || 'Nessuna descrizione')}</p>
 
       <section class="comments-section" aria-label="Commenti">
@@ -1910,12 +1942,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     (async () => {
       const container = div.querySelector('.card-image');
-      await loadImageIntoPlaceholder({
-        container,
-        url: photoUrl,
-        alt: a.animalId?.species || 'Animale',
-        fallbackText: a.animalId?.species?.[0] || 'Animale'
-      });
+      try {
+        const res = await fetch(photoUrl, { method: 'GET' });
+        if (!res.ok) throw new Error('no image');
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.startsWith('image')) throw new Error('not image');
+        const blob = await res.blob();
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.onload = () => { URL.revokeObjectURL(img.src); };
+        const placeholder = container.querySelector('.card-image-placeholder');
+        if (placeholder) placeholder.replaceWith(img);
+      } catch (err) {
+        const placeholder = container.querySelector('.card-image-placeholder');
+        if (placeholder) placeholder.innerHTML = '🐾';
+      }
     })();
   });
 
@@ -2025,16 +2066,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         const placeholder = container.querySelector('.card-image-placeholder');
         const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
         if (!photo) {
-          setImagePlaceholderFallback(placeholder, a.species?.[0] || '?');
+          if (placeholder) placeholder.innerHTML = '🐾';
           return;
         }
         (async () => {
-          await loadImageIntoPlaceholder({
-            container,
-            url: photo,
-            alt: a.species || 'Animale',
-            fallbackText: a.species?.[0] || '?'
-          });
+          try {
+            const res = await fetch(photo, { method: 'GET' });
+            if (!res.ok) throw new Error('no image');
+            const ct = res.headers.get('content-type') || '';
+            if (!ct.startsWith('image')) throw new Error('not image');
+            const blob = await res.blob();
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(blob);
+            img.alt = a.species || 'Animale';
+            img.loading = 'lazy';
+            img.onload = () => { URL.revokeObjectURL(img.src); };
+            if (placeholder) placeholder.replaceWith(img);
+          } catch (err) {
+            if (placeholder) placeholder.innerHTML = '🐾';
+          }
         })();
       });
 
@@ -2192,23 +2242,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     gallery.innerHTML = '<div class="view-modal-no-photo">Caricamento...</div>';
     (async () => {
       const photoUrl = `/api/v1/announcements/${data._id}/photo`;
-      await loadImageIntoGallery({
-        gallery,
-        url: photoUrl,
-        fallbackText: 'Non è presente alcuna foto',
-        fallbackClassName: 'view-modal-no-photo',
-        loading: null
-      });
+      try {
+        const res = await fetch(photoUrl, { method: 'GET' });
+        if (!res.ok) throw new Error('no image');
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.startsWith('image')) throw new Error('not image');
+        const blob = await res.blob();
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.alt = 'foto animale';
+        img.onload = () => { URL.revokeObjectURL(img.src); };
+        gallery.innerHTML = '';
+        gallery.appendChild(img);
+      } catch (err) {
+        gallery.innerHTML = '<div class="view-modal-no-photo">Non è presente alcuna foto</div>';
+      }
     })();
 
     document.getElementById('view-modal-body').innerHTML = `
         <div class="view-modal-summary">
-          ${renderAnimalDetailsListHtml(animal, data, {
-            className: 'view-modal-details',
-            date,
-            includeStatus: true,
-            formatValue: displayValue
-          })}
+          <dl class="detail-list view-modal-details">
+        ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
+        <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
+        <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
+        <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
+        <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
+        <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
+        <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
+        <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
+        <dt>Data</dt><dd>${date}</dd>
+        <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
+        <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
+        <dt>Stato</dt><dd>${displayValue(data.status)}</dd>
+        </dl>
         <div class="view-modal-aside">
           <section class="view-modal-block">
             <h4>Descrizione</h4>
@@ -2316,12 +2382,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       (async () => {
         const container = card.querySelector('.card-image');
-        await loadImageIntoPlaceholder({
-          container,
-          url: `/api/v1/announcements/${ann._id}/photo`,
-          alt: animal?.species || 'Animale',
-          fallbackText: animal?.species?.[0] || '?'
-        });
+        try {
+          const res = await fetch(`/api/v1/announcements/${ann._id}/photo`, { method: 'GET' });
+          if (!res.ok) throw new Error('no image');
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.startsWith('image')) throw new Error('not image');
+          const blob = await res.blob();
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.alt = animal?.species || 'Animale';
+          img.loading = 'lazy';
+          img.onload = () => { URL.revokeObjectURL(img.src); };
+          const placeholder = container.querySelector('.card-image-placeholder');
+          if (placeholder) placeholder.replaceWith(img);
+        } catch (err) {
+          const placeholder = container.querySelector('.card-image-placeholder');
+          if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(animal?.species?.[0] || '?')}</span>`;
+        }
       })();
 
       grid.appendChild(card);
