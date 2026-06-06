@@ -151,14 +151,37 @@ describe('contact request endpoints', () => {
           role: 'shelter',
           rifugioStatus: 'approved'
         }))
-      });
-    mockContactRequestModel.findById.mockReturnValue(
-      makeQuery({
-        _id: 'req1',
-        shelterId: { _id: 'shelter1' },
-        requesterId: { _id: 'user1' },
-        save: jest.fn().mockResolvedValue(undefined)
       })
+      .mockReturnValueOnce({
+        select: jest.fn(() => Promise.resolve({
+          _id: 'user1',
+          email: 'mario@test.local',
+          notificationPrefs: { emailOnComment: true },
+          username: 'mario'
+        }))
+      });
+    mockContactRequestModel.findById
+      .mockReturnValueOnce(
+        makeQuery({
+          _id: 'req1',
+          shelterId: { _id: 'shelter1' },
+          requesterId: { _id: 'user1' },
+          save: jest.fn().mockResolvedValue(undefined)
+        })
+      )
+      .mockReturnValueOnce(
+        makeQuery({
+          _id: 'req1',
+          shelterId: { _id: 'shelter1', username: 'rifugio', role: 'shelter', rifugioData: { rifugioName: 'Il Rifugio' } },
+          requesterId: { _id: 'user1', username: 'mario', email: 'mario@test.local', phoneNumber: '123' },
+          animalId: { _id: 'anim1', name: 'Fido', species: 'Cane' },
+          replyMessage: 'ok',
+          status: 'replied',
+          repliedAt: new Date()
+        })
+      );
+    mockAnimalModel.findById.mockReturnValue(
+      makeQuery({ _id: 'anim1', name: 'Fido', species: 'Cane' })
     );
 
     const res = await request(app)

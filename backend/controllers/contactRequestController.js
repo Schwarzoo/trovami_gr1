@@ -4,6 +4,7 @@ const ContactRequest = require('../models/ContactRequest');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { writeAuditLog } = require('../services/auditService');
+const { sendAdoptionReplyEmail } = require('../services/emailService');
 const {
   buildContactRequestPayload,
   canShelterManageRequest,
@@ -210,6 +211,10 @@ exports.replyToContactRequest = async (req, res) => {
       targetUserId: shelter._id,
       message: 'Il rifugio ha risposto alla tua richiesta di adozione'
     });
+
+    const requesterUser = await User.findById(contactRequest.requesterId._id || contactRequest.requesterId).select('email notificationPrefs username');
+    const animal = await Animal.findById(contactRequest.animalId).select('name');
+    await sendAdoptionReplyEmail(requesterUser, shelter, animal?.name || 'un animale', contactRequest.replyMessage);
 
     await writeAuditLog({
       actor: shelter,
