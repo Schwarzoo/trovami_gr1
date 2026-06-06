@@ -324,18 +324,6 @@
   color: var(--text-muted);
 }
 
-.section-badge {
-  align-self: center;
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .shelter-info-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -547,10 +535,6 @@
 
   .section-head {
     flex-direction: column;
-  }
-
-  .section-badge {
-    align-self: flex-start;
   }
 
   .hero-stats {
