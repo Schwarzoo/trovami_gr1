@@ -16,31 +16,6 @@ function escapeHtml(input) {
 }
 
 /**
- * Ensures shared site dialog styles are available.
- * @returns {void}
- */
-function ensureSiteDialogStyles() {
-  const styleId = 'site-alert-styles';
-  if (document.getElementById(styleId)) return;
-
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = `
-    .site-alert-overlay{position:fixed;inset:0;z-index:4000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.46)}
-    .site-alert-card{width:min(420px,100%);padding:20px;border:1px solid var(--border,#e2ddd6);border-radius:14px;background:var(--surface,#fff);color:var(--text,#1c1a17);box-shadow:0 24px 60px rgba(0,0,0,.28)}
-    .site-alert-card h3{margin:0 0 8px;font-family:var(--font-display,inherit);font-size:1.1rem}
-    .site-alert-card p{margin:0;color:var(--text-muted,#7a7369);line-height:1.5}
-    .site-alert-input{width:100%;box-sizing:border-box;margin-top:14px;border:1px solid var(--border,#e2ddd6);border-radius:10px;padding:10px 12px;background:var(--surface,#fff);color:var(--text,#1c1a17);font:inherit}
-    .site-alert-input:focus{outline:2px solid color-mix(in srgb,var(--accent,#c85a2a) 32%,transparent);border-color:var(--accent,#c85a2a)}
-    .site-alert-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-    .site-alert-ok{border:0;border-radius:10px;padding:10px 16px;background:var(--accent,#c85a2a);color:#fff;font-weight:700;cursor:pointer}
-    .site-alert-cancel{border:1px solid var(--border,#e2ddd6);border-radius:10px;padding:10px 16px;background:var(--surface,#fff);color:var(--text,#1c1a17);font-weight:700;cursor:pointer}
-    .site-alert-card--success .site-alert-ok{background:#166534}
-  `;
-  document.head.appendChild(style);
-}
-
-/**
  * Shows a site-styled alert dialog.
  * @param {string} message - Message displayed in the dialog.
  * @param {Object} [options={}] - Alert display options.
@@ -51,7 +26,6 @@ function ensureSiteDialogStyles() {
 function showSiteAlert(message, options = {}) {
   const { title = 'Avviso', tone = 'default' } = options;
   document.getElementById('site-alert-overlay')?.remove();
-  ensureSiteDialogStyles();
 
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
@@ -97,7 +71,6 @@ window.showSiteAlert = showSiteAlert;
 function showSiteConfirm(message, options = {}) {
   const { title = 'Conferma azione', confirmLabel = 'Conferma' } = options;
   document.getElementById('site-alert-overlay')?.remove();
-  ensureSiteDialogStyles();
 
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
@@ -154,7 +127,6 @@ function showSitePrompt(message, options = {}) {
     placeholder = ''
   } = options;
   document.getElementById('site-alert-overlay')?.remove();
-  ensureSiteDialogStyles();
 
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
