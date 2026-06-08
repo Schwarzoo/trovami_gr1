@@ -16,6 +16,190 @@ function escapeHtml(input) {
 }
 
 /**
+ * Ensures shared site dialog styles are available.
+ * @returns {void}
+ */
+function ensureSiteDialogStyles() {
+  const styleId = 'site-alert-styles';
+  if (document.getElementById(styleId)) return;
+
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    .site-alert-overlay{position:fixed;inset:0;z-index:4000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.46)}
+    .site-alert-card{width:min(420px,100%);padding:20px;border:1px solid var(--border,#e2ddd6);border-radius:14px;background:var(--surface,#fff);color:var(--text,#1c1a17);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+    .site-alert-card h3{margin:0 0 8px;font-family:var(--font-display,inherit);font-size:1.1rem}
+    .site-alert-card p{margin:0;color:var(--text-muted,#7a7369);line-height:1.5}
+    .site-alert-input{width:100%;box-sizing:border-box;margin-top:14px;border:1px solid var(--border,#e2ddd6);border-radius:10px;padding:10px 12px;background:var(--surface,#fff);color:var(--text,#1c1a17);font:inherit}
+    .site-alert-input:focus{outline:2px solid color-mix(in srgb,var(--accent,#c85a2a) 32%,transparent);border-color:var(--accent,#c85a2a)}
+    .site-alert-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+    .site-alert-ok{border:0;border-radius:10px;padding:10px 16px;background:var(--accent,#c85a2a);color:#fff;font-weight:700;cursor:pointer}
+    .site-alert-cancel{border:1px solid var(--border,#e2ddd6);border-radius:10px;padding:10px 16px;background:var(--surface,#fff);color:var(--text,#1c1a17);font-weight:700;cursor:pointer}
+    .site-alert-card--success .site-alert-ok{background:#166534}
+  `;
+  document.head.appendChild(style);
+}
+
+/**
+ * Shows a site-styled alert dialog.
+ * @param {string} message - Message displayed in the dialog.
+ * @param {Object} [options={}] - Alert display options.
+ * @param {string} [options.title='Avviso'] - Dialog title.
+ * @param {string} [options.tone='default'] - Visual tone, such as `default` or `success`.
+ * @returns {Promise<void>} Promise resolving when the dialog is closed.
+ */
+function showSiteAlert(message, options = {}) {
+  const { title = 'Avviso', tone = 'default' } = options;
+  document.getElementById('site-alert-overlay')?.remove();
+  ensureSiteDialogStyles();
+
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'site-alert-overlay';
+    overlay.className = 'site-alert-overlay';
+    overlay.innerHTML = `
+      <div class="site-alert-card site-alert-card--${escapeHtml(tone)}" role="alertdialog" aria-modal="true" aria-labelledby="site-alert-title">
+        <h3 id="site-alert-title">${escapeHtml(title)}</h3>
+        <p>${escapeHtml(message)}</p>
+        <div class="site-alert-actions"><button type="button" class="site-alert-ok">OK</button></div>
+      </div>
+    `;
+
+    const close = () => {
+      overlay.remove();
+      document.removeEventListener('keydown', onEscape);
+      resolve();
+    };
+    const onEscape = (event) => {
+      if (event.key === 'Escape') close();
+    };
+
+    overlay.querySelector('.site-alert-ok').addEventListener('click', close);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    document.addEventListener('keydown', onEscape);
+    document.body.appendChild(overlay);
+    overlay.querySelector('.site-alert-ok').focus();
+  });
+}
+
+window.showSiteAlert = showSiteAlert;
+
+/**
+ * Shows a site-styled confirmation dialog.
+ * @param {string} message - Message displayed in the dialog.
+ * @param {Object} [options={}] - Confirmation display options.
+ * @param {string} [options.title='Conferma azione'] - Dialog title.
+ * @param {string} [options.confirmLabel='Conferma'] - Confirm button label.
+ * @returns {Promise<boolean>} Promise resolving to true when confirmed.
+ */
+function showSiteConfirm(message, options = {}) {
+  const { title = 'Conferma azione', confirmLabel = 'Conferma' } = options;
+  document.getElementById('site-alert-overlay')?.remove();
+  ensureSiteDialogStyles();
+
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'site-alert-overlay';
+    overlay.className = 'site-alert-overlay';
+    overlay.innerHTML = `
+      <div class="site-alert-card" role="alertdialog" aria-modal="true" aria-labelledby="site-alert-title">
+        <h3 id="site-alert-title">${escapeHtml(title)}</h3>
+        <p>${escapeHtml(message)}</p>
+        <div class="site-alert-actions">
+          <button type="button" class="site-alert-cancel">Annulla</button>
+          <button type="button" class="site-alert-ok">${escapeHtml(confirmLabel)}</button>
+        </div>
+      </div>
+    `;
+
+    const close = (value) => {
+      overlay.remove();
+      document.removeEventListener('keydown', onEscape);
+      resolve(value);
+    };
+    const onEscape = (event) => {
+      if (event.key === 'Escape') close(false);
+    };
+
+    overlay.querySelector('.site-alert-cancel').addEventListener('click', () => close(false));
+    overlay.querySelector('.site-alert-ok').addEventListener('click', () => close(true));
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close(false);
+    });
+    document.addEventListener('keydown', onEscape);
+    document.body.appendChild(overlay);
+    overlay.querySelector('.site-alert-ok').focus();
+  });
+}
+
+window.showSiteConfirm = showSiteConfirm;
+
+/**
+ * Shows a site-styled prompt dialog.
+ * @param {string} message - Message displayed in the dialog.
+ * @param {Object} [options={}] - Prompt display options.
+ * @param {string} [options.title='Inserisci valore'] - Dialog title.
+ * @param {string} [options.defaultValue=''] - Initial input value.
+ * @param {string} [options.confirmLabel='Conferma'] - Confirm button label.
+ * @param {string} [options.placeholder=''] - Input placeholder text.
+ * @returns {Promise<string|null>} Promise resolving to the input value, or null when cancelled.
+ */
+function showSitePrompt(message, options = {}) {
+  const {
+    title = 'Inserisci valore',
+    defaultValue = '',
+    confirmLabel = 'Conferma',
+    placeholder = ''
+  } = options;
+  document.getElementById('site-alert-overlay')?.remove();
+  ensureSiteDialogStyles();
+
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.id = 'site-alert-overlay';
+    overlay.className = 'site-alert-overlay';
+    overlay.innerHTML = `
+      <div class="site-alert-card" role="alertdialog" aria-modal="true" aria-labelledby="site-alert-title">
+        <h3 id="site-alert-title">${escapeHtml(title)}</h3>
+        <p>${escapeHtml(message)}</p>
+        <input type="text" class="site-alert-input" value="${escapeHtml(defaultValue)}" placeholder="${escapeHtml(placeholder)}" />
+        <div class="site-alert-actions">
+          <button type="button" class="site-alert-cancel">Annulla</button>
+          <button type="button" class="site-alert-ok">${escapeHtml(confirmLabel)}</button>
+        </div>
+      </div>
+    `;
+
+    const close = (value) => {
+      overlay.remove();
+      document.removeEventListener('keydown', onEscape);
+      resolve(value);
+    };
+    const onEscape = (event) => {
+      if (event.key === 'Escape') close(null);
+    };
+
+    const input = overlay.querySelector('.site-alert-input');
+    overlay.querySelector('.site-alert-cancel').addEventListener('click', () => close(null));
+    overlay.querySelector('.site-alert-ok').addEventListener('click', () => close(input.value));
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') close(input.value);
+    });
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close(null);
+    });
+    document.addEventListener('keydown', onEscape);
+    document.body.appendChild(overlay);
+    input.focus();
+    input.select();
+  });
+}
+
+window.showSitePrompt = showSitePrompt;
+
+/**
  * Formats a value for UI display, replacing null, undefined, or blank text with a placeholder.
  * @param {*} value - Value to format for UI display.
  * @param {string} [fallback='- -'] - Text shown when the value is empty.
@@ -887,14 +1071,14 @@ function bindAnnouncementModalActions(data) {
   const resolveButton = document.getElementById('admin-resolve-announcement');
   if (resolveButton) {
     resolveButton.addEventListener('click', async () => {
-      if (!confirm('Segnare l\'annuncio come risolto?')) return;
+      if (!(await showSiteConfirm('Segnare l\'annuncio come risolto?'))) return;
       resolveButton.disabled = true;
       try {
         await patchAnnouncementStatus(data._id, 'RESOLVED');
         window.dispatchEvent(new Event('announcements:resolved-updated'));
         closeAnnouncementModal();
       } catch (err) {
-        alert(err.message || 'Errore aggiornamento stato');
+        showSiteAlert(err.message || 'Errore aggiornamento stato');
       } finally {
         resolveButton.disabled = false;
       }

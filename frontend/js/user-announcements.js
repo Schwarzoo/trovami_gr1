@@ -21,7 +21,11 @@ function showError(message) {
  * @throws {Error} When the admin API rejects the warning.
  */
 async function warnUser(userId) {
-  const reason = prompt('Motivo avvertimento:', 'Ammonimento da moderazione account');
+  const reason = await showSitePrompt('Motivo avvertimento:', {
+    title: 'Avverti utente',
+    defaultValue: 'Ammonimento da moderazione account',
+    confirmLabel: 'Invia'
+  });
   if (reason === null) return;
   const warnReason = reason.trim() || 'Ammonimento da moderazione account';
   const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/warnings`, {
@@ -30,7 +34,7 @@ async function warnUser(userId) {
     body: JSON.stringify({ reason: warnReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore avvertimento'));
-  alert('Avvertimento inviato');
+  await showSiteAlert('Avvertimento inviato', { title: 'Operazione completata', tone: 'success' });
 }
 
 /**
@@ -40,7 +44,11 @@ async function warnUser(userId) {
  * @throws {Error} When the admin API rejects the block request.
  */
 async function blockUser(userId) {
-  const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
+  const reason = await showSitePrompt('Motivo blocco account:', {
+    title: 'Blocca account',
+    defaultValue: 'Violazione delle regole della community',
+    confirmLabel: 'Blocca'
+  });
   if (reason === null) return;
   const blockReason = reason.trim() || 'Account bloccato da admin';
   const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`, {
@@ -49,7 +57,7 @@ async function blockUser(userId) {
     body: JSON.stringify({ status: 'blocked', reason: blockReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore blocco'));
-  alert('Account bloccato');
+  await showSiteAlert('Account bloccato', { title: 'Operazione completata', tone: 'success' });
   await loadUserAnnouncements();
 }
 
@@ -272,7 +280,7 @@ function setupAdminActions(userId) {
     try {
       await warnUser(userId);
     } catch (err) {
-      alert(err.message || 'Errore avvertimento');
+      showSiteAlert(err.message || 'Errore avvertimento');
     }
   });
 
@@ -280,7 +288,7 @@ function setupAdminActions(userId) {
     try {
       await blockUser(userId);
     } catch (err) {
-      alert(err.message || 'Errore blocco');
+      showSiteAlert(err.message || 'Errore blocco');
     }
   });
 }

@@ -563,7 +563,7 @@ function showUserLocation(lat, lng) {
 if (locateBtn) {
   locateBtn.addEventListener('click', () => {
     if (!navigator.geolocation) {
-      alert('Geolocalizzazione non supportata dal browser');
+      showSiteAlert('Geolocalizzazione non supportata dal browser');
       return;
     }
 
@@ -577,7 +577,7 @@ if (locateBtn) {
     }, (err) => {
       locateBtn.disabled = false;
       console.error('Geolocation error', err);
-      alert('Impossibile ottenere la posizione: ' + (err.message || err.code));
+      showSiteAlert('Impossibile ottenere la posizione a causa del seguente errore: ' + (err.message || err.code));
     }, { enableHighAccuracy: true, timeout: 10000 });
   });
 }

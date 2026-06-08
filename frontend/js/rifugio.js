@@ -125,7 +125,7 @@ async function unfollowCurrentShelter() {
     });
     setFollowButtonState(false);
   } catch (err) {
-    alert(err.message || 'Errore: impossibile smettere di seguire il rifugio');
+    showSiteAlert(err.message || 'Errore: impossibile smettere di seguire il rifugio');
   } finally {
     if (button) button.disabled = false;
   }
@@ -404,7 +404,7 @@ async function openShelterAnimalModal(animalId) {
       document.body.style.overflow = '';
     };
   } catch (err) {
-    alert(err.message || 'Errore apertura scheda animale');
+    showSiteAlert(err.message || 'Errore apertura scheda animale');
   }
 }
 
