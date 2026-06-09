@@ -428,6 +428,19 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio. 
                 "adoptable": false
             }
 
++ Request (multipart/form-data)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Attributes
+        + name: Rex (string, optional)
+        + species: Cane (string, required)
+        + breed: Pastore Tedesco (string, required)
+        + gender: Maschio (string, required)
+        + color: Nero e Focato (string, required)
+        + photo: animale.jpg (file, optional) - Foto principale salvata nello schema `Animal.photo`.
+
 + Response 201 (application/json)
     + Headers
 
@@ -446,6 +459,9 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio. 
             "microchipId": "380260000123456",
             "shelterId": null,
             "adoptable": false,
+            "photos": [
+                "http://localhost:3000/api/v1/animals/645b2c3d4e5f6g7h8i9j0k1l/photo"
+            ],
             "createdAt": "2026-05-15T09:00:00.000Z"
         }
 
@@ -480,7 +496,9 @@ Restituisce gli animali del rifugio autenticato. Opzionalmente filtrabile per `s
                     "color": "Nero e Focato",
                     "age": "3 anni",
                     "adoptable": false,
-                    "photos": [],
+                    "photos": [
+                        "http://localhost:3000/api/v1/animals/645b2c3d4e5f6g7h8i9j0k1l/photo"
+                    ],
                     "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
                     "createdAt": "2026-05-15T09:00:00.000Z"
                 }
@@ -521,7 +539,9 @@ Restituisce i dati di un singolo animale tramite ID. Richiede autenticazione.
             "adoptable": false,
             "shelterId": "645a1b2c3d4e5f6g7h8i9j0k",
             "medicalNotes": [],
-            "photos": [],
+            "photos": [
+                "http://localhost:3000/api/v1/animals/645b2c3d4e5f6g7h8i9j0k1l/photo"
+            ],
             "createdAt": "2026-05-15T09:00:00.000Z"
         }
 
@@ -557,6 +577,17 @@ Aggiorna campi dell'animale. Campi supportati: `name`/`animalName`, `species`, `
                 "medicalNote": "Vaccinazione antirabbica effettuata"
             }
 
++ Request (multipart/form-data)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Attributes
+        + name: Rex (string, optional)
+        + color: Nero (string, optional)
+        + age: 4 anni (string, optional)
+        + photo: rex.jpg (file, optional) - Nuova foto principale salvata nello schema `Animal.photo`.
+
 + Response 200 (application/json)
 
         {
@@ -581,8 +612,25 @@ Aggiorna campi dell'animale. Campi supportati: `name`/`animalName`, `species`, `
             "message": "Animal non trovato"
         }
 
+## Foto Animale [/api/v1/animals/{id}/photo]
++ Parameters
+    + id: `645b2c3d4e5f6g7h8i9j0k1l` (string, required) - ID animale.
+
+### Recupera Foto Animale [GET]
+Restituisce il contenuto binario della foto principale salvata nel documento `Animal`.
+
++ Response 200 (image/jpeg)
+
+        <binary image data>
+
++ Response 404 (application/json)
+
+        {
+            "message": "Foto animale non trovata"
+        }
+
 ### Elimina Animale [DELETE]
-Elimina l'animale. Richiede autenticazione.
+Elimina l'animale dal database. Se l'animale e collegato a uno o piu annunci, elimina anche gli annunci associati. Richiede autenticazione.
 
 + Request
     + Headers

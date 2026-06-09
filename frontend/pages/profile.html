@@ -132,16 +132,24 @@
 
 
 				<section id="my-announcements" class="section-card">
-					<h2>I miei annunci</h2>
-					<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
+					<div class="profile-section-head">
+						<h2>I miei annunci</h2>
+						<div class="profile-actions-row profile-actions-row--wrap">
+							<button id="showCreate" class="btn btn--ghost">Nuovo annuncio</button>
+						</div>
+					</div>
 					<div id="announcements-grid" class="profile-grid-spaced"></div>
 				</section>
 
 				<section id="my-animals" class="section-card">
-					<h2>I miei animali</h2>
-					<span class="section-badge" id="my-animals-count">0 animali</span>
+					<div class="profile-section-head">
+						<h2 class="profile-section-head__title">I miei animali</h2>
+						<div class="profile-actions-row profile-actions-row--wrap">
+							<button id="addAnimalBtn" type="button" class="btn btn--ghost">Aggiungi animale</button>
+						</div>
+					</div>
 					<div id="my-animals-grid" class="profile-grid-spaced"></div>
-         </section>
+        </section>
 
 				<section id="contact-requests-section" class="section-card">
 					<div class="profile-section-head">
@@ -231,6 +239,87 @@
 					<button id="profile-confirm-cancel" type="button" class="btn btn--ghost">Annulla</button>
 					<button id="profile-confirm-ok" type="button" class="btn btn--danger">Conferma</button>
 				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="animal-create-overlay" class="modal-overlay" role="dialog" aria-modal="true">
+		<div class="modal-card animal-create-modal">
+			<div class="modal-header">
+				<h3 id="animal-create-title">Aggiungi animale</h3>
+				<button id="animal-create-close" type="button" class="wiz-close-btn" aria-label="Chiudi">✕</button>
+			</div>
+			<div class="modal-body">
+				<form id="animal-create-form" class="form-stack">
+					<div class="form-grid">
+						<div class="field">
+							<label for="animal-create-name">Nome</label>
+							<input id="animal-create-name" type="text" placeholder="Es. Luna" />
+						</div>
+						<div class="field">
+							<label for="animal-create-species">Specie *</label>
+							<input id="animal-create-species" type="text" placeholder="Es. Cane" required />
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="field">
+							<label for="animal-create-breed">Razza *</label>
+							<input id="animal-create-breed" type="text" placeholder="Es. Labrador" required />
+						</div>
+						<div class="field">
+							<label for="animal-create-gender">Genere *</label>
+							<select id="animal-create-gender" required>
+								<option value="">Seleziona</option>
+								<option value="Maschio">Maschio</option>
+								<option value="Femmina">Femmina</option>
+								<option value="Sconosciuto">Sconosciuto</option>
+							</select>
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="field">
+							<label for="animal-create-color">Colore *</label>
+							<input id="animal-create-color" type="text" placeholder="Es. Nero" required />
+						</div>
+						<div class="field">
+							<label for="animal-create-age">Età</label>
+							<input id="animal-create-age" type="text" placeholder="Es. 3 anni" />
+						</div>
+					</div>
+					<div class="form-grid">
+						<div class="field">
+							<label for="animal-create-lunghezzaPelo">Lunghezza pelo</label>
+							<select id="animal-create-lunghezzaPelo">
+								<option value="">Seleziona</option>
+								<option value="Corto">Corto</option>
+								<option value="Medio">Medio</option>
+								<option value="Lungo">Lungo</option>
+								<option value="Senza">Senza</option>
+							</select>
+						</div>
+						<div class="field">
+							<label for="animal-create-microchipId">Microchip</label>
+							<input id="animal-create-microchipId" type="text" placeholder="Codice microchip" />
+						</div>
+					</div>
+					<div class="field">
+						<label for="animal-create-photo">Foto</label>
+						<input id="animal-create-photo" type="file" accept="image/*" />
+						<span class="form-hint">Carica una foto dell'animale in formato immagine.</span>
+					</div>
+					<div class="field">
+						<label for="animal-create-distinctiveFeatures">Segni particolari</label>
+						<textarea id="animal-create-distinctiveFeatures" rows="3" placeholder="Descrivi dettagli utili"></textarea>
+					</div>
+					<div class="field checkbox-row">
+						<label><input id="animal-create-adoptable" type="checkbox" />Animale adottabile</label>
+					</div>
+					<div class="form-actions">
+						<button id="animal-create-cancel" type="button" class="btn btn--ghost">Annulla</button>
+						<button id="animal-create-save" type="submit" class="btn btn--primary">Salva animale</button>
+					</div>
+					<div id="animal-create-status" class="form-hint"></div>
+				</form>
 			</div>
 		</div>
 	</div>
@@ -519,6 +608,7 @@
 						<div id="animal-medicalNotes" class="animal-medical-notes"></div>
 						<textarea id="animal-newMedicalNote" rows="2" placeholder="Aggiungi una nota medica..."></textarea>
 						<div class="animal-modal-actions">
+							<button id="animal-delete" type="button" class="btn btn--danger">Elimina animale</button>
 							<button id="animal-save" type="button" class="btn btn--primary">Salva</button>
 						</div>
 					</div>

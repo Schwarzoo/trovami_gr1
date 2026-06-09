@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { createAnimal, updateAnimal, deleteAnimal, listAnimals, getAnimalById } = require('../controllers/animalController');
+const { createAnimal, updateAnimal, deleteAnimal, listAnimals, getAnimalById, getAnimalPhoto } = require('../controllers/animalController');
 const { authMiddleware } = require('../middleware/auth');
+const multer = require('multer');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 /**
  * @openapi
@@ -32,6 +35,18 @@ router.get('/:id', getAnimalById);
  * /api/v1/animals:
  *   post:
  *     summary: Crea un animale
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               photo:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       '201':
  *         description: Animale creato.
@@ -41,8 +56,52 @@ router.get('/:id', getAnimalById);
  *               type: string
  *             description: URI della risorsa creata
  */
-router.post('/', authMiddleware, createAnimal);
-router.put('/:id', authMiddleware, updateAnimal);
+router.post('/', upload.single('photo'), authMiddleware, createAnimal);
+/**
+ * @openapi
+ * /api/v1/animals/{id}/photo:
+ *   get:
+ *     summary: Recupera la foto salvata nel documento animale
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       '200':
+ *         description: Contenuto binario della foto animale.
+ *         content:
+ *           image/jpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       '404':
+ *         description: Foto animale non trovata.
+ */
+router.get('/:id/photo', getAnimalPhoto);
+/**
+ * @openapi
+ * /api/v1/animals/{id}:
+ *   put:
+ *     summary: Aggiorna un animale
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       '200':
+ *         description: Animale aggiornato.
+ */
+router.put('/:id', upload.single('photo'), authMiddleware, updateAnimal);
 router.delete('/:id', authMiddleware, deleteAnimal);
 
 

@@ -344,6 +344,10 @@
   margin-top: 8px;
 }
 
+#animal-delete {
+  margin-right: auto;
+}
+
 .animal-medical-notes,
 .modal-gallery-spaced,
 .adoption-reply-summary {
@@ -398,6 +402,7 @@
 #admin-user-overlay,
 #adoption-reply-overlay,
 #profile-confirm-overlay,
+#animal-create-overlay,
 #modal-overlay,
 #modal-type,
 #modal-gender,
@@ -778,6 +783,29 @@
 }
 #animal-modal-overlay .modal-body {
   padding: 12px 16px;
+}
+
+#animal-create-overlay {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.animal-create-modal {
+  max-width: 680px;
+  border: 1px solid var(--wiz-border2);
+  border-radius: var(--wiz-radius);
+}
+
+.animal-create-modal .modal-header {
+  padding: 18px 22px 14px;
+}
+
+.animal-create-modal .modal-body {
+  padding: 18px 22px 22px;
+}
+
+.animal-create-modal .form-actions {
+  padding-top: 4px;
 }
 
 /* Buttons alignment */

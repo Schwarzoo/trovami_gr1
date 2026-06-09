@@ -20,6 +20,7 @@ app.use('/api/v1/users', require('./routes/userRoutes'));
 app.use('/api/v1/notifications', require('./routes/notificationRoutes'));
 app.use('/api/v1/contact-requests', require('./routes/contactRequestRoutes'));
 app.use('/api/v1/admin', require('./routes/adminRoutes'));
+app.use('/assests', express.static(path.join(__dirname, 'assests')));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.get('/api/v1/mock-emails', (req, res) => {

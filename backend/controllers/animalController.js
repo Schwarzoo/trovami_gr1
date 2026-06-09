@@ -3,6 +3,48 @@ const mongoose = require('mongoose');
 const { sendError } = require('../utils/errorResponse');
 
 /**
+ * Returns the public API URL for the animal photo endpoint.
+ * @param {Object} req - Express request object.
+ * @param {string|mongoose.Types.ObjectId} animalId - Animal identifier.
+ * @returns {string} Absolute URL that serves the animal photo.
+ */
+function buildAnimalPhotoUrl(req, animalId) {
+  return `${req.protocol}://${req.get('host')}${req.baseUrl}/${animalId}/photo`;
+}
+
+/**
+ * Stores an uploaded photo buffer inside an animal document.
+ * @param {Object} animal - Animal mongoose document to update.
+ * @param {Express.Multer.File|undefined} file - Uploaded image file.
+ * @returns {boolean} True when a photo was stored.
+ */
+function applyUploadedAnimalPhoto(animal, file) {
+  if (!file?.buffer) return false;
+  animal.photo = {
+    data: file.buffer,
+    contentType: file.mimetype || 'image/jpeg'
+  };
+  animal.photos = [];
+  return true;
+}
+
+/**
+ * Converts an animal document to a JSON-safe response without binary photo data.
+ * @param {Object} req - Express request object.
+ * @param {Object} animal - Animal mongoose document or plain object.
+ * @returns {Object} Animal response payload with photo URLs.
+ */
+function toAnimalResponse(req, animal) {
+  const obj = animal?.toObject ? animal.toObject() : { ...animal };
+  const hasDbPhoto = !!(obj.photo?.data || obj.photo?.contentType);
+  delete obj.photo;
+  if (hasDbPhoto && obj._id) {
+    obj.photos = [buildAnimalPhotoUrl(req, obj._id)];
+  }
+  return obj;
+}
+
+/**
  * Handles the create animal API request and writes the HTTP response.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
@@ -44,8 +86,10 @@ exports.createAnimal = async (req, res) => {
       adoptable: req.user?.role === 'shelter' ? !!adoptable : false
     });
 
+    applyUploadedAnimalPhoto(animal, req.file);
     await animal.save();
-    res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${animal._id}`).status(201).json(animal);
+
+    res.location(`${req.protocol}://${req.get('host')}${req.baseUrl}/${animal._id}`).status(201).json(toAnimalResponse(req, animal));
   } catch (err) {
     sendError(res, 400, err.message, 'Errore nella creazione', 'ANIMAL_CREATE_ERROR');
   }
@@ -79,6 +123,10 @@ exports.updateAnimal = async (req, res) => {
     const animal = await Animal.findByIdAndUpdate(req.params.id, updates, { new: true });
     if (!animal) return res.status(404).json({ message: 'Animal non trovato' });
 
+    if (applyUploadedAnimalPhoto(animal, req.file)) {
+      await animal.save();
+    }
+
     if (req.body.medicalNote) {
       const noteText = String(req.body.medicalNote).trim();
       if (noteText) {
@@ -88,7 +136,7 @@ exports.updateAnimal = async (req, res) => {
       }
     }
 
-    res.json(animal);
+    res.json(toAnimalResponse(req, animal));
   } catch (err) {
     sendError(res, 400, err.message, 'Errore aggiornamento animal', 'ANIMAL_UPDATE_ERROR');
   }
@@ -105,11 +153,30 @@ exports.getAnimalById = async (req, res) => {
   try {
     const id = req.params.id;
     if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'ID animale non valido' });
-    const animal = await Animal.findById(id).select('-imageEmbedding -__v');
+    const animal = await Animal.findById(id).select('-imageEmbedding -__v -photo.data');
     if (!animal) return res.status(404).json({ message: 'Animal non trovato' });
-    res.json(animal);
+    res.json(toAnimalResponse(req, animal));
   } catch (err) {
     sendError(res, 500, err.message, 'Errore recupero animal', 'ANIMAL_FETCH_ERROR');
+  }
+};
+
+/**
+ * Handles the get animal photo API request and streams binary image content.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @returns {Promise<void>} Promise resolving when the image response is sent.
+ */
+exports.getAnimalPhoto = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.isValidObjectId(id)) return res.status(400).json({ message: 'ID animale non valido' });
+    const animal = await Animal.findById(id).select('+photo.data photo.contentType');
+    if (!animal?.photo?.data) return res.status(404).json({ message: 'Foto animale non trovata' });
+    res.contentType(animal.photo.contentType || 'image/jpeg');
+    res.send(animal.photo.data);
+  } catch (err) {
+    sendError(res, 500, err.message, 'Errore recupero foto animal', 'ANIMAL_PHOTO_FETCH_ERROR');
   }
 };
 
@@ -128,10 +195,19 @@ exports.deleteAnimal = async (req, res) => {
       return res.status(400).json({ message: "ID animale non valido" });
     }
 
-    const deleted = await Animal.findByIdAndDelete(animalId);
-    if (!deleted) {
+    const animal = await Animal.findById(animalId).select('shelterId');
+    if (!animal) {
       return res.status(404).json({ message: "Animal non trovato" });
     }
+
+    const ownerId = animal.shelterId ? String(animal.shelterId) : null;
+    if (req.user?.role !== 'admin' && ownerId && ownerId !== String(req.user?.userId)) {
+      return res.status(403).json({ message: 'Non autorizzato' });
+    }
+
+    const deleted = await Animal.findByIdAndDelete(animalId);
+    const Announcement = require('../models/Announcement');
+    await Announcement.deleteMany({ animalId });
 
     res.json({ message: "Animal eliminato", id: deleted._id });
   } catch (err) {
@@ -173,7 +249,7 @@ exports.listAnimals = async (req, res) => {
     const totalItems = await Animal.countDocuments(filter);
     const totalPages = Math.ceil(totalItems / limit);
     const animals = await Animal.find(filter)
-      .select('-imageEmbedding -__v')
+      .select('-imageEmbedding -__v -photo.data')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -182,6 +258,10 @@ exports.listAnimals = async (req, res) => {
     const hostBase = req.protocol + '://' + req.get('host');
     const out = await Promise.all(animals.map(async (a) => {
       const obj = a.toObject ? a.toObject() : a;
+      if ((obj.photo?.data || obj.photo?.contentType) && obj._id) {
+        obj.photos = [buildAnimalPhotoUrl(req, obj._id)];
+      }
+      delete obj.photo;
       if ((!obj.photos || obj.photos.length === 0) && obj._id) {
         try {
           const ann = await Announcement.findOne({ animalId: obj._id, 'photo.data': { $exists: true } }).sort({ createdAt: -1 }).select('_id');

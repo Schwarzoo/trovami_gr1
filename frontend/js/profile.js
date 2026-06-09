@@ -1893,6 +1893,65 @@ document.addEventListener('DOMContentLoaded', async () => {
     openModalForCreate();
   });
 
+  document.getElementById('addAnimalBtn')?.addEventListener('click', () => {
+    openAnimalCreateModal();
+  });
+
+  document.getElementById('animal-create-close')?.addEventListener('click', closeAnimalCreateModal);
+  document.getElementById('animal-create-cancel')?.addEventListener('click', closeAnimalCreateModal);
+  document.getElementById('animal-create-overlay')?.addEventListener('click', (e) => {
+    if (e.target?.id === 'animal-create-overlay') closeAnimalCreateModal();
+  });
+  document.getElementById('animal-create-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = document.getElementById('animal-create-status');
+    const form = e.currentTarget;
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    const photoFile = document.getElementById('animal-create-photo')?.files?.[0] || null;
+    const payload = {
+      name: document.getElementById('animal-create-name').value.trim() || undefined,
+      species: document.getElementById('animal-create-species').value.trim(),
+      breed: document.getElementById('animal-create-breed').value.trim(),
+      gender: document.getElementById('animal-create-gender').value,
+      color: document.getElementById('animal-create-color').value.trim(),
+      age: document.getElementById('animal-create-age').value.trim() || undefined,
+      lunghezzaPelo: document.getElementById('animal-create-lunghezzaPelo').value || undefined,
+      distinctiveFeatures: document.getElementById('animal-create-distinctiveFeatures').value.trim() || undefined,
+      microchipId: document.getElementById('animal-create-microchipId').value.trim() || undefined,
+      adoptable: currentUser?.role === 'shelter' ? !!document.getElementById('animal-create-adoptable').checked : false
+    };
+
+    if (status) status.textContent = 'Salvataggio...';
+
+    try {
+      const body = photoFile ? new FormData() : JSON.stringify(payload);
+      if (photoFile) {
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') body.append(key, value);
+        });
+        body.append('photo', photoFile);
+      }
+
+      const requestInit = photoFile
+        ? { method: 'POST', headers: { Authorization: authHeader.Authorization }, body }
+        : { method: 'POST', headers: { ...authHeader, 'Content-Type': 'application/json' }, body };
+
+      const res = await fetch('/api/v1/animals', requestInit);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.userMessage || data.message || 'Errore creazione animale');
+      }
+      closeAnimalCreateModal();
+      await loadMyAnimals();
+    } catch (err) {
+      if (status) status.textContent = err.message || 'Errore creazione animale';
+    }
+  });
+
 
   document.getElementById('deleteAccount')?.addEventListener('click', async () => {
     const confirmed = await showProfileConfirm({
@@ -1913,6 +1972,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     await showSiteAlert('Account eliminato', { title: 'Operazione completata', tone: 'success' });
     window.location.href = '/';
   });
+
+  /**
+   * Opens the shelter animal creation modal.
+   * @returns {void}
+   */
+  function openAnimalCreateModal() {
+    const overlay = document.getElementById('animal-create-overlay');
+    const form = document.getElementById('animal-create-form');
+    const title = document.getElementById('animal-create-title');
+    const status = document.getElementById('animal-create-status');
+    if (!overlay || !form) return;
+
+    form.reset();
+    if (title) title.textContent = 'Aggiungi animale';
+    if (status) status.textContent = '';
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const adoptable = document.getElementById('animal-create-adoptable');
+    if (adoptable) adoptable.checked = currentUser?.role === 'shelter';
+    const photo = document.getElementById('animal-create-photo');
+    if (photo) photo.value = '';
+  }
+
+  /**
+   * Closes the shelter animal creation modal.
+   * @returns {void}
+   */
+  function closeAnimalCreateModal() {
+    const overlay = document.getElementById('animal-create-overlay');
+    const status = document.getElementById('animal-create-status');
+    const photo = document.getElementById('animal-create-photo');
+    if (overlay) overlay.style.display = 'none';
+    if (status) status.textContent = '';
+    if (photo) photo.value = '';
+    document.body.style.overflow = '';
+  }
   /**
    * Loads my announcements data and updates the UI.
    * @returns {Promise<void>} Promise resolving after the current user's announcement grid is rendered.
@@ -2042,18 +2138,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const section = document.getElementById('my-animals');
     const grid = document.getElementById('my-animals-grid');
     const counter = document.getElementById('my-animals-count');
-    if (!section || !grid || !counter) return;
+    const addAnimalBtn = document.getElementById('addAnimalBtn');
+    if (!section || !grid) return;
     if (currentUser?.role !== 'shelter') {
       section.style.display = 'none';
+      if (addAnimalBtn) addAnimalBtn.style.display = 'none';
       return;
     }
     section.style.display = 'block';
+    if (addAnimalBtn) addAnimalBtn.style.display = 'inline-flex';
     try {
       const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(currentUser._id)}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
       if (!res.ok) throw new Error('Errore recupero animali');
       const payload = await res.json();
       const list = Array.isArray(payload) ? payload : payload.data || [];
-      counter.textContent = `${(list && list.length) || 0} animali`;
       if (!list || list.length === 0) {
         grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
         return;
@@ -2111,7 +2209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     } catch (err) {
       grid.innerHTML = `<div class="empty-state">${escapeHtml(err.message || 'Errore')}</div>`;
-      counter.textContent = '0 animali';
+      if (counter) counter.textContent = '';
     }
   }
 
@@ -2192,6 +2290,38 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.body.style.overflow = 'hidden';
 
       document.getElementById('animal-modal-close').onclick = () => { document.getElementById('animal-modal-overlay').style.display = 'none'; document.body.style.overflow = ''; };
+      const deleteButton = document.getElementById('animal-delete');
+      if (deleteButton) {
+        deleteButton.disabled = false;
+        deleteButton.onclick = async () => {
+          const confirmed = await showProfileConfirm({
+            title: 'Elimina animale',
+            message: "Vuoi eliminare questo animale? Se e collegato a un annuncio, verra eliminato anche l'annuncio.",
+            confirmLabel: 'Elimina',
+            danger: true
+          });
+          if (!confirmed) return;
+          deleteButton.disabled = true;
+          try {
+            const delRes = await fetch(`/api/v1/animals/${encodeURIComponent(animalId)}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!delRes.ok) {
+              const data = await delRes.json().catch(() => ({}));
+              throw new Error(data.userMessage || data.message || 'Errore eliminazione animale');
+            }
+            document.getElementById('animal-modal-overlay').style.display = 'none';
+            document.body.style.overflow = '';
+            await loadMyAnimals();
+            await loadMyAnnouncements();
+          } catch (err) {
+            showSiteAlert(err.message || 'Errore eliminazione animale');
+          } finally {
+            deleteButton.disabled = false;
+          }
+        };
+      }
 
       document.getElementById('animal-save').onclick = async () => {
         const payload = {

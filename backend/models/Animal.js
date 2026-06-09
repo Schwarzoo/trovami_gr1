@@ -14,7 +14,8 @@ const mongoose = require('mongoose');
  * @property {string} microchipId Identificativo del microchip.
  * @property {mongoose.Types.ObjectId} shelterId Rifugio associato, se presente.
  * @property {boolean} adoptable Indica se l'animale è adottabile.
- * @property {string[]} photos Elenco degli URL delle foto.
+ * @property {{ data: Buffer, contentType: string }} photo Foto principale salvata nel database.
+ * @property {string[]} photos Elenco degli URL delle foto o fallback legacy.
  * @property {Date} dateArrived Data di arrivo.
  * @property {Array<{ text: string, createdAt: Date }>} medicalNotes Note mediche.
  * @property {string} otherInfo Informazioni aggiuntive.
@@ -31,6 +32,10 @@ const animalSchema = new mongoose.Schema({
     microchipId:        { type: String, default: null }, 
     shelterId:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     adoptable:          { type: Boolean, default: false },
+    photo:              {
+        data: { type: Buffer, select: false },
+        contentType: String
+    },
     photos:             [{ type: String }],
     dateArrived:        { type: Date, default: null },
     medicalNotes:       [{ text: String, createdAt: { type: Date, default: Date.now } }],
