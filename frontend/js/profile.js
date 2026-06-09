@@ -17,6 +17,15 @@ const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
 
 /**
+ * Returns whether an announcement is published by a shelter account.
+ * @param {Object} announcement - Announcement record to inspect.
+ * @returns {boolean} True when the publisher is a shelter.
+ */
+function isShelterAnnouncement(announcement) {
+  return announcement?.publisherId?.role === 'shelter';
+}
+
+/**
  * Sets last seen mode.
  * @param {string} mode - Selected last-seen mode, either `today` or `custom`.
  * @returns {void}
@@ -2065,7 +2074,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <p class="card-description profile-announcement-card__description">${escapeHtml(a.description || 'Nessuna descrizione disponibile.')}</p>
           <div class="profile-announcement-card__actions">
             <button data-id="${a._id}" class="edit btn btn--ghost profile-announcement-card__button">Modifica</button>
-            ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost profile-announcement-card__button">Chiudi</button>` : ''}
+            ${a.status !== 'RESOLVED' && !isShelterAnnouncement(a) ? `<button data-id="${a._id}" class="close btn btn--ghost profile-announcement-card__button">Chiudi</button>` : ''}
             <button data-id="${a._id}" class="del btn btn--danger profile-announcement-card__button">Elimina</button>
           </div>
         </div>

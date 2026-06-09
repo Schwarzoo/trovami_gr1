@@ -184,6 +184,15 @@ function displayValue(value, fallback = '- -') {
 }
 
 /**
+ * Returns whether an announcement is published by a shelter account.
+ * @param {Object} announcement - Announcement record to inspect.
+ * @returns {boolean} True when the publisher is a shelter.
+ */
+function isShelterAnnouncement(announcement) {
+  return announcement?.publisherId?.role === 'shelter';
+}
+
+/**
  * Renders the shared animal/announcement details list used by announcement modals.
  * @param {Object} animal - Animal fields to render.
  * @param {Object} announcement - Announcement fields to render.
@@ -661,7 +670,7 @@ function createAnnouncementCard(ann, options = {}) {
   const animal = ann.animalId;
   const publisher = ann.publisherId;
   const isLost = ann.type === 'LostAnimal';
-  const isRifugioAnnouncement = publisher?.role === 'shelter';
+  const isRifugioAnnouncement = isShelterAnnouncement(ann);
   const rifugioName = publisher?.role === 'shelter'
     ? (publisher?.rifugioData?.rifugioName || publisher?.username)
     : '';
@@ -774,7 +783,7 @@ async function openAnnouncementModal(ann) {
   const animal = data.animalId;
   const publisher = data.publisherId;
   const isLost = data.type === 'LostAnimal';
-  const isRifugioAnnouncement = publisher?.role === 'shelter';
+  const isRifugioAnnouncement = isShelterAnnouncement(data);
   const comments = Array.isArray(data.comments) ? data.comments : [];
   const date = new Date(data.date).toLocaleDateString('it-IT', {
     day: '2-digit',
@@ -856,7 +865,7 @@ async function openAnnouncementModal(ann) {
       </details>
     `
     : '';
-  const adminResolveBoxHtml = currentRole === 'admin' && data.status !== 'RESOLVED'
+  const adminResolveBoxHtml = currentRole === 'admin' && !isShelterAnnouncement(data) && data.status !== 'RESOLVED'
     ? `
       <section class="comments-section" aria-label="Moderazione annuncio">
         <div class="comments-header">
