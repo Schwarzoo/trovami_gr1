@@ -184,6 +184,12 @@ npm install
 # Crea file .env
 # Configura: DB_URL, PORT, JWT_SECRET, EMAIL credentials, HUGGINGFACE_API_KEY
 
+#CONFIGURA VENV(solo da local host per i smart matching tra annunci)
+python -m venv venv
+venv\Scripts\activate
+pip install -r scripts/requirements.txt
+exit
+
 # Avvia server
 npm start
 
@@ -245,7 +251,7 @@ RENDER=false  # Per mock inbox emails in dev
 ##  Stato Sviluppo
 
 Questo è un progetto attualmente universitario in sviluppo attivo per il corso di **Ingegneria del Software** presso l'Università di Trento.
-
+Essendo appunto in stato di sviluppo alcune funzionalità non sono disponibili ma sostiuite in modo da rendere tutto funzionale e coerente col progetto.(ad esempio email e smart matching sono pronti ma non resi disponibili da render)
 
 
 ---
