@@ -52,16 +52,17 @@
         <label for="filter-date-from">Da data</label>
         <input type="date" id="filter-date-from" />
       </div>
-      <div class="filter-group">
-        <label for="filter-date-to">A data</label>
-        <input type="date" id="filter-date-to" />
-      </div>
-      <div class="filter-group">
-        <label for="filter-include-unknown">Opzioni</label>
-        <label class="include-unknown-label">
-          <input type="checkbox" id="filter-include-unknown" checked />
-          Includi segnalazioni con informazioni sconosciute
-        </label>
+      <div class="map-date-row">
+        <div class="filter-group">
+          <label for="filter-date-to">A data</label>
+          <input type="date" id="filter-date-to" />
+        </div>
+        <div class="filter-group filter-group--include-unknown">
+          <label class="include-unknown-label">
+            <input type="checkbox" id="filter-include-unknown" checked />
+            Includi segnalazioni con informazioni sconosciute
+          </label>
+        </div>
       </div>
       <span id="result-count">— annunci trovati</span>
     </div>

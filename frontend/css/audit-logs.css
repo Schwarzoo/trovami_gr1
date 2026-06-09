@@ -1,5 +1,5 @@
 .audit-page {
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .audit-toolbar {
@@ -21,6 +21,7 @@
 
 .audit-search input {
   min-width: 240px;
+  max-width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -113,8 +114,21 @@
 }
 
 @media (max-width: 600px) {
+  .audit-toolbar,
+  .audit-search,
+  .audit-search input {
+    width: 100%;
+  }
+
+  .audit-table-wrap {
+    margin-inline: -1rem;
+    padding-inline: 1rem;
+    width: calc(100% + 2rem);
+  }
+
   .audit-pagination {
     gap: 12px;
+    flex-wrap: wrap;
   }
 
   .audit-nav-btn {

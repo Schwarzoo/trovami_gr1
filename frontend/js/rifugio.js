@@ -1,41 +1,9 @@
 const API_RIFUGI = '/api/v1/users/shelters?isPublic=true';
-const API_ANNOUNCEMENTS = '/api/v1/announcements';
 const API_ANIMALS = '/api/v1/animals';
 const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
 let currentRifugio = null;
 let isFollowingCurrentRifugio = false;
-
-/**
- * Formats a numeric shelter statistic for Italian UI display.
- * @param {*} value - Numeric value or numeric string to format.
- * @returns {string} Localized number string, or `0` for invalid values.
- */
-function formatNumber(value) {
-  return Number.isFinite(Number(value)) ? Number(value).toLocaleString('it-IT') : '0';
-}
-
-/**
- * Returns rifugio name.
- * @param {Object} rifugio - Shelter user object from the public shelters API.
- * @returns {string} Best available shelter display name.
- */
-function getRifugioName(rifugio) {
-  return rifugio?.rifugioData?.rifugioName || rifugio?.username || 'Rifugio';
-}
-
-/**
- * Returns coordinates.
- * @param {Object} rifugio - Shelter user object containing location data.
- * @returns {number[]|null} `[longitude, latitude]` coordinates, or null when unavailable.
- */
-function getCoordinates(rifugio) {
-  const coords = rifugio?.rifugioData?.location?.coordinates;
-  if (!Array.isArray(coords) || coords.length !== 2) return null;
-  const [lng, lat] = coords.map(Number);
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
-  return [lng, lat];
-}
 
 /**
  * Returns rifugio id.
@@ -52,44 +20,6 @@ function getRifugioId() {
 function getAnimalId() {
   return new URLSearchParams(window.location.search).get('animalId');
 }
-
-/**
- * Fetches JSON from an API endpoint and throws on HTTP failures.
- * @param {string} url - API endpoint to request.
- * @returns {Promise<Object|Array<Object>>} Parsed JSON response.
- * @throws {Error} When the API response is not successful.
- */
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json?.userMessage || json?.message || `HTTP ${res.status}`);
-  }
-  return await res.json();
-}
-
-/**
- * Fetches JSON from an authenticated API endpoint and throws on HTTP failures.
- * @param {string} url - Authenticated API endpoint to request.
- * @param {Object} options - Fetch options merged with the bearer authorization header.
- * @returns {Promise<Object|Array<Object>>} Parsed JSON response.
- * @throws {Error} When the API response is not successful.
- */
-async function fetchAuthJson(url, options = {}) {
-  const token = localStorage.getItem('token');
-  const headers = {
-    ...(options.headers || {}),
-    'Authorization': `Bearer ${token}`
-  };
-  if (options.body && !(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
-  const res = await fetch(url, { ...options, headers });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.userMessage || json?.message || `HTTP ${res.status}`);
-  return json;
-}
-
 
 /**
  * Reads the current user role from local storage.
@@ -195,7 +125,7 @@ async function unfollowCurrentShelter() {
     });
     setFollowButtonState(false);
   } catch (err) {
-    alert(err.message || 'Errore: impossibile smettere di seguire il rifugio');
+    showSiteAlert(err.message || 'Errore: impossibile smettere di seguire il rifugio');
   } finally {
     if (button) button.disabled = false;
   }
@@ -230,15 +160,6 @@ function initFollowControls() {
 }
 
 /**
- * Collects visible shelter contact fields into a list.
- * @param {Object} rifugio - Shelter user object with public phone and email fields.
- * @returns {string} Contact summary joined for display.
- */
-function getAllContacts(rifugio) {
-  return [rifugio?.phoneNumber, rifugio?.email].filter(Boolean).join(' · ');
-}
-
-/**
  * Summarizes shelter animals by total and adoptable counts.
  * @param {Array<Object>} animals - Animals registered for the shelter.
  * @returns {{total: number, available: number}} Total and adoptable animal counts.
@@ -263,9 +184,12 @@ function renderStats(rifugio, animals) {
 
   stats.innerHTML = `
     <div class="stat-card">
-      <span>Animali disponibili</span>
+      <span>Animali</span>
+      <strong>${escapeHtml(total)}</strong>
+    </div>
+    <div class="stat-card stat-card--accent">
+      <span>Adottabili</span>
       <strong>${escapeHtml(available)}</strong>
-      <span>su ${escapeHtml(total)} animali registrati</span>
     </div>
   `;
 }
@@ -273,16 +197,13 @@ function renderStats(rifugio, animals) {
 /**
  * Renders shelter profile information and contacts.
  * @param {Object} rifugio - Shelter user object for the current page.
- * @param {Array<Object>} animals - Animals used to show availability totals.
  * @returns {void}
  */
-function renderInfo(rifugio, animals) {
+function renderInfo(rifugio) {
   const container = document.getElementById('shelter-info-grid');
-  const coords = getCoordinates(rifugio);
   const address = [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
-  const { total, available } = summarizeAnimals(animals);
-  const contacts = getAllContacts(rifugio) || 'Contatti non pubblici';
-  const websiteLink = `/pages/announcements.html?rifugioId=${encodeURIComponent(rifugio._id)}`;
+  const email = rifugio?.email || 'Email non pubblica';
+  const phone = rifugio?.phoneNumber || 'Numero non pubblico';
 
   container.innerHTML = `
     <div class="info-tile">
@@ -290,26 +211,12 @@ function renderInfo(rifugio, animals) {
       <strong>${escapeHtml(address || 'Non disponibile')}</strong>
     </div>
     <div class="info-tile">
-      <span>Animali disponibili</span>
-      <strong>${escapeHtml(available)} / ${escapeHtml(total)}</strong>
-      <p>Animali adottabili rispetto al totale registrato.</p>
+      <span>Email</span>
+      <strong>${escapeHtml(email)}</strong>
     </div>
     <div class="info-tile">
-      <span>Contatti</span>
-      <strong>${escapeHtml(contacts)}</strong>
-      <a href="${websiteLink}">Vai agli annunci del rifugio</a>
-    </div>
-    <div class="info-tile">
-      <span>Descrizione</span>
-      <p>${escapeHtml(rifugio?.rifugioData?.description || 'Nessuna descrizione disponibile.')}</p>
-    </div>
-    <div class="info-tile">
-      <span>Coordinate</span>
-      <strong>${coords ? `${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}` : 'Non disponibili'}</strong>
-    </div>
-    <div class="info-tile">
-      <span>Stato</span>
-      <strong>${escapeHtml(rifugio?.rifugioStatus || 'non configurato')}</strong>
+      <span>Telefono</span>
+      <strong>${escapeHtml(phone)}</strong>
     </div>
   `;
 }
@@ -322,59 +229,22 @@ function renderInfo(rifugio, animals) {
  */
 async function renderAnimalsForShelter(rifugioId) {
   const grid = document.getElementById('shelter-animals-grid');
-  const counter = document.getElementById('shelter-animals-count');
-  if (!grid || !counter) return;
+  if (!grid) return;
   try {
     const res = await fetch(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugioId)}`);
     if (!res.ok) throw new Error('Errore recupero animali');
     const payload = await res.json();
     const list = Array.isArray(payload) ? payload : payload.data || [];
-    counter.textContent = `${(list && list.length) || 0} animali`;
     if (!list || list.length === 0) {
       grid.innerHTML = '<div class="empty-state">Nessun animale registrato.</div>';
       return;
     }
-    grid.innerHTML = list.map(a => {
-      const name = a.name || a.breed || a.species || 'Animale';
-      const status = a.adoptable ? 'Adottabile' : 'Non disponibile';
-      return `
-        <article class="card" data-id="${escapeHtml(a._id)}">
-          <div class="card-image"><div class="card-image-placeholder"><span>${escapeHtml((a.species||'A')[0])}</span></div></div>
-          <div class="card-body">
-            <div class="card-meta"><span class="card-species">${escapeHtml(a.species || '')}</span></div>
-            <h3 class="card-breed">${escapeHtml(name)}</h3>
-            <p class="card-description">${escapeHtml(a.distinctiveFeatures || '')}</p>
-            <div class="animal-status">${escapeHtml(status)}</div>
-          </div>
-        </article>
-      `;
-    }).join('');
+    grid.innerHTML = list.map(a => createAdoptableAnimalCard(a, { rifugio: currentRifugio })).join('');
     list.forEach(a => {
       const card = grid.querySelector(`.card[data-id="${a._id}"]`);
       if (!card) return;
-      const container = card.querySelector('.card-image');
-      const placeholder = container.querySelector('.card-image-placeholder');
-      const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
-      if (!photo) {
-        if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(a.species?.[0] || '?')}</span>`;
-        return;
-      }
       (async () => {
-        try {
-          const res = await fetch(photo, { method: 'GET' });
-          if (!res.ok) throw new Error('no image');
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.startsWith('image')) throw new Error('not image');
-          const blob = await res.blob();
-          const img = document.createElement('img');
-          img.src = URL.createObjectURL(blob);
-          img.alt = a.species || 'Animale';
-          img.loading = 'lazy';
-          img.onload = () => { URL.revokeObjectURL(img.src); };
-          if (placeholder) placeholder.replaceWith(img);
-        } catch (err) {
-          if (placeholder) placeholder.innerHTML = `<span>${escapeHtml(a.species?.[0] || '?')}</span>`;
-        }
+        await hydrateAdoptableAnimalCardImage(card, a);
       })();
     });
     grid.addEventListener('click', (e) => {
@@ -386,7 +256,6 @@ async function renderAnimalsForShelter(rifugioId) {
     });
   } catch (err) {
     grid.innerHTML = `<div class="empty-state">${escapeHtml(err.message || 'Errore')}</div>`;
-    counter.textContent = '0 animali';
   }
 }
 
@@ -513,23 +382,13 @@ async function openShelterAnimalModal(animalId) {
       gallery.innerHTML = '';
       const photo = Array.isArray(a.photos) && a.photos.length ? a.photos[0] : null;
       if (photo) {
-        try {
-          const res = await fetch(photo, { method: 'GET' });
-          if (!res.ok) throw new Error('no image');
-          const contentType = res.headers.get('content-type') || '';
-          if (!contentType.startsWith('image')) throw new Error('not image');
-          const blob = await res.blob();
-          const img = document.createElement('img');
-          img.src = URL.createObjectURL(blob);
-          img.alt = a.species || 'Animale';
-          img.loading = 'lazy';
-          img.style.maxWidth = '100%';
-          img.style.borderRadius = '8px';
-          img.onload = () => URL.revokeObjectURL(img.src);
-          gallery.appendChild(img);
-        } catch (err) {
-          gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
-        }
+        await loadImageIntoGallery({
+          gallery,
+          url: photo,
+          alt: a.species || 'Animale',
+          fallbackText: 'Non è presente alcuna foto',
+          style: { maxWidth: '100%', borderRadius: '8px' }
+        });
       } else {
         gallery.innerHTML = '<div class="modal-no-photo">Non è presente alcuna foto</div>';
       }
@@ -545,7 +404,7 @@ async function openShelterAnimalModal(animalId) {
       document.body.style.overflow = '';
     };
   } catch (err) {
-    alert(err.message || 'Errore apertura scheda animale');
+    showSiteAlert(err.message || 'Errore apertura scheda animale');
   }
 }
 
@@ -569,7 +428,7 @@ function renderMap(rifugio) {
     mapLink.rel = 'noreferrer';
   }
 
-  const map = L.map('shelter-map', { scrollWheelZoom: false }).setView([coords[1], coords[0]], 15);
+  const map = L.map('shelter-map', { scrollWheelZoom: true }).setView([coords[1], coords[0]], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
@@ -609,7 +468,7 @@ async function loadPage() {
   const animalsPayload = await fetchJson(`${API_ANIMALS}?shelterId=${encodeURIComponent(rifugio._id)}`);
   const animals = Array.isArray(animalsPayload) ? animalsPayload : animalsPayload.data || [];
   renderStats(rifugio, animals);
-  renderInfo(rifugio, animals);
+  renderInfo(rifugio);
   renderMap(rifugio);
   await loadFollowState(rifugio._id);
   await renderAnimalsForShelter(rifugio._id);

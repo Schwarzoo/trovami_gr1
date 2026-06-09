@@ -122,6 +122,9 @@ function configureModalLabelsForAccount() {
       ? 'Posizione del rifugio gia impostata. Puoi modificarla selezionando un altro punto.'
       : 'Scegli un punto sulla mappa o usa la posizione attuale.';
   }
+
+  const step3Label = document.getElementById('wiz-sl3');
+  if (step3Label) step3Label.textContent = isRifugio ? 'Immagine' : 'Luogo';
 }
 
 /**
@@ -196,7 +199,7 @@ function showProfileConfirm({ title, message, confirmLabel = 'Conferma', danger 
     const closeButton = document.getElementById('profile-confirm-close');
 
     if (!overlay || !titleEl || !messageEl || !okButton || !cancelButton || !closeButton) {
-      resolve(window.confirm(message));
+      showSiteConfirm(message, { title, confirmLabel }).then(resolve);
       return;
     }
 
@@ -1029,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const message = document.getElementById('rifugio-position-message');
 
     if (!navigator.geolocation) {
-      alert('Geolocalizzazione non disponibile nel browser.');
+      showSiteAlert('Geolocalizzazione non disponibile nel browser.');
       return;
     }
 
@@ -1060,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    */
   async function saveRifugioPosition() {
     if (!pendingRifugioLocation) {
-      alert('Seleziona un punto sulla mappa');
+      showSiteAlert('Seleziona un punto sulla mappa');
       return;
     }
 
@@ -1097,13 +1100,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.userMessage || data.message || 'Errore salvataggio posizione');
+      showSiteAlert(data.userMessage || data.message || 'Errore salvataggio posizione');
       return;
     }
 
     const savedCoords = data?.rifugioData?.location?.coordinates;
     if (!Array.isArray(savedCoords) || savedCoords.length !== 2) {
-      alert('La posizione non risulta salvata. Riprova.');
+      showSiteAlert('La posizione non risulta salvata. Riprova.');
       return;
     }
 
@@ -1282,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
     if (!user) {
-      alert('Informazioni account non disponibili');
+      showSiteAlert('Informazioni account non disponibili');
       return;
     }
     renderAdminUserModal(user);
@@ -1315,7 +1318,11 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @throws {Error} When the admin API rejects the block request.
    */
   async function blockAdminUser(userId) {
-    const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
+    const reason = await showSitePrompt('Motivo blocco account:', {
+      title: 'Blocca account',
+      defaultValue: 'Violazione delle regole della community',
+      confirmLabel: 'Blocca'
+    });
     if (reason === null) return;
     const blockReason = reason.trim() || 'Account bloccato da admin';
     const res = await fetch(`/api/v1/admin/users/${encodeURIComponent(userId)}`, {
@@ -1704,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await unfollowShelter(shelterId);
       await loadFollowedShelters();
     } catch (err) {
-      alert(err.message || 'Errore');
+      showSiteAlert(err.message || 'Errore');
       button.disabled = false;
     }
   });
@@ -1713,7 +1720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await clearRepliedAdoptionRequests();
       await loadContactRequests();
     } catch (err) {
-      alert(err.message || 'Errore svuotamento richieste');
+      showSiteAlert(err.message || 'Errore svuotamento richieste');
     }
   });
   document.getElementById('contact-requests-list')?.addEventListener('click', (e) => {
@@ -1763,7 +1770,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           await loadMyAnnouncements();
         }
       } catch (err) {
-        alert(err.message || 'Errore moderazione');
+        showSiteAlert(err.message || 'Errore moderazione');
       }
       return;
     }
@@ -1792,7 +1799,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (action === 'delete-ann') {
         const annId = button.dataset.annId;
-        const reason = prompt('Motivo rimozione annuncio:', 'annuncio falso/offensivo');
+        const reason = await showSitePrompt('Motivo rimozione annuncio:', {
+          title: 'Rimuovi annuncio',
+          defaultValue: 'annuncio falso/offensivo',
+          confirmLabel: 'Rimuovi'
+        });
         if (reason === null) return;
         const deleteReason = reason.trim() || 'violazione delle regole';
         const res = await fetch(`/api/v1/admin/announcements/${encodeURIComponent(annId)}`, {
@@ -1840,10 +1851,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (action === 'approve-rifugio' || action === 'reject-rifugio') {
         const userId = button.dataset.userId;
-        const verb = action === 'approve-rifugio' ? 'approve' : 'reject';
-        const body = action === 'reject-rifugio'
-          ? { rifugioStatus: 'rejected', reason: prompt('Motivo rifiuto:', 'Dati insufficienti') || 'Dati insufficienti' }
-          : { rifugioStatus: 'approved' };
+        let body = { rifugioStatus: 'approved' };
+        if (action === 'reject-rifugio') {
+          const reason = await showSitePrompt('Motivo rifiuto:', {
+            title: 'Rifiuta rifugio',
+            defaultValue: 'Dati insufficienti',
+            confirmLabel: 'Rifiuta'
+          });
+          if (reason === null) return;
+          body = { rifugioStatus: 'rejected', reason: reason.trim() || 'Dati insufficienti' };
+        }
         const res = await fetch(`/api/v1/admin/rifugi/${encodeURIComponent(userId)}`, {
           method: 'PATCH',
           headers: authHeader,
@@ -1858,18 +1875,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadAdminData();
       await loadMyAnnouncements();
     } catch (err) {
-      alert(err.message || 'Errore moderazione');
+      showSiteAlert(err.message || 'Errore moderazione');
     }
   });
 
   document.getElementById('showCreate').addEventListener('click', (e) => {
     e.preventDefault();
     if (currentUser?.role === 'shelter' && currentUser?.rifugioStatus !== 'approved') {
-      alert('Il tuo account rifugio deve essere approvato da un admin prima di pubblicare annunci.');
+      showSiteAlert('Il tuo account rifugio deve essere approvato da un admin prima di pubblicare annunci.');
       return;
     }
     if (currentUser?.role === 'shelter' && !getRifugioCoordinates()) {
-      alert('Prima salva la posizione del rifugio nella sezione Dati profilo.');
+      showSiteAlert('Prima salva la posizione del rifugio nella sezione Dati profilo.');
       openRifugioPositionEditor();
       return;
     }
@@ -1888,12 +1905,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch('/api/v1/users/me', { method: 'DELETE', headers: authHeader });
     if (!res.ok) {
       const d = await res.json().catch(()=>({}));
-      alert(d.userMessage || d.message || 'Errore eliminazione account');
+      showSiteAlert(d.userMessage || d.message || 'Errore eliminazione account');
       return;
     }
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-    alert('Account eliminato');
+    await showSiteAlert('Account eliminato', { title: 'Operazione completata', tone: 'success' });
     window.location.href = '/';
   });
   /**
@@ -1979,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           loadMyAnnouncements();
           window.dispatchEvent(new Event('announcements:resolved-updated'));
         } else {
-          alert('Errore chiusura');
+          showSiteAlert('Errore chiusura');
         }
         return;
       }
@@ -2000,10 +2017,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadMyAnnouncements();
           } else {
             const d = await res.json().catch(() => ({}));
-            alert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+            showSiteAlert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
           }
         } catch (err) {
-          alert('Errore di rete: ' + (err.message || err));
+          showSiteAlert('Errore di rete: ' + (err.message || err));
         }
         return;
       }
@@ -2196,12 +2213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           document.body.style.overflow = '';
           await loadMyAnimals();
         } catch (err) {
-          alert(err.message || 'Errore salvataggio');
+          showSiteAlert(err.message || 'Errore salvataggio');
         }
       };
 
     } catch (err) {
-      alert(err.message || 'Errore apertura scheda animale');
+      showSiteAlert(err.message || 'Errore apertura scheda animale');
     }
   }
 
@@ -2217,7 +2234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function openAnnouncementModal(announcementId) {
     const data = await fetchAnnouncementById(announcementId);
     if (!data) {
-      alert('Annuncio non trovato');
+      showSiteAlert('Annuncio non trovato');
       return;
     }
 
@@ -2302,7 +2319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const res = await fetch(`/api/v1/announcements/${id}/flyer`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + token } });
             if (!res.ok) {
               const d = await res.json().catch(()=>({}));
-              alert(d.userMessage || d.message || ('Errore generazione volantino (' + res.status + ')'));
+              showSiteAlert(d.userMessage || d.message || ('Errore generazione volantino (' + res.status + ')'));
               return;
             }
             const blob = await res.blob();
@@ -2315,7 +2332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 10000);
           } catch (err) {
-            alert('Errore generazione volantino: ' + (err.message || err));
+            showSiteAlert('Errore generazione volantino: ' + (err.message || err));
           }
         });
       }
@@ -2411,7 +2428,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('useMyLocation').addEventListener('click', () => {
     if (!navigator.geolocation) {
-      alert('Geolocalizzazione non disponibile nel browser.');
+      showSiteAlert('Geolocalizzazione non disponibile nel browser.');
       return;
     }
 
@@ -2429,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (error.code === error.PERMISSION_DENIED) msg = 'Permesso negato per la geolocalizzazione.';
         if (error.code === error.POSITION_UNAVAILABLE) msg = 'Posizione non disponibile.';
         if (error.code === error.TIMEOUT) msg = 'Timeout della richiesta di posizione.';
-        alert(msg);
+        showSiteAlert(msg);
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
     );
@@ -2484,23 +2501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const coordsRawInput = document.getElementById('modal-coords').value.trim();
     const coordsRaw = normalizeCoordsFromInput(coordsRawInput);
 
-    if (!type || !species || !color) {
-      alert('Compila i campi obbligatori: Tipo, Specie e Colore.');
-      return;
-    }
-
-    const modalForm = document.getElementById('modalForm');
-    if (modalForm && !modalForm.reportValidity()) {
-      return;
-    }
-
-    if (type === 'LostAnimal' && !animalName) {
-      alert('Per un annuncio di smarrimento il nome dell animale è obbligatorio se lo conosci.');
-      return;
-    }
-
-    if (!coordsRaw || coordsRaw.length !== 2 || isNaN(coordsRaw[0]) || isNaN(coordsRaw[1])) {
-      alert('Inserisci coordinate valide');
+    if (!(await validateAnnouncementWizardThroughStep(maxSteps))) {
       return;
     }
 
@@ -2643,7 +2644,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       try { localStorage.setItem('announcements:update', Date.now().toString()); } catch (e) {}
     } catch (error) {
       console.error('Save announcement error:', error);
-      alert(error?.message || 'Errore salvataggio annuncio');
+      showSiteAlert(error?.message || 'Errore salvataggio annuncio');
     } finally {
       setAnnouncementSavingState(false);
     }
@@ -2654,7 +2655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (el.classList.contains('edit')) {
       const id = el.dataset.id;
       const res = await fetch(`/api/v1/announcements/${id}`);
-      if (!res.ok) { alert('Errore caricamento annuncio'); return; }
+      if (!res.ok) { showSiteAlert('Errore caricamento annuncio'); return; }
       const ann = await res.json();
       openModalForEdit(ann);
     }
@@ -2804,6 +2805,7 @@ function openModalForCreate() {
     adoptionSelect.value = 'none';
     adoptionSelect.disabled = currentUser?.role !== 'shelter';
   }
+  resetAnnouncementWizard();
   showModal(true);
 }
 
@@ -2862,6 +2864,7 @@ function openModalForEdit(ann) {
     adoptionSelectEdit.value = ann.animalId?.adoptable && currentUser?.role === 'shelter' ? 'adoptable' : 'none';
     adoptionSelectEdit.disabled = currentUser?.role !== 'shelter';
   }
+  resetAnnouncementWizard();
   showModal(true);
 }
 
@@ -2947,6 +2950,131 @@ function showMapPicker() {
 let wizStep = 1;
 	const maxSteps = 4;
 
+  /**
+   * Returns whether parsed announcement coordinates are usable.
+   * @param {number[]|null} coords - Parsed coordinates in `[longitude, latitude]` order.
+   * @returns {boolean} True when both coordinate values are finite.
+   */
+  function hasValidAnnouncementCoords(coords) {
+    return Array.isArray(coords)
+      && coords.length === 2
+      && Number.isFinite(coords[0])
+      && Number.isFinite(coords[1]);
+  }
+
+  /**
+   * Builds the first validation error for a wizard step.
+   * @param {number} step - Wizard step to validate.
+   * @returns {{step:number,message:string,focusId?:string}|null} Validation error, or null when valid.
+   */
+  function getAnnouncementWizardStepError(step) {
+    const type = document.getElementById('modal-type')?.value || '';
+    const species = document.getElementById('modal-species')?.value?.trim() || '';
+    const animalName = document.getElementById('modal-animalName')?.value?.trim() || '';
+    const color = document.getElementById('modal-color')?.value?.trim() || '';
+
+    if (step === 1) {
+      if (!type) {
+        return { step, message: 'Seleziona il tipo di annuncio.' };
+      }
+      if (!species) {
+        return { step, message: 'Seleziona la specie dell animale.' };
+      }
+      if (type === 'LostAnimal' && !animalName) {
+        return { step, message: 'Inserisci il nome del tuo amico a quattro zampe!', focusId: 'modal-animalName' };
+      }
+    }
+
+    if (step === 2 && !color) {
+      return { step, message: 'Seleziona il colore dell animale.' };
+    }
+
+    if (step === 3) {
+      const customDateSelected = document.getElementById('lastSeenCustomBtn')?.classList.contains('is-selected');
+      const lastSeenDate = document.getElementById('modal-lastSeenDate')?.value || '';
+      if (customDateSelected && !lastSeenDate) {
+        return { step, message: 'Inserisci la data oppure seleziona Oggi.', focusId: 'modal-lastSeenDate' };
+      }
+
+      const coordsInput = document.getElementById('modal-coords')?.value?.trim() || '';
+      const coords = normalizeCoordsFromInput(coordsInput);
+      if (!hasValidAnnouncementCoords(coords)) {
+        const isShelter = currentUser?.role === 'shelter';
+        return {
+          step,
+          message: isShelter
+            ? 'La posizione del rifugio non e disponibile. Salvala nei dati profilo prima di pubblicare.'
+            : 'Seleziona la posizione sulla mappa o usa la tua posizione.',
+          focusId: isShelter ? undefined : 'pickOnMap'
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Finds the first validation error up to a wizard step.
+   * @param {number} stepLimit - Last step to validate.
+   * @returns {{step:number,message:string,focusId?:string}|null} First validation error, or null when valid.
+   */
+  function getFirstAnnouncementWizardError(stepLimit) {
+    const limit = Math.min(stepLimit || maxSteps, maxSteps);
+    for (let step = 1; step <= limit; step++) {
+      const error = getAnnouncementWizardStepError(step);
+      if (error) return error;
+    }
+    return null;
+  }
+
+  /**
+   * Shows a wizard validation message and moves the UI to the failing step.
+   * @param {{step:number,message:string,focusId?:string}|null} error - Validation error to show.
+   * @returns {Promise<boolean>} False when a validation error was shown.
+   */
+  async function showAnnouncementWizardError(error) {
+    if (!error) return true;
+    if (error.step && wizStep !== error.step) {
+      wizStep = error.step;
+      wizUpdateUI();
+    }
+    await showSiteAlert(error.message);
+    if (error.focusId) {
+      const focusEl = document.getElementById(error.focusId);
+      if (focusEl && typeof focusEl.focus === 'function' && focusEl.type !== 'hidden') {
+        focusEl.focus();
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Validates the current wizard step.
+   * @param {number} step - Step to validate.
+   * @returns {Promise<boolean>} True when the step can be left.
+   */
+  async function validateAnnouncementWizardStep(step) {
+    return showAnnouncementWizardError(getAnnouncementWizardStepError(step));
+  }
+
+  /**
+   * Validates all wizard steps up to the provided step.
+   * @param {number} stepLimit - Last step to validate.
+   * @returns {Promise<boolean>} True when all requested steps are valid.
+   */
+  async function validateAnnouncementWizardThroughStep(stepLimit) {
+    return showAnnouncementWizardError(getFirstAnnouncementWizardError(stepLimit));
+  }
+
+  /**
+   * Resets the announcement wizard to the first step and refreshes its UI.
+   * @returns {void}
+   */
+  function resetAnnouncementWizard() {
+    wizStep = 1;
+    wizUpdateUI();
+  }
+
 	function wizUpdateUI() {
 		// Aggiorna Pannelli
 		for(let i=1; i<=maxSteps; i++) {
@@ -3007,7 +3135,12 @@ let wizStep = 1;
     } catch (e) {}
 	}
 
-	function wizNextStep() { if(wizStep < maxSteps) { wizStep++; wizUpdateUI(); } }
+	async function wizNextStep() {
+    if (wizStep >= maxSteps) return;
+    if (!(await validateAnnouncementWizardStep(wizStep))) return;
+    wizStep++;
+    wizUpdateUI();
+  }
 	function wizPrevStep() { if(wizStep > 1) { wizStep--; wizUpdateUI(); } }
 
 	// Tasto "Tipo Annuncio" (Smarrito / Avvistamento)

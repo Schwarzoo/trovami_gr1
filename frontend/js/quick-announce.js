@@ -169,17 +169,6 @@ async function reverseGeocode(lat, lon) {
 }
 
 /**
- * Escapes HTML special characters for safe insertion into innerHTML.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, function (s) {
-    return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[s];
-  });
-}
-
-/**
  * Handles quick-announcement form submission and API creation.
  * @param {Event} e - Browser event object.
  * @returns {Promise<void>} Promise resolving after validation and submission handling finish.
@@ -198,17 +187,17 @@ async function handleQuickAnnounceSubmit(e) {
   const photoFile = QUICK_ANNOUNCE_PHOTO_INPUT?.files?.[0] || null;
 
   if (!species || !color || !healthCondition || !type) {
-    alert('Per favore, compila i campi obbligatori: Specie, Colore, Condizioni di salute e Tipo di segnalazione.');
+    showSiteAlert('Per favore, compila i campi obbligatori: Specie, Colore, Condizioni di salute e Tipo di segnalazione.');
     return;
   }
 
   if (!contactEmail && !contactPhone) {
-    alert('Per pubblicare una segnalazione rapida devi inserire almeno un contatto tra email e telefono.');
+    showSiteAlert('Per pubblicare una segnalazione rapida devi inserire almeno un contatto tra email e telefono.');
     return;
   }
 
   if (!currentLocation) {
-    alert('La posizione non è stata acquisita. Per favore, abilita la geolocalizzazione e riprova.');
+    showSiteAlert('La posizione non è stata acquisita. Per favore, abilita la geolocalizzazione e riprova.');
     return;
   }
 
@@ -231,7 +220,7 @@ async function handleQuickAnnounceSubmit(e) {
     await submitQuickAnnounce(data);
   } catch (error) {
     console.error('Error submitting announcement:', error);
-    alert('Errore nella pubblicazione dell\'annuncio. Per favore, riprova.');
+    showSiteAlert('Errore nella pubblicazione dell\'annuncio. Per favore, riprova.');
   }
 }
 
@@ -295,7 +284,7 @@ async function submitQuickAnnounce(data) {
     }
 
     await announcementRes.json();
-    alert('Annuncio pubblicato con successo!');
+    await showSiteAlert('Annuncio pubblicato con successo!', { title: 'Operazione completata', tone: 'success' });
     closeQuickAnnounceModal();
 
     setTimeout(() => {

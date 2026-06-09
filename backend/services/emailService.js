@@ -281,6 +281,33 @@ async function sendAccountBlockedEmail(user, reason) {
   });
 }
 
+async function sendAdoptionReplyEmail(recipient, shelter, animalName, replyMessage) {
+  if (!recipient?.notificationPrefs?.emailOnComment || !recipient?.email) return;
+
+  const shelterName = shelter?.rifugioData?.rifugioName || shelter?.username || 'Il rifugio';
+  const profileUrl = (process.env.FRONTEND_URL || 'http://localhost:5173') + '/pages/profile.html';
+
+  const html = `
+      <h2>Risposta alla tua richiesta di adozione</h2>
+      <p><strong>${escapeHtml(shelterName)}</strong> ha risposto alla tua richiesta per <strong>${escapeHtml(animalName)}</strong>.</p>
+      <p><em>&quot;${escapeHtml(replyMessage)}&quot;</em></p>
+      <p><a href="${escapeHtml(profileUrl)}">Vedi la risposta nel tuo profilo</a></p>
+    `;
+
+  if (isRenderMockInboxEnabled()) {
+    pushMockEmail(recipient.email, `Trovami - Risposta alla richiesta di adozione da ${shelterName}`, html);
+    return;
+  }
+
+  if (!isEmailConfigured()) return;
+
+  await getTransporter().sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: recipient.email,
+    subject: `Trovami - Risposta alla tua richiesta di adozione`,
+    html
+  });
+}
 module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -288,5 +315,6 @@ module.exports = {
   sendMatchEmail: sendSmartMatchEmail,
   sendShelterAnnouncementEmail,
   sendAnnouncementCommentEmail,
-  sendAccountBlockedEmail
+  sendAccountBlockedEmail,
+  sendAdoptionReplyEmail
 };

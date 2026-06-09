@@ -22,8 +22,10 @@
 		</div>
 
 		<div class="profile-grid">
-			<section id="profile-section" class="section-card">
-				<h2>Dati profilo</h2>
+			<details id="profile-section" class="section-card profile-details" open>
+				<summary class="profile-details-summary">
+					<h2>Dati profilo</h2>
+				</summary>
 				<form id="profileForm" class="form-stack">
 					<div class="field">
 						<label>Username</label>
@@ -99,7 +101,7 @@
 						<button id="deleteAccount" class="btn btn--danger">Elimina account</button>
 					</div>
 				</form>
-			</section>
+			</details>
 
 			<div class="profile-right">
 				<section id="notifications-section" class="section-card">
@@ -171,6 +173,7 @@
 
 	</main>
 
+	<script src="/js/includes.js"></script>
 	<script src="../js/profile.js?v=follow-rifugi-1"></script>
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -459,8 +462,6 @@
 		</div>
 	</div>
 
-
-	<script src="/js/includes.js"></script>
 	<div data-include="footer"></div>
 
 	<!-- Animal detail modal -->

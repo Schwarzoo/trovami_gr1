@@ -1,87 +1,9 @@
-.page {
-  position: relative;
-  z-index: 1;
-}
-
 .page-header h1 {
   color: #fff;
 }
 
 .page-header p {
   color: rgba(255, 255, 255, 0.78);
-}
-
-html {
-  background-color: #1a0e08;
-}
-
-
-body {
-  position: relative;
-  min-height: 100vh;
-  background-color: #1a0e08;
-  position: relative;
-  isolation: isolate;
-}
-
-
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: -8%;
-  pointer-events: none;
-}
-
-body::before {
-  z-index: -1;
-  background-image: radial-gradient(
-    circle,
-    rgba(240, 153, 123, 0.18) 1px,
-    transparent 1px
-  );
-  background-size: 36px 36px;
-  mask-image: radial-gradient(
-    ellipse 80% 80% at 50% 50%,
-    black 30%,
-    transparent 100%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse 80% 80% at 50% 50%,
-    black 30%,
-    transparent 100%
-  );
-  animation: profileBgFloat 34s ease-in-out infinite alternate;
-}
-
-body::after {
-  z-index: -3;
-  background: repeating-linear-gradient(
-    -55deg,
-    transparent,
-    transparent 60px,
-    rgba(216, 90, 48, 0.03) 60px,
-    rgba(216, 90, 48, 0.03) 61px
-  );
-  animation: bgDrift 46s ease-in-out infinite alternate;
-}
-
-@keyframes bgFloat {
-  from {
-    transform: translate3d(-1.5%, -1%, 0) scale(1.03);
-  }
-  to {
-    transform: translate3d(1.5%, 1%, 0) scale(1.08);
-  }
-}
-
-@keyframes bgDrift {
-  from {
-    transform: translate3d(1%, 0, 0) scale(1.02);
-  }
-  to {
-    transform: translate3d(-1%, -0.8%, 0) scale(1.06);
-  }
 }
 
 #profile-section {
@@ -97,6 +19,18 @@ body::after {
   margin-top: 0;
   margin-bottom: 0.75rem;
   font-size: 1.1rem;
+}
+
+.profile-details-summary {
+  list-style: none;
+}
+
+.profile-details-summary::-webkit-details-marker {
+  display: none;
+}
+
+#profile-section .profile-details-summary h2 {
+  margin: 0;
 }
 
 #profileForm {
@@ -487,12 +421,14 @@ body::after {
   grid-template-columns: 360px 1fr;
   gap: 1.5rem;
   align-items: start;
+  min-width: 0;
 }
 
 .profile-right {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
 }
 
 .section-card {
@@ -915,6 +851,32 @@ body::after {
   }
 }
 
+@media (max-width: 720px) {
+  .profile-details-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+  }
+
+  .profile-details-summary::after {
+    content: '+';
+    color: var(--accent);
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .profile-details[open] .profile-details-summary {
+    margin-bottom: 1rem;
+  }
+
+  .profile-details[open] .profile-details-summary::after {
+    content: '-';
+  }
+}
+
 /* Modal styles */
 .modal-overlay {
   position: fixed;
@@ -1065,14 +1027,16 @@ body::after {
   display: flex;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 #view-modal-gallery img {
+  width: 100%;
   height: 200px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
+  background: var(--bg);
 }
 
 .view-modal-no-photo {
@@ -1276,14 +1240,16 @@ body::after {
   display: flex;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 #admin-modal-gallery img {
+  width: 100%;
   height: 200px;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain;
   flex-shrink: 0;
+  background: var(--bg);
 }
 
 #admin-announcement-body {
@@ -1367,10 +1333,39 @@ body::after {
     justify-content: stretch;
     flex-direction: column;
   }
+  .view-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .view-modal {
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+  }
+  #view-modal-gallery,
+  #view-modal-body,
+  .view-modal-header,
+  .view-modal-similar {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
   #admin-announcement-overlay {
     align-items: flex-end;
     padding: 0;
   }
+}
+
+@media (max-width: 420px) {
+  .section-card,
+  #profile-section {
+    padding: 0.85rem;
+  }
+
+  #my-animals .section-badge {
+    float: none;
+    display: inline-flex;
+    margin: 0 0 0.75rem;
+  }
+
 }
 
 :root {
@@ -1721,4 +1716,128 @@ body::after {
   font-weight: 700;
   cursor: pointer;
   display: none;
+}
+
+@media (max-width: 700px) {
+  .form-grid,
+  .field-grid,
+  .wiz-grid,
+  .admin-user-details {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-section-head,
+  .profile-form-footer,
+  .profile-actions-row,
+  .profile-announcement-card__actions,
+  .animal-modal-actions,
+  .admin-user-actions,
+  .wizard-position-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-section-head .btn,
+  .profile-form-footer .btn,
+  .profile-actions-row .btn,
+  .profile-announcement-card__button,
+  .animal-modal-actions .btn,
+  .admin-user-actions .btn,
+  .wizard-position-actions .btn {
+    width: 100%;
+  }
+
+  .stepper {
+    padding-inline: 14px;
+  }
+
+  .step-label {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .type-tabs,
+  .wizard-header,
+  .step-content,
+  .wiz-footer {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .wiz-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .wiz-btn-back,
+  .wiz-btn-next,
+  .wiz-btn-publish {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  #announcements-grid,
+  #my-animals-grid {
+    display: flex;
+    gap: 0.9rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #announcements-grid {
+    --profile-announcement-card-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -0.85rem;
+    padding: 0 max(0.85rem, calc((100vw - var(--profile-announcement-card-width)) / 2)) 0.35rem;
+  }
+
+  #announcements-grid .profile-announcement-card {
+    flex: 0 0 var(--profile-announcement-card-width);
+    width: var(--profile-announcement-card-width);
+    max-width: var(--profile-announcement-card-width);
+    scroll-snap-align: center;
+  }
+
+  #announcements-grid .profile-announcement-card .card-image {
+    height: 165px;
+  }
+
+  #announcements-grid .profile-announcement-card__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #announcements-grid .profile-announcement-card__button,
+  #announcements-grid .profile-announcement-card__link {
+    width: 100%;
+    margin-left: 0;
+    text-align: center;
+  }
+
+  #my-animals .section-badge {
+    float: none;
+    display: inline-flex;
+    margin: 0 0 0.75rem;
+  }
+
+  #my-animals-grid {
+    --profile-animal-card-width: min(260px, calc(100vw - 5.2rem));
+    margin-inline: -0.85rem;
+    padding: 0 max(0.85rem, calc((100vw - var(--profile-animal-card-width)) / 2)) 0.35rem;
+  }
+
+  #my-animals-grid .card {
+    flex: 0 0 var(--profile-animal-card-width);
+    width: var(--profile-animal-card-width);
+    max-width: var(--profile-animal-card-width);
+    scroll-snap-align: center;
+  }
+
+  #my-animals-grid .card-image {
+    height: 150px;
+  }
 }

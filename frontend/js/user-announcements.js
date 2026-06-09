@@ -2,16 +2,6 @@ const API_BASE = '/api/v1/announcements';
 const ADMIN_BASE = '/api/v1/admin';
 
 /**
- * Formats a value for UI display, replacing empty values with a placeholder.
- * @param {*} value - Field value shown in the announcement details UI.
- * @returns {string} Trimmed display text or the empty-value placeholder.
- */
-function displayValue(value) {
-  const text = String(value ?? '').trim();
-  return text || '- -';
-}
-
-/**
  * Shows an error message in the page error area.
  * @param {string} message - Error text displayed in the page banner.
  * @returns {void}
@@ -23,40 +13,6 @@ function showError(message) {
   banner.style.display = 'block';
 }
 
-/**
- * Builds authorization headers for admin moderation requests.
- * @returns {{'Content-Type': string, Authorization: string}} JSON request headers with the stored bearer token.
- */
-function authHeader() {
-  const token = localStorage.getItem('token');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token || ''}`
-  };
-}
-
-/**
- * Fetches announcement by id data from the API.
- * @param {string} id - Announcement identifier to load.
- * @returns {Promise<Object>} Full announcement detail payload.
- * @throws {Error} When the announcement cannot be loaded.
- */
-async function fetchAnnouncementById(id) {
-  const res = await fetch(`${API_BASE}/${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error('Errore caricamento annuncio');
-  return res.json();
-}
-
-/**
- * Reads an API error message, falling back to a status-aware default.
- * @param {Response} res - Failed fetch response.
- * @param {string} fallback - Message prefix used when the response body has no message.
- * @returns {Promise<string>} Error message suitable for display.
- */
-async function readResponseError(res, fallback) {
-  const json = await res.json().catch(() => ({}));
-  return json?.userMessage || json?.message || `${fallback} (${res.status})`;
-}
 
 /**
  * Sends an admin warning for the selected announcement publisher.
@@ -65,16 +21,20 @@ async function readResponseError(res, fallback) {
  * @throws {Error} When the admin API rejects the warning.
  */
 async function warnUser(userId) {
-  const reason = prompt('Motivo avvertimento:', 'Ammonimento da moderazione account');
+  const reason = await showSitePrompt('Motivo avvertimento:', {
+    title: 'Avverti utente',
+    defaultValue: 'Ammonimento da moderazione account',
+    confirmLabel: 'Invia'
+  });
   if (reason === null) return;
   const warnReason = reason.trim() || 'Ammonimento da moderazione account';
   const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}/warnings`, {
     method: 'POST',
-    headers: authHeader(),
+    headers: authJsonHeaders(),
     body: JSON.stringify({ reason: warnReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore avvertimento'));
-  alert('Avvertimento inviato');
+  await showSiteAlert('Avvertimento inviato', { title: 'Operazione completata', tone: 'success' });
 }
 
 /**
@@ -84,16 +44,20 @@ async function warnUser(userId) {
  * @throws {Error} When the admin API rejects the block request.
  */
 async function blockUser(userId) {
-  const reason = prompt('Motivo blocco account:', 'Violazione delle regole della community');
+  const reason = await showSitePrompt('Motivo blocco account:', {
+    title: 'Blocca account',
+    defaultValue: 'Violazione delle regole della community',
+    confirmLabel: 'Blocca'
+  });
   if (reason === null) return;
   const blockReason = reason.trim() || 'Account bloccato da admin';
   const res = await fetch(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`, {
     method: 'PATCH',
-    headers: authHeader(),
+    headers: authJsonHeaders(),
     body: JSON.stringify({ status: 'blocked', reason: blockReason })
   });
   if (!res.ok) throw new Error(await readResponseError(res, 'Errore blocco'));
-  alert('Account bloccato');
+  await showSiteAlert('Account bloccato', { title: 'Operazione completata', tone: 'success' });
   await loadUserAnnouncements();
 }
 
@@ -141,7 +105,7 @@ function closeModal() {
 async function openModal(ann) {
   let data = ann;
   try {
-    data = await fetchAnnouncementById(ann._id);
+    data = await fetchAnnouncementById(ann._id, { throwOnError: true });
   } catch (err) {
     showError(err.message || 'Errore caricamento annuncio');
   }
@@ -173,39 +137,19 @@ async function openModal(ann) {
   const gallery = document.getElementById('modal-gallery');
   gallery.innerHTML = '<div class="modal-spinner">...</div>';
   (async () => {
-    try {
-      const res = await fetch(`${API_BASE}/${encodeURIComponent(data._id)}/photo`);
-      if (!res.ok) throw new Error('no image');
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.startsWith('image')) throw new Error('not image');
-      const blob = await res.blob();
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      img.alt = 'foto animale';
-      img.onload = () => URL.revokeObjectURL(img.src);
-      gallery.innerHTML = '';
-      gallery.appendChild(img);
-    } catch (err) {
-      gallery.innerHTML = '<div class="modal-no-photo">Non e presente alcuna foto</div>';
-    }
+    await loadImageIntoGallery({
+      gallery,
+      url: `${API_BASE}/${encodeURIComponent(data._id)}/photo`,
+      loading: null
+    });
   })();
 
   document.getElementById('modal-body').innerHTML = `
-    <dl class="detail-list">
-      ${animal?.name ? `<dt>Nome</dt><dd>${escapeHtml(animal.name)}</dd>` : ''}
-      <dt>Specie</dt><dd>${displayValue(animal?.species)}</dd>
-      <dt>Razza</dt><dd>${displayValue(animal?.breed)}</dd>
-      <dt>Colore</dt><dd>${displayValue(animal?.color)}</dd>
-      <dt>Sesso</dt><dd>${displayValue(animal?.gender)}</dd>
-      <dt>Lunghezza pelo</dt><dd>${displayValue(animal?.lunghezzaPelo)}</dd>
-      <dt>Segni particolari</dt><dd>${displayValue(animal?.distinctiveFeatures)}</dd>
-      <dt>Microchip</dt><dd>${displayValue(animal?.microchipId)}</dd>
-      ${locationInfo}
-      <dt>Data</dt><dd>${escapeHtml(date)}</dd>
-      <dt>Condizioni</dt><dd>${displayValue(data.healthCondition)}</dd>
-      <dt>Comportamento</dt><dd>${displayValue(data.animalBehaviour)}</dd>
-      <dt>Stato</dt><dd>${displayValue(data.status)}</dd>
-    </dl>
+    ${renderAnimalDetailsListHtml(animal, data, {
+      date,
+      extraLocationHtml: locationInfo,
+      includeStatus: true
+    })}
     <p class="modal-description">${escapeHtml(data.description || '')}</p>
 
     <section class="comments-section" aria-label="Commenti">
@@ -271,19 +215,12 @@ function buildCard(ann) {
   const photoUrl = `${API_BASE}/${encodeURIComponent(ann._id)}/photo`;
   (async () => {
     const container = card.querySelector('.card-image');
-    try {
-      const res = await fetch(photoUrl);
-      if (!res.ok) throw new Error('no image');
-      const blob = await res.blob();
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      img.alt = animal.species || 'Animale';
-      img.onload = () => URL.revokeObjectURL(img.src);
-      container.querySelector('.card-image-placeholder')?.replaceWith(img);
-    } catch (err) {
-      const placeholder = container.querySelector('.card-image-placeholder');
-      if (placeholder) placeholder.innerHTML = `<span>${escapeHtml((animal.species || '?')[0])}</span>`;
-    }
+    await loadImageIntoPlaceholder({
+      container,
+      url: photoUrl,
+      alt: animal.species || 'Animale',
+      fallbackText: (animal.species || '?')[0]
+    });
   })();
 
   return card;
@@ -343,7 +280,7 @@ function setupAdminActions(userId) {
     try {
       await warnUser(userId);
     } catch (err) {
-      alert(err.message || 'Errore avvertimento');
+      showSiteAlert(err.message || 'Errore avvertimento');
     }
   });
 
@@ -351,7 +288,7 @@ function setupAdminActions(userId) {
     try {
       await blockUser(userId);
     } catch (err) {
-      alert(err.message || 'Errore blocco');
+      showSiteAlert(err.message || 'Errore blocco');
     }
   });
 }

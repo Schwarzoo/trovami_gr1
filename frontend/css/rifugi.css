@@ -1,63 +1,6 @@
-html {
-  background-color: #1A0E08;
-}
-
-body {
-  background-color: #1A0E08;
-  position: relative;
-  isolation: isolate;
-  min-height: 100vh;
-}
-
-body::before,
-body::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-body::before {
-  z-index: -2;
-  background-image: radial-gradient(circle, rgba(240, 153, 123, 0.18) 1px, transparent 1px);
-  background-size: 36px 36px;
-  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
-  animation: bgFloat 34s ease-in-out infinite alternate;
-}
-
-body::after {
-  z-index: -3;
-  background: repeating-linear-gradient(
-    -55deg,
-    transparent,
-    transparent 60px,
-    rgba(216, 90, 48, 0.03) 60px,
-    rgba(216, 90, 48, 0.03) 61px
-  );
-  animation: bgDrift 46s ease-in-out infinite alternate;
-}
-
-@keyframes bgFloat {
-  from {
-    transform: translate3d(-1.5%, -1%, 0) scale(1.03);
-  }
-  to {
-    transform: translate3d(1.5%, 1%, 0) scale(1.08);
-  }
-}
-
-@keyframes bgDrift {
-  from {
-    transform: translate3d(1%, 0, 0) scale(1.02);
-  }
-  to {
-    transform: translate3d(-1%, -0.8%, 0) scale(1.06);
-  }
-}
-
 .rifugi-page {
   max-width: 1240px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   display: flex;
@@ -79,6 +22,7 @@ body::after {
     radial-gradient(circle at bottom left, rgba(42, 110, 200, 0.12), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(251, 247, 241, 0.95));
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .hero-copy {
@@ -153,23 +97,59 @@ body::after {
 
 .hero-aside {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
+  align-content: stretch;
+  align-self: start;
+  width: min(100%, 460px);
+  justify-self: end;
 }
 
 .hero-card {
-  background: rgba(255, 255, 255, 0.75);
+  position: relative;
+  min-height: 152px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 244, 0.86));
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 1rem 1.1rem;
+  border-radius: 22px;
+  padding: 1rem;
   display: grid;
-  gap: 0.35rem;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+  place-items: center;
+  gap: 0.85rem;
+  text-align: center;
+  box-shadow: 0 14px 28px rgba(26, 14, 8, 0.08);
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  right: -34px;
+  top: -34px;
+  width: 92px;
+  height: 92px;
+  border-radius: 999px;
+  background: rgba(200, 90, 42, 0.12);
+}
+
+.hero-card::after {
+  content: '';
+  position: relative;
+  z-index: 1;
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.55;
 }
 
 .hero-card strong {
-  font-size: 2rem;
+  position: relative;
+  z-index: 1;
+  font-size: clamp(2.35rem, 4vw, 3.2rem);
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 500;
+  line-height: 1;
   color: var(--text);
 }
 
@@ -180,6 +160,8 @@ body::after {
 }
 
 .hero-card-label {
+  position: relative;
+  z-index: 1;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -188,7 +170,16 @@ body::after {
 }
 
 .hero-card.accent {
-  background: linear-gradient(135deg, rgba(200, 90, 42, 0.13), rgba(255, 255, 255, 0.86));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(241, 247, 255, 0.88));
+}
+
+.hero-card.accent::before {
+  background: rgba(42, 110, 200, 0.13);
+}
+
+.hero-card.accent::after {
+  background: var(--accent-2);
 }
 
 .hero-card.muted {
@@ -209,6 +200,10 @@ body::after {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.2rem;
+}
+
+.section-head--adoptions {
+  justify-content: space-between;
 }
 
 .section-head h2 {
@@ -234,6 +229,44 @@ body::after {
   font-size: 0.85rem;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.section-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 190px;
+}
+
+.filter-control span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.filter-control select {
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.filter-control select.is-placeholder {
+  color: var(--text-muted);
 }
 
 .rifugi-layout {
@@ -275,6 +308,7 @@ body::after {
   gap: 1rem;
   padding-bottom: 0.8rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  min-width: 0;
 }
 
 .rifugio-name {
@@ -320,29 +354,6 @@ body::after {
   color: var(--text-muted);
   line-height: 1.6;
   font-size: 0.93rem;
-}
-
-.rifugio-meta {
-  display: grid;
-  gap: 0.7rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  padding-top: 0.15rem;
-}
-
-.meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.meta-row strong {
-  color: var(--text);
-}
-
-.meta-row span {
-  text-align: right;
 }
 
 .card-actions {
@@ -405,7 +416,7 @@ body::after {
   gap: 1.25rem;
 }
 
-.adoption-card {
+.adoptable-animal-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 24px;
@@ -416,17 +427,17 @@ body::after {
   animation: adoptionFadeUp 0.4s ease both;
 }
 
-.adoption-card:hover {
+.adoptable-animal-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.adoption-card:focus-visible {
+.adoptable-animal-card:focus-visible {
   outline: 3px solid rgba(26, 115, 232, 0.45);
   outline-offset: 3px;
 }
 
-.adoption-media {
+.adoptable-animal-card .card-image {
   position: relative;
   height: 180px;
   background: var(--bg);
@@ -438,14 +449,14 @@ body::after {
   font-family: var(--font-display);
 }
 
-.adoption-media img {
+.adoptable-animal-card .card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.adoption-media-placeholder {
+.adoptable-animal-card .card-image-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
@@ -457,19 +468,19 @@ body::after {
   text-align: center;
 }
 
-.adoption-media .badge {
+.adoptable-animal-card .badge {
   position: absolute;
   top: 10px;
   left: 10px;
 }
 
-.adoption-body {
+.adoptable-animal-card .card-body {
   padding: 1rem 1.1rem 1.2rem;
   display: grid;
   gap: 0.6rem;
 }
 
-.adoption-meta {
+.adoptable-animal-card .card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -480,18 +491,21 @@ body::after {
   font-weight: 600;
 }
 
-.adoption-species {
+.adoptable-animal-card .card-species {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
-.adoption-date {
+.adoptable-animal-card .card-date,
+.adoptable-animal-card .card-distance,
+.adoptable-animal-card .animal-status {
   white-space: nowrap;
+  color: var(--text-muted);
 }
 
-.adoption-body h3 {
+.adoptable-animal-card .card-breed {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 400;
@@ -499,25 +513,11 @@ body::after {
   line-height: 1.15;
 }
 
-.adoption-body p {
+.adoptable-animal-card .card-description {
   margin: 0;
   color: var(--text-muted);
   line-height: 1.6;
   font-size: 0.95rem;
-}
-
-.adoption-details {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
-.adoption-kicker {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
 }
 
 @keyframes adoptionFadeUp {
@@ -635,8 +635,76 @@ body::after {
     border-radius: 20px;
   }
 
+  .hero-aside {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .hero-card {
+    min-width: 0;
+    min-height: 118px;
+    padding: 0.85rem 0.75rem;
+    border-radius: 16px;
+  }
+
+  .hero-card strong {
+    font-size: clamp(2rem, 9vw, 2.45rem);
+    line-height: 1;
+  }
+
+  .hero-card-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+  }
+
+  .hero-card::before {
+    right: -42px;
+    top: -42px;
+  }
+
+  .hero-card::after {
+    width: 30px;
+  }
+
   .section-head {
     flex-direction: column;
+  }
+
+  #rifugi-count {
+    align-self: flex-start;
+  }
+
+  .section-tools,
+  .filter-control {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  #adoptions-grid,
+  .adoptions-grid {
+    display: flex;
+    gap: 0.9rem;
+    --adoption-card-mobile-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -1rem;
+    padding: 0 max(1rem, calc((100vw - var(--adoption-card-mobile-width)) / 2)) 0.35rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .adoptable-animal-card {
+    flex: 0 0 var(--adoption-card-mobile-width);
+    width: var(--adoption-card-mobile-width);
+    max-width: var(--adoption-card-mobile-width);
+    scroll-snap-align: center;
+  }
+
+  .adoptable-animal-card .card-image {
+    height: 180px;
+    min-height: 180px;
   }
 
   #rifugi-map {
@@ -644,16 +712,86 @@ body::after {
   }
 
   .hero-actions {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
   .button {
     width: 100%;
+    min-height: 46px;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.84rem;
+  }
+
+  .rifugio-card-hero,
+  .meta-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .rifugi-grid {
+    display: flex;
+    gap: 0.9rem;
+    --rifugio-card-mobile-width: min(340px, calc(100vw - 5.2rem));
+    margin-inline: -1rem;
+    padding: 0 max(1rem, calc((100vw - var(--rifugio-card-mobile-width)) / 2)) 0.35rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rifugio-card {
+    flex: 0 0 var(--rifugio-card-mobile-width);
+    width: var(--rifugio-card-mobile-width);
+    max-width: var(--rifugio-card-mobile-width);
+    scroll-snap-align: center;
+  }
+
+  .rifugio-chip-stack {
+    justify-content: flex-start;
+  }
+
+  .meta-row span {
+    text-align: left;
+  }
+
+  .card-actions a,
+  .card-actions button {
+    flex: 1 1 100%;
+    text-align: center;
   }
 }
 
+@media (max-width: 420px) {
+  .rifugi-page {
+    padding-inline: 0.85rem;
+  }
 
-body::before,
-body::after {
-  animation: none !important;
+  #rifugi-map {
+    height: 300px;
+  }
+
+  #adoptions-grid,
+  .adoptions-grid {
+    --adoption-card-mobile-width: calc(100vw - 4.8rem);
+    margin-inline: -0.85rem;
+    padding-inline: max(0.85rem, calc((100vw - var(--adoption-card-mobile-width)) / 2));
+  }
+
+  .adoptable-animal-card .card-image {
+    height: 165px;
+    min-height: 165px;
+  }
+
+  .rifugi-grid {
+    --rifugio-card-mobile-width: calc(100vw - 4.8rem);
+    margin-inline: -0.85rem;
+    padding-inline: max(0.85rem, calc((100vw - var(--rifugio-card-mobile-width)) / 2));
+  }
+
+  .rifugi-popup {
+    width: min(250px, calc(100vw - 64px));
+  }
 }

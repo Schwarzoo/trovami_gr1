@@ -1,6 +1,16 @@
 <header>
   <a href="/" class="logo-link"><span class="logo">Trovami</span></a>
-  <nav>
+  <button type="button" class="nav-menu-toggle" aria-controls="site-nav" aria-expanded="false" aria-label="Apri menu">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <div class="nav-scrim" data-nav-close></div>
+  <nav id="site-nav" class="site-nav" aria-label="Navigazione principale">
+    <div class="site-nav__head">
+      <span class="site-nav__title">Menu</span>
+      <button type="button" class="site-nav__close" data-nav-close aria-label="Chiudi menu">&times;</button>
+    </div>
     <a href="/" data-nav>Home</a>
     <a href="/pages/map.html" data-nav>Mappa</a>
     <a href="/pages/rifugi.html" data-nav>Rifugi</a>
@@ -14,6 +24,7 @@
         <path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5z" fill="#000" fill-opacity="0.8" />
         <path d="M4 20c0-3.314 2.686-6 6-6h4c3.314 0 6 2.686 6 6v1H4v-1z" fill="#000" fill-opacity="0.8" />
       </svg>
+      <span class="nav-icon__label">Accedi</span>
       <span id="notificationBadge" class="nav-badge" hidden aria-live="polite"></span>
     </a>
   </nav>
