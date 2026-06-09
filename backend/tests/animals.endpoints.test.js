@@ -107,7 +107,7 @@ describe('animal endpoints', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.photos).toHaveLength(1);
-    expect(res.body.photos[0]).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/api\/v1\/animals\/507f1f77bcf86cd799439011\/photo$/);
+    expect(res.body.photos[0]).toBe('/api/v1/animals/507f1f77bcf86cd799439011/photo');
     const savedAnimal = mockAnimalModel.mock.instances[0];
     expect(savedAnimal.photo.contentType).toBe('image/jpeg');
     expect(Buffer.isBuffer(savedAnimal.photo.data)).toBe(true);
@@ -181,7 +181,7 @@ describe('animal endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data[0].photo).toBeUndefined();
-    expect(res.body.data[0].photos[0]).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/api\/v1\/animals\/507f1f77bcf86cd799439011\/photo$/);
+    expect(res.body.data[0].photos[0]).toBe('/api/v1/animals/507f1f77bcf86cd799439011/photo');
   });
 
   test('GET /api/v1/animals/:id returns animal', async () => {

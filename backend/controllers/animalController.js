@@ -3,13 +3,12 @@ const mongoose = require('mongoose');
 const { sendError } = require('../utils/errorResponse');
 
 /**
- * Returns the public API URL for the animal photo endpoint.
- * @param {Object} req - Express request object.
+ * Returns the API path for the animal photo endpoint.
  * @param {string|mongoose.Types.ObjectId} animalId - Animal identifier.
- * @returns {string} Absolute URL that serves the animal photo.
+ * @returns {string} Relative URL path that serves the animal photo.
  */
-function buildAnimalPhotoUrl(req, animalId) {
-  return `${req.protocol}://${req.get('host')}${req.baseUrl}/${animalId}/photo`;
+function buildAnimalPhotoUrl(animalId) {
+  return `/api/v1/animals/${animalId}/photo`;
 }
 
 /**
@@ -39,7 +38,7 @@ function toAnimalResponse(req, animal) {
   const hasDbPhoto = !!(obj.photo?.data || obj.photo?.contentType);
   delete obj.photo;
   if (hasDbPhoto && obj._id) {
-    obj.photos = [buildAnimalPhotoUrl(req, obj._id)];
+    obj.photos = [buildAnimalPhotoUrl(obj._id)];
   }
   return obj;
 }
@@ -255,18 +254,17 @@ exports.listAnimals = async (req, res) => {
       .limit(limit);
 
     const Announcement = require('../models/Announcement');
-    const hostBase = req.protocol + '://' + req.get('host');
     const out = await Promise.all(animals.map(async (a) => {
       const obj = a.toObject ? a.toObject() : a;
       if ((obj.photo?.data || obj.photo?.contentType) && obj._id) {
-        obj.photos = [buildAnimalPhotoUrl(req, obj._id)];
+        obj.photos = [buildAnimalPhotoUrl(obj._id)];
       }
       delete obj.photo;
       if ((!obj.photos || obj.photos.length === 0) && obj._id) {
         try {
           const ann = await Announcement.findOne({ animalId: obj._id, 'photo.data': { $exists: true } }).sort({ createdAt: -1 }).select('_id');
           if (ann && ann._id) {
-            obj.photos = [`${hostBase}/api/v1/announcements/${ann._id}/photo`];
+            obj.photos = [`/api/v1/announcements/${ann._id}/photo`];
           }
         } catch (e) {
         }
