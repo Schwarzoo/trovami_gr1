@@ -12,6 +12,34 @@ function buildAnimalPhotoUrl(animalId) {
 }
 
 /**
+ * Converts same-host absolute API URLs to relative paths to avoid mixed-content requests.
+ * @param {string} photoUrl - Stored photo URL or path.
+ * @returns {string} HTTPS-safe same-origin photo URL or original external URL.
+ */
+function normalizeSameOriginPhotoUrl(photoUrl) {
+  if (typeof photoUrl !== 'string') return photoUrl;
+  const marker = '/api/v1/';
+  const markerIndex = photoUrl.indexOf(marker);
+  if (markerIndex === -1) return photoUrl;
+  try {
+    const parsed = new URL(photoUrl);
+    if (parsed.pathname.startsWith(marker)) return parsed.pathname;
+  } catch (err) {
+    return photoUrl;
+  }
+  return photoUrl.slice(markerIndex);
+}
+
+/**
+ * Normalizes a photo URL list for JSON responses.
+ * @param {string[]} photos - Stored photo URLs.
+ * @returns {string[]} Photo URLs safe for same-origin HTTPS pages.
+ */
+function normalizePhotoList(photos) {
+  return Array.isArray(photos) ? photos.map(normalizeSameOriginPhotoUrl) : photos;
+}
+
+/**
  * Stores an uploaded photo buffer inside an animal document.
  * @param {Object} animal - Animal mongoose document to update.
  * @param {Express.Multer.File|undefined} file - Uploaded image file.
@@ -39,6 +67,8 @@ function toAnimalResponse(req, animal) {
   delete obj.photo;
   if (hasDbPhoto && obj._id) {
     obj.photos = [buildAnimalPhotoUrl(obj._id)];
+  } else {
+    obj.photos = normalizePhotoList(obj.photos);
   }
   return obj;
 }
@@ -260,6 +290,7 @@ exports.listAnimals = async (req, res) => {
         obj.photos = [buildAnimalPhotoUrl(obj._id)];
       }
       delete obj.photo;
+      obj.photos = normalizePhotoList(obj.photos);
       if ((!obj.photos || obj.photos.length === 0) && obj._id) {
         try {
           const ann = await Announcement.findOne({ animalId: obj._id, 'photo.data': { $exists: true } }).sort({ createdAt: -1 }).select('_id');
