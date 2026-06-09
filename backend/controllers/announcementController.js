@@ -66,6 +66,15 @@ function buildShelterAnimalUrl(shelterId, animalId) {
 }
 
 /**
+ * Builds a same-origin API path for serving an announcement photo.
+ * @param {string|mongoose.Types.ObjectId} announcementId - Announcement identifier.
+ * @returns {string} Relative API path for the announcement photo.
+ */
+function buildAnnouncementPhotoPath(announcementId) {
+    return `/api/v1/announcements/${announcementId}/photo`;
+}
+
+/**
  * Creates notifications for users following a shelter and optionally emails them.
  * @param {Object} announcement - New shelter announcement used as notification context.
  * @param {Object} animal - Animal document referenced by the announcement.
@@ -482,9 +491,7 @@ exports.createAnnouncement = async (req,res)=>{
 
             try {
                 if (announcement.photo && announcement._id) {
-                    const base = req.protocol + '://' + req.get('host');
-                    const photoUrl = `${base}/api/v1/announcements/${announcement._id}/photo`;
-                    await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
+                    await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [buildAnnouncementPhotoPath(announcement._id)] } });
                 }
             } catch (err) {
                 console.warn('Impossibile aggiornare foto animale:', err.message || err);
@@ -588,9 +595,7 @@ async function createQuickAnnouncementInternal(req, res) {
         await announcement.save();
         try {
             if (announcement.photo && announcement._id) {
-                const base = req.protocol + '://' + req.get('host');
-                const photoUrl = `${base}/api/v1/announcements/${announcement._id}/photo`;
-                await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [photoUrl] } });
+                await Animal.findByIdAndUpdate(animal._id, { $set: { photos: [buildAnnouncementPhotoPath(announcement._id)] } });
             }
         } catch (err) {
             console.warn('Impossibile aggiornare foto animale (quick):', err.message || err);
@@ -955,9 +960,7 @@ exports.updateAnnouncement = async (req, res) => {
 
         try {
             if (ann.photo && ann._id) {
-                const base = req.protocol + '://' + req.get('host');
-                const photoUrl = `${base}/api/v1/announcements/${ann._id}/photo`;
-                await Animal.findByIdAndUpdate(ann.animalId, { $set: { photos: [photoUrl] } });
+                await Animal.findByIdAndUpdate(ann.animalId, { $set: { photos: [buildAnnouncementPhotoPath(ann._id)] } });
             }
         } catch (err) {
             console.warn('Impossibile aggiornare foto animale:', err.message || err);
