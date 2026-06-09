@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: http://localhost:3000
+HOST: https://trovami-app.onrender.com
 
 # API Gestione Trovami!
 Questa è la documentazione ufficiale dell'applicazione Trovami!. Le rotte protette richiedono header:
@@ -26,7 +26,7 @@ Permette a un nuovo utente di registrarsi sulla piattaforma.
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/auth/users/645a1b2c3d4e5f6g7h8i9j0k
+            Location: /api/v1/auth/users/645a1b2c3d4e5f6g7h8i9j0k
 
         {
             "message": "Account creato. Controlla la mail per verificare l'account",
@@ -63,7 +63,7 @@ Per creare un account rifugio, usare `accountType = rifugio` e compilare `rifugi
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/auth/users/645a1b2c3d4e5f6g7h8i9j0k
+            Location: /api/v1/auth/users/645a1b2c3d4e5f6g7h8i9j0k
 
         {
             "message": "Account rifugio creato. Controlla la mail e attendi approvazione admin",
@@ -444,7 +444,7 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio. 
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/animals/645b2c3d4e5f6g7h8i9j0k1l
+            Location: /api/v1/animals/645b2c3d4e5f6g7h8i9j0k1l
 
         {
             "_id": "645b2c3d4e5f6g7h8i9j0k1l",
@@ -735,7 +735,7 @@ Crea un nuovo annuncio. Richiede autenticazione. Se vuoi caricare una foto, usa 
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/announcements/645c3d4e5f6g7h8i9j0k1l2m
+            Location: /api/v1/announcements/645c3d4e5f6g7h8i9j0k1l2m
 
         {
             "_id": "645c3d4e5f6g7h8i9j0k1l2m",
@@ -910,7 +910,7 @@ Aggiunge un commento all'annuncio. Richiede autenticazione.
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/announcements/645c3d4e5f6g7h8i9j0k1l2m/comments/665c3d4e5f6g7h8i9j0k1l2f
+            Location: /api/v1/announcements/645c3d4e5f6g7h8i9j0k1l2m/comments/665c3d4e5f6g7h8i9j0k1l2f
 
         {
             "comment": {
@@ -943,7 +943,7 @@ Invia una segnalazione agli admin. Richiede autenticazione. Valori validi per `r
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/admin/reports/665c3d4e5f6g7h8i9j0k1l2a
+            Location: /api/v1/admin/reports/665c3d4e5f6g7h8i9j0k1l2a
 
         {
             "message": "Segnalazione inviata",
@@ -1078,7 +1078,7 @@ Invia una richiesta di adozione a un rifugio per un animale specifico. Solo uten
 + Response 201 (application/json)
     + Headers
 
-            Location: http://localhost:3000/api/v1/contact-requests/665d4e5f6g7h8i9j0k1l2m3n
+            Location: /api/v1/contact-requests/665d4e5f6g7h8i9j0k1l2m3n
 
         {
             "_id": "665d4e5f6g7h8i9j0k1l2m3n",
@@ -1649,7 +1649,7 @@ Questa rotta restituisce l'elenco delle email intercettate dal server. È attiva
                 {
                     "to": "nuovo_utente@example.com",
                     "subject": "Conferma Registrazione Account",
-                    "message": "Clicca qui per confermare: <a href='http://localhost:3000/confirm.html?token=abc123xyz'>Conferma Account</a>",
+                    "message": "Clicca qui per confermare: <a href='/confirm.html?token=abc123xyz'>Conferma Account</a>",
                     "time": "14:30:05"
                 },
                 {
