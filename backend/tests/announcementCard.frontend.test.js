@@ -21,4 +21,14 @@ describe('shared announcement card frontend', () => {
     expect(announcements).not.toContain('function buildCard');
     expect(announcements).not.toContain('async function openModal');
   });
+
+  test('shelter announcements do not render resolve actions', () => {
+    const includes = fs.readFileSync(path.join(__dirname, '../../frontend/js/includes.js'), 'utf8');
+    const profile = fs.readFileSync(path.join(__dirname, '../../frontend/js/profile.js'), 'utf8');
+
+    expect(includes).toContain('function isShelterAnnouncement');
+    expect(includes).toContain("currentRole === 'admin' && !isShelterAnnouncement(data)");
+    expect(profile).toContain('function isShelterAnnouncement');
+    expect(profile).toContain("a.status !== 'RESOLVED' && !isShelterAnnouncement(a)");
+  });
 });

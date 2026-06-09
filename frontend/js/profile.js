@@ -17,6 +17,15 @@ const API_CONTACT_REQUESTS = '/api/v1/contact-requests';
 const API_FOLLOWED_SHELTERS = '/api/v1/users/me/followed-shelters';
 
 /**
+ * Returns whether an announcement is published by a shelter account.
+ * @param {Object} announcement - Announcement record to inspect.
+ * @returns {boolean} True when the publisher is a shelter.
+ */
+function isShelterAnnouncement(announcement) {
+  return announcement?.publisherId?.role === 'shelter';
+}
+
+/**
  * Sets last seen mode.
  * @param {string} mode - Selected last-seen mode, either `today` or `custom`.
  * @returns {void}
@@ -1627,6 +1636,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /**
+   * Returns whether the current account can manage personal announcements from profile.
+   * @returns {boolean} True for user and shelter roles.
+   */
+  function canManagePersonalAnnouncements() {
+    return ['user', 'shelter'].includes(currentUser?.role);
+  }
+
+  /**
+   * Syncs the personal announcements panel with the current account role.
+   * @returns {boolean} True when the panel should be visible and loaded.
+   */
+  function syncMyAnnouncementsVisibility() {
+    const section = document.getElementById('my-announcements');
+    const showCreateButton = document.getElementById('showCreate');
+    const visible = canManagePersonalAnnouncements();
+
+    if (section) section.style.display = visible ? 'block' : 'none';
+    if (showCreateButton) showCreateButton.style.display = visible ? '' : 'none';
+    return visible;
+  }
+
+  /**
    * Loads the profile page data and renders role-specific sections.
    * @returns {Promise<void>} Promise resolving after the profile view is initialized.
    */
@@ -1651,12 +1682,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.dispatchEvent(new Event('notifications:updated'));
     await loadAdminData();
 
-    await loadMyAnnouncements();
+    if (syncMyAnnouncementsVisibility()) await loadMyAnnouncements();
     await loadMyAnimals();
     await loadContactRequests();
     await loadFollowedShelters();
 
-    if (autoOpenNewAnnouncement) {
+    if (autoOpenNewAnnouncement && canManagePersonalAnnouncements()) {
       openModalForCreate();
     }
   }
@@ -1881,6 +1912,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('showCreate').addEventListener('click', (e) => {
     e.preventDefault();
+    if (!canManagePersonalAnnouncements()) return;
     if (currentUser?.role === 'shelter' && currentUser?.rifugioStatus !== 'approved') {
       showSiteAlert('Il tuo account rifugio deve essere approvato da un admin prima di pubblicare annunci.');
       return;
@@ -2014,121 +2046,121 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @returns {Promise<void>} Promise resolving after the current user's announcement grid is rendered.
    */
   async function loadMyAnnouncements() {
-  const res = await fetch('/api/v1/announcements');
-  if (!res.ok) return;
-  const payload = await res.json();
-  const all = Array.isArray(payload) ? payload : payload.data || [];
-  const mine = all.filter(a => a.publisherId && ((a.publisherId._id || a.publisherId) == myUserId || (a.publisherId._id && a.publisherId._id == myUserId)));
+    if (!syncMyAnnouncementsVisibility()) return;
+    const res = await fetch('/api/v1/announcements');
+    if (!res.ok) return;
+    const payload = await res.json();
+    const all = Array.isArray(payload) ? payload : payload.data || [];
+    const mine = all.filter(a => a.publisherId && ((a.publisherId._id || a.publisherId) == myUserId || (a.publisherId._id && a.publisherId._id == myUserId)));
 
-  const grid = document.getElementById('announcements-grid');
-  grid.innerHTML = '';
-  mine.forEach(a => {
-    const div = document.createElement('article');
-    div.className = 'card profile-announcement-card';
-    div.dataset.id = a._id;
-    const photoUrl = `/api/v1/announcements/${a._id}/photo`;
-    const statusLabel = a.status === 'RESOLVED' ? 'Risolto' : 'Attivo';
-    const statusClass = a.status === 'RESOLVED' ? 'is-resolved' : 'is-active';
-    const titleText = a.animalId?.name ? `${escapeHtml(a.animalId.name)} - ${escapeHtml(a.animalId.species || '')}` : escapeHtml(a.animalId?.species || 'Animale');
-    div.innerHTML = `
-      <div class="card-image"><div class="card-image-placeholder"><span>...</span></div></div>
-      <div class="card-body">
-        <div class="profile-announcement-card__meta">
-          <span class="profile-announcement-status ${statusClass}">${statusLabel}</span>
-          <span class="profile-announcement-kind">Il tuo annuncio</span>
+    const grid = document.getElementById('announcements-grid');
+    grid.innerHTML = '';
+    mine.forEach(a => {
+      const div = document.createElement('article');
+      div.className = 'card profile-announcement-card';
+      div.dataset.id = a._id;
+      const photoUrl = `/api/v1/announcements/${a._id}/photo`;
+      const statusLabel = a.status === 'RESOLVED' ? 'Risolto' : 'Attivo';
+      const statusClass = a.status === 'RESOLVED' ? 'is-resolved' : 'is-active';
+      const titleText = a.animalId?.name ? `${escapeHtml(a.animalId.name)} - ${escapeHtml(a.animalId.species || '')}` : escapeHtml(a.animalId?.species || 'Animale');
+      div.innerHTML = `
+        <div class="card-image"><div class="card-image-placeholder"><span>...</span></div></div>
+        <div class="card-body">
+          <div class="profile-announcement-card__meta">
+            <span class="profile-announcement-status ${statusClass}">${statusLabel}</span>
+            <span class="profile-announcement-kind">Il tuo annuncio</span>
+          </div>
+          <h3 class="card-breed profile-announcement-card__title">${titleText}</h3>
+          <p class="card-description profile-announcement-card__description">${escapeHtml(a.description || 'Nessuna descrizione disponibile.')}</p>
+          <div class="profile-announcement-card__actions">
+            <button data-id="${a._id}" class="edit btn btn--ghost profile-announcement-card__button">Modifica</button>
+            ${a.status !== 'RESOLVED' && !isShelterAnnouncement(a) ? `<button data-id="${a._id}" class="close btn btn--ghost profile-announcement-card__button">Chiudi</button>` : ''}
+            <button data-id="${a._id}" class="del btn btn--danger profile-announcement-card__button">Elimina</button>
+          </div>
         </div>
-        <h3 class="card-breed profile-announcement-card__title">${titleText}</h3>
-        <p class="card-description profile-announcement-card__description">${escapeHtml(a.description || 'Nessuna descrizione disponibile.')}</p>
-        <div class="profile-announcement-card__actions">
-          <button data-id="${a._id}" class="edit btn btn--ghost profile-announcement-card__button">Modifica</button>
-          ${a.status !== 'RESOLVED' ? `<button data-id="${a._id}" class="close btn btn--ghost profile-announcement-card__button">Chiudi</button>` : ''}
-          <button data-id="${a._id}" class="del btn btn--danger profile-announcement-card__button">Elimina</button>
+      `;
 
-        </div>
-      </div>
-    `;
+      grid.appendChild(div);
 
-    grid.appendChild(div);
-
-    (async () => {
-      const container = div.querySelector('.card-image');
-      try {
-        const res = await fetch(photoUrl, { method: 'GET' });
-        if (!res.ok) throw new Error('no image');
-        const ct = res.headers.get('content-type') || '';
-        if (!ct.startsWith('image')) throw new Error('not image');
-        const blob = await res.blob();
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(blob);
-        img.onload = () => { URL.revokeObjectURL(img.src); };
-        const placeholder = container.querySelector('.card-image-placeholder');
-        if (placeholder) placeholder.replaceWith(img);
-      } catch (err) {
-        const placeholder = container.querySelector('.card-image-placeholder');
-        if (placeholder) placeholder.innerHTML = '🐾';
-      }
-    })();
-  });
-
-  if (!grid.dataset.eventsBound) {
-    grid.dataset.eventsBound = '1';
-    grid.addEventListener('click', async (e) => {
-      const closeButton = e.target.closest('button.close');
-      if (closeButton) {
-        const id = closeButton.dataset.id;
-        const confirmed = await showProfileConfirm({
-          title: 'Segna come risolto',
-          message: 'Segni l\'annuncio come risolto? Non comparirà  più nella lista pubblica.',
-          confirmLabel: 'Segna come risolto',
-          danger: false
-        });
-        if (!confirmed) return;
-        const res = await fetch(`/api/v1/announcements/${id}`, {
-          method: 'PATCH',
-          headers: authHeader,
-          body: JSON.stringify({ status: 'RESOLVED' })
-        });
-        if (res.ok) {
-          loadMyAnnouncements();
-          window.dispatchEvent(new Event('announcements:resolved-updated'));
-        } else {
-          showSiteAlert('Errore chiusura');
-        }
-        return;
-      }
-
-      const deleteButton = e.target.closest('button.del');
-      if (deleteButton) {
-        const id = deleteButton.dataset.id;
-        const confirmed = await showProfileConfirm({
-          title: 'Elimina annuncio',
-          message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
-          confirmLabel: 'Elimina',
-          danger: true
-        });
-        if (!confirmed) return;
+      (async () => {
+        const container = div.querySelector('.card-image');
         try {
-          const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
+          const res = await fetch(photoUrl, { method: 'GET' });
+          if (!res.ok) throw new Error('no image');
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.startsWith('image')) throw new Error('not image');
+          const blob = await res.blob();
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.onload = () => { URL.revokeObjectURL(img.src); };
+          const placeholder = container.querySelector('.card-image-placeholder');
+          if (placeholder) placeholder.replaceWith(img);
+        } catch (err) {
+          const placeholder = container.querySelector('.card-image-placeholder');
+          if (placeholder) placeholder.innerHTML = '🐾';
+        }
+      })();
+    });
+
+    if (!grid.dataset.eventsBound) {
+      grid.dataset.eventsBound = '1';
+      grid.addEventListener('click', async (e) => {
+        const closeButton = e.target.closest('button.close');
+        if (closeButton) {
+          const id = closeButton.dataset.id;
+          const confirmed = await showProfileConfirm({
+            title: 'Segna come risolto',
+            message: 'Segni l\'annuncio come risolto? Non comparirà  più nella lista pubblica.',
+            confirmLabel: 'Segna come risolto',
+            danger: false
+          });
+          if (!confirmed) return;
+          const res = await fetch(`/api/v1/announcements/${id}`, {
+            method: 'PATCH',
+            headers: authHeader,
+            body: JSON.stringify({ status: 'RESOLVED' })
+          });
           if (res.ok) {
             loadMyAnnouncements();
+            window.dispatchEvent(new Event('announcements:resolved-updated'));
           } else {
-            const d = await res.json().catch(() => ({}));
-            showSiteAlert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+            showSiteAlert('Errore chiusura');
           }
-        } catch (err) {
-          showSiteAlert('Errore di rete: ' + (err.message || err));
+          return;
         }
-        return;
-      }
 
-      const clickedCard = e.target.closest('.card');
-      if (!clickedCard || !grid.contains(clickedCard)) return;
-      if (e.target.closest('button, a, input, select, textarea')) return;
-      const id = clickedCard.dataset.id;
-      if (id) openAnnouncementModal(id);
-    });
+        const deleteButton = e.target.closest('button.del');
+        if (deleteButton) {
+          const id = deleteButton.dataset.id;
+          const confirmed = await showProfileConfirm({
+            title: 'Elimina annuncio',
+            message: 'Eliminare annuncio? Questa azione rimuove anche i dati collegati.',
+            confirmLabel: 'Elimina',
+            danger: true
+          });
+          if (!confirmed) return;
+          try {
+            const res = await fetch(`/api/v1/announcements/${id}`, { method: 'DELETE', headers: authHeader });
+            if (res.ok) {
+              loadMyAnnouncements();
+            } else {
+              const d = await res.json().catch(() => ({}));
+              showSiteAlert(d.userMessage || d.message || ('Errore eliminazione (' + res.status + ')'));
+            }
+          } catch (err) {
+            showSiteAlert('Errore di rete: ' + (err.message || err));
+          }
+          return;
+        }
+
+        const clickedCard = e.target.closest('.card');
+        if (!clickedCard || !grid.contains(clickedCard)) return;
+        if (e.target.closest('button, a, input, select, textarea')) return;
+        const id = clickedCard.dataset.id;
+        if (id) openAnnouncementModal(id);
+      });
+    }
   }
-}
 
   /**
    * Loads my animals data and updates the UI.
