@@ -439,7 +439,7 @@ Crea la scheda di un animale che sarà successivamente associato a un annuncio. 
         + breed: Pastore Tedesco (string, required)
         + gender: Maschio (string, required)
         + color: Nero e Focato (string, required)
-        + photo: animale.jpg (file, optional) - Foto principale salvata nello schema `Animal.photo`.
+        + photo: animale.jpg (string, optional) - Campo file multipart `photo`; il backend lo riceve con `upload.single('photo')` e lo salva in `Animal.photo`.
 
 + Response 201 (application/json)
     + Headers
@@ -586,7 +586,7 @@ Aggiorna campi dell'animale. Campi supportati: `name`/`animalName`, `species`, `
         + name: Rex (string, optional)
         + color: Nero (string, optional)
         + age: 4 anni (string, optional)
-        + photo: rex.jpg (file, optional) - Nuova foto principale salvata nello schema `Animal.photo`.
+        + photo: rex.jpg (string, optional) - Campo file multipart `photo`; il backend lo riceve con `upload.single('photo')` e aggiorna `Animal.photo`.
 
 + Response 200 (application/json)
 
@@ -718,19 +718,17 @@ Crea un nuovo annuncio. Richiede autenticazione. Se vuoi caricare una foto, usa 
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
 
-    + Body
-
-            {
-                "type": "LostAnimal",
-                "animalId": "645b2c3d4e5f6g7h8i9j0k1l",
-                "name": "Rex",
-                "description": "Smarrito in zona parco centrale",
-                "coordinates": [11.12108, 46.06787],
-                "lastSeenDate": "2026-05-14T18:30:00.000Z",
-                "isCurrentlyThere": false,
-                "animalBehaviour": "spaventato",
-                "healthCondition": "in salute"
-            }
+    + Attributes
+        + type: LostAnimal (string, required)
+        + animalId: 645b2c3d4e5f6g7h8i9j0k1l (string, required)
+        + name: Rex (string, optional)
+        + description: Smarrito in zona parco centrale (string, required)
+        + coordinates: `[11.12108,46.06787]` (string, required) - Coordinate come stringa JSON o coppia `longitudine,latitudine`.
+        + lastSeenDate: `2026-05-14T18:30:00.000Z` (string, optional)
+        + isCurrentlyThere: false (boolean, optional)
+        + animalBehaviour: spaventato (string, optional)
+        + healthCondition: in salute (string, optional)
+        + photo: rex.jpg (string, optional) - Campo file multipart `photo`; il backend lo riceve con `upload.single('photo')` e lo salva in `Announcement.photo`.
 
 + Response 201 (application/json)
     + Headers
@@ -804,12 +802,15 @@ Consente al proprietario dell'annuncio di modificarne i campi principali. Richie
 
             Authorization: Bearer INSERISCI_QUI_IL_TOKEN
 
-    + Body
-
-            {
-                "description": "Aggiornamento: visto vicino alla fontana",
-                "isCurrentlyThere": true
-            }
+    + Attributes
+        + description: Aggiornamento: visto vicino alla fontana (string, optional)
+        + isCurrentlyThere: true (boolean, optional)
+        + location: `[11.12108,46.06787]` (string, optional) - Coordinate come stringa JSON o coppia `longitudine,latitudine`.
+        + animalBehaviour: spaventato (string, optional)
+        + healthCondition: in salute (string, optional)
+        + status: ACTIVE (string, optional)
+        + type: LostAnimal (string, optional)
+        + photo: rex.jpg (string, optional) - Campo file multipart `photo`; il backend lo riceve con `upload.single('photo')` e aggiorna `Announcement.photo`.
 
 + Response 200 (application/json)
 
