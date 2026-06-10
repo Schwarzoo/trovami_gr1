@@ -301,7 +301,7 @@ git log --author="zambonmatteo" --pretty=tformat: --numstat | grep -vE 'package-
 Risultato:
 
 ```text
-Totale netto: 8528
+Totale netto: 8632
 ```
 
 ### Andrea Schwarz
@@ -313,7 +313,7 @@ git log --author="Andrea Schwarz" --pretty=tformat: --numstat | grep -vE 'packag
 Risultato:
 
 ```text
-Totale netto: 9921
+Totale netto: 10361
 ```
 
 ### Alessandro Weber
