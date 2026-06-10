@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "migrate:remove-inStallo": "node scripts/remove_inStallo_migration.js",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage --runInBand"
   },
   "keywords": [],
   "author": "",
@@ -27,9 +28,7 @@
     "multer": "^1.4.4",
     "nodemailer": "^6.10.1",
     "pdfkit": "^0.13.0",
-    "sharp": "^0.32.0",
-    "swagger-jsdoc": "^6.3.0",
-    "swagger-ui-express": "^5.0.1"
+    "sharp": "^0.32.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",

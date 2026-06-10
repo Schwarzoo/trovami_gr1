@@ -28,7 +28,7 @@ Piattaforma web community-driven per la segnalazione in tempo reale di animali s
 - **AI/ML**: Hugging Face Inference (per embeddings e matching)
 - **Elaborazione Immagini**: Sharp
 - **Testing**: Jest + Supertest
-- **Documentazione API**: Swagger/OpenAPI
+- **Documentazione API**: Apiary con API Blueprint
 
 ### Frontend
 - **HTML5** + **CSS3**

@@ -73,6 +73,31 @@ describe('admin endpoints', () => {
     expect(res.body[0].rifugioStatus).toBe('pending');
   });
 
+  test('GET /api/v1/admin/reports rejects authenticated non-admin users', async () => {
+    mockUserModel.findById.mockResolvedValueOnce({
+      _id: 'user1',
+      isActive: true,
+      role: 'user'
+    });
+    const userToken = jwt.sign({ userId: 'user1', role: 'admin' }, process.env.JWT_SECRET);
+
+    const res = await request(app)
+      .get('/api/v1/admin/reports')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toBe('Permesso negato');
+  });
+
+  test('GET /api/v1/admin/users/:id rejects malformed identifiers', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/users/not-an-object-id')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('ID utente non valido');
+  });
+
   test('PATCH /api/v1/admin/rifugi/:id approves shelter', async () => {
     mockUserModel.findOneAndUpdate.mockReturnValue({
       select: jest.fn(() => Promise.resolve(makeDoc({
