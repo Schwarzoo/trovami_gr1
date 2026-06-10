@@ -4,7 +4,7 @@ Piattaforma web community-driven per la segnalazione in tempo reale di animali s
 
 ## Descrizione del Progetto
 
-**Trovami** è un'applicazione web che facilita la ricerca e il ritrovamento di animali smarriti creando una comunità collaborativa. La piattaforma connette proprietari di animali smarriti con rifugi, soccorritori e altri utenti della community al fine di massimizzare le possibilità di ritrovamento.
+**Trovami** è un'applicazione web che facilita la ricerca e il ritrovamento di animali smarriti creando una comunità collaborativa. La piattaforma connette proprietari di animali smarriti con rifugi ed altri utenti della community al fine di massimizzare le possibilità di ritrovamento.
 
 ### Obiettivi Principali
 
@@ -25,7 +25,7 @@ Piattaforma web community-driven per la segnalazione in tempo reale di animali s
 - **Database**: MongoDB + Mongoose
 - **Autenticazione**: JWT + bcryptjs
 - **Email**: Nodemailer
-- **AI/ML**: Hugging Face Inference (per embeddings e matching)
+- **AI/ML**: Sentence Transformers con modello preaddestrato CLIP `clip-ViT-B-32` (per embeddings immagine e matching)
 - **Elaborazione Immagini**: Sharp
 - **Testing**: Jest + Supertest
 - **Documentazione API**: Apiary (`apiary.apib`)
@@ -122,7 +122,7 @@ trovami_gr1/
 
 ### 3. **Smart Matching Engine**
 - Confronto automatico tra segnalazioni di smarrimento e avvistamenti
-- Utilizzo di embeddings IA (Hugging Face) per semantic similarity
+- Utilizzo di embeddings immagine generati localmente con il modello preaddestrato CLIP `clip-ViT-B-32`
 - Ranking somiglianza caratteristiche
 - Suggerimenti automatici agli utenti
 
@@ -152,10 +152,12 @@ trovami_gr1/
 ##  Come Funziona il Matching Intelligente
 
 1. **Acquisizione Dati**: Il sistema raccoglie foto
-2. **Embedding IA**: Converte le foto in vettori numerici usando modelli Hugging Face
+2. **Embedding IA**: Converte le foto in vettori numerici usando Sentence Transformers e il modello preaddestrato CLIP `clip-ViT-B-32`
 3. **Confronto Semantico**: Confronta embedding di segnalazioni diverse
 4. **Ranking**: Combina score semantico e geografico
 5. **Notifica**: Suggerisce i migliori match agli utenti interessati
+
+In ambiente locale il backend invoca lo script Python `backend/scripts/generate_embedding.py`, che carica il modello preaddestrato `clip-ViT-B-32` tramite `sentence-transformers`. In ambiente Render (`RENDER=true`) viene usato un vettore simulato a 512 dimensioni per evitare problemi di memoria.
 
 ---
 
