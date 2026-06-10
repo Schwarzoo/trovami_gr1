@@ -9,6 +9,90 @@ function apiaryResource(apiary, heading) {
   return next === -1 ? apiary.slice(start) : apiary.slice(start, next);
 }
 
+function normalizeApiPath(apiPath) {
+  return apiPath
+    .replace(/\{\?[^}]+\}/g, '')
+    .replace(/:([A-Za-z0-9_]+)/g, '{$1}')
+    .replace(/\/+/g, '/')
+    .replace(/\/$/, '');
+}
+
+function joinApiPath(basePath, routePath) {
+  if (routePath === '/') return basePath;
+  return normalizeApiPath(`${basePath}/${routePath.replace(/^\//, '')}`);
+}
+
+function mountedApiRouters(rootDir) {
+  const server = fs.readFileSync(path.join(rootDir, 'backend/server.js'), 'utf8');
+  const mountPattern = /app\.use\(\s*['"]([^'"]+)['"]\s*,\s*require\(['"]\.\/routes\/([^'"]+)['"]\)\s*\)/g;
+  const mounts = [];
+  let match;
+
+  while ((match = mountPattern.exec(server)) !== null) {
+    mounts.push({
+      basePath: normalizeApiPath(match[1]),
+      fileStem: path.basename(match[2], '.js')
+    });
+  }
+
+  return mounts;
+}
+
+function duplicates(values) {
+  return values
+    .filter((value, index) => values.indexOf(value) !== index)
+    .filter((value, index, duplicateValues) => duplicateValues.indexOf(value) === index)
+    .sort();
+}
+
+const allowedApiaryDuplicateContracts = [
+  'PATCH /api/v1/admin/rifugi/{id}',
+  'POST /api/v1/auth/users'
+];
+
+function expressRouteContracts(rootDir) {
+  const routeDir = path.join(rootDir, 'backend/routes');
+  const contracts = [];
+
+  mountedApiRouters(rootDir).forEach(({ fileStem, basePath }) => {
+    const source = fs.readFileSync(path.join(routeDir, `${fileStem}.js`), 'utf8');
+    const routePattern = /router\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/g;
+    let match;
+
+    while ((match = routePattern.exec(source)) !== null) {
+      contracts.push(`${match[1].toUpperCase()} ${joinApiPath(basePath, match[2])}`);
+    }
+  });
+
+  const server = fs.readFileSync(path.join(rootDir, 'backend/server.js'), 'utf8');
+  if (server.includes("app.get('/api/v1/mock-emails'")) {
+    contracts.push('GET /api/v1/mock-emails');
+  }
+
+  return contracts.sort();
+}
+
+function apiaryRouteContracts(apiary) {
+  const contracts = [];
+  const resourcePattern = /^## .+ \[([^\]]+)\]$/gm;
+  let resourceMatch;
+
+  while ((resourceMatch = resourcePattern.exec(apiary)) !== null) {
+    const resourcePath = normalizeApiPath(resourceMatch[1]);
+    const resourceStart = resourceMatch.index + resourceMatch[0].length;
+    const nextResourceIndex = apiary.indexOf('\n## ', resourceStart);
+    const resourceBody = apiary.slice(resourceStart, nextResourceIndex === -1 ? apiary.length : nextResourceIndex);
+    const actionPattern = /^### .+ \[(GET|POST|PUT|PATCH|DELETE)\]$/gm;
+    let actionMatch;
+
+    while ((actionMatch = actionPattern.exec(resourceBody)) !== null) {
+      contracts.push(`${actionMatch[1]} ${resourcePath}`);
+    }
+  }
+
+  return contracts.sort();
+}
+
 describe('API documentation', () => {
   test('Apiary is the only declared API documentation system', () => {
     const rootDir = path.join(__dirname, '../..');
@@ -56,5 +140,16 @@ describe('API documentation', () => {
     expect(apiary).toContain('## Lettura Tutte [/api/v1/notifications]');
     expect(apiary).toContain('### Segna Tutte Come Lette [PATCH]');
     expect(apiary).not.toContain('/api/v1/notifications/read-all');
+  });
+
+  test('Apiary documents every Express API route and no removed route', () => {
+    const rootDir = path.join(__dirname, '../..');
+    const apiary = fs.readFileSync(path.join(rootDir, 'apiary.apib'), 'utf8');
+    const expressContracts = expressRouteContracts(rootDir);
+    const apiaryContracts = apiaryRouteContracts(apiary);
+
+    expect(duplicates(expressContracts)).toEqual([]);
+    expect(duplicates(apiaryContracts)).toEqual(allowedApiaryDuplicateContracts);
+    expect([...new Set(apiaryContracts)].sort()).toEqual(expressContracts);
   });
 });

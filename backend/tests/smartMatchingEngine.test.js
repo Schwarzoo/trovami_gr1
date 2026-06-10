@@ -10,6 +10,7 @@ describe('SmartMatchingEngine render simulation', () => {
 
   test('generateImageEmbedding returns a mock vector only when RENDER is true', async () => {
     process.env.RENDER = 'TRUE';
+    jest.spyOn(console, 'log').mockImplementation(() => {});
 
     const result = await smartMatchingEngine.generateImageEmbedding(Buffer.from('unused'));
 

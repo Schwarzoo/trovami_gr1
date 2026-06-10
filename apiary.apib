@@ -624,23 +624,6 @@ Aggiorna campi dell'animale. Campi supportati: `name`/`animalName`, `species`, `
             "message": "Animal non trovato"
         }
 
-## Foto Animale [/api/v1/animals/{id}/photo]
-+ Parameters
-    + id: `645b2c3d4e5f6g7h8i9j0k1l` (string, required) - ID animale.
-
-### Recupera Foto Animale [GET]
-Restituisce il contenuto binario della foto principale salvata nel documento `Animal`.
-
-+ Response 200 (image/jpeg)
-
-        <binary image data>
-
-+ Response 404 (application/json)
-
-        {
-            "message": "Foto animale non trovata"
-        }
-
 ### Elimina Animale [DELETE]
 Elimina l'animale dal database. Se l'animale e collegato a uno o piu annunci, elimina anche gli annunci associati. Richiede autenticazione.
 
@@ -666,6 +649,23 @@ Elimina l'animale dal database. Se l'animale e collegato a uno o piu annunci, el
 
         {
             "message": "Animal non trovato"
+        }
+
+## Foto Animale [/api/v1/animals/{id}/photo]
++ Parameters
+    + id: `645b2c3d4e5f6g7h8i9j0k1l` (string, required) - ID animale.
+
+### Recupera Foto Animale [GET]
+Restituisce il contenuto binario della foto principale salvata nel documento `Animal`.
+
++ Response 200 (image/jpeg)
+
+        <binary image data>
+
++ Response 404 (application/json)
+
+        {
+            "message": "Foto animale non trovata"
         }
 
 # Group Annunci
@@ -763,6 +763,19 @@ Crea un nuovo annuncio. Richiede autenticazione. Se vuoi caricare una foto, usa 
             "animalBehaviour": "spaventato",
             "healthCondition": "in salute",
             "createdAt": "2026-05-15T08:15:00.000Z"
+        }
+
+## Conteggio Annunci [/api/v1/announcements/count{?status}]
+### Conteggio Segnalazioni [GET]
+Restituisce il conteggio degli annunci secondo il filtro di stato gestito dal backend.
+
++ Parameters
+    + status (string, optional) - Stato da contare; se omesso usa il default del backend.
+
++ Response 200 (application/json)
+
+        {
+            "count": 12
         }
 
 ## Dettaglio Annuncio [/api/v1/announcements/{id}]
@@ -1181,6 +1194,21 @@ Restituisce le richieste di adozione relative all'utente autenticato. I rifugi v
             ]
         }
 
+### Nascondi Richieste Risposte [PATCH]
+Nasconde (soft-delete) tutte le richieste con stato `replied` per l'utente autenticato usando il path base supportato dal backend.
+
++ Request
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
++ Response 200 (application/json)
+
+        {
+            "success": true,
+            "hidden": 3
+        }
+
 ## Risposta Richiesta [/api/v1/contact-requests/{id}/replies]
 + Parameters
     + id: `665d4e5f6g7h8i9j0k1l2m3n` (string, required) - ID richiesta di adozione.
@@ -1377,6 +1405,36 @@ Blocca, sblocca o ammonisce un utente tramite un solo endpoint basato sull'ID.
             "reviewedReportsCount": 0
         }
 
+## Ammonimento Utente Admin [/api/v1/admin/users/{id}/warnings]
++ Parameters
+    + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
+
+### Aggiungi Ammonimento [POST]
+Aggiunge un ammonimento a un utente tramite la rotta dedicata del backend.
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
+
+    + Body
+
+            {
+                "reason": "Contenuti offensivi"
+            }
+
++ Response 200 (application/json)
+
+        {
+            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+            "conductWarnings": [
+                {
+                    "reason": "Contenuti offensivi",
+                    "createdAt": "2026-05-15T08:15:00.000Z"
+                }
+            ]
+        }
+
 ## Riammissioni [/api/v1/admin/readmissions{?page,limit}]
 ### Elenco Richieste [GET]
 Restituisce richieste riammissione pendenti.
@@ -1532,35 +1590,6 @@ Elimina annuncio e, se presente un publisher, invia notifica. Richiede admin.
         {
             "success": true,
             "warnedUser": true
-        }
-
-## Gestione Account Admin [/api/v1/admin/users/{id}]
-### Blocca, ammonisci o sblocca [PATCH]
-Endpoint unico per l'amministrazione dell'account basato esclusivamente sull'ID.
-
-+ Request (application/json)
-    + Headers
-
-            Authorization: Bearer INSERISCI_QUI_IL_TOKEN
-
-    + Body
-
-            {
-                "action": "warn",
-                "reason": "Contenuti offensivi"
-            }
-
-+ Response 200 (application/json)
-
-        {
-            "_id": "645a1b2c3d4e5f6g7h8i9j0k",
-            "conductWarnings": [
-                {
-                    "reason": "Contenuti offensivi",
-                    "createdAt": "2026-05-15T08:15:00.000Z"
-                }
-            ],
-            "publishedAnnouncementsCount": 2
         }
 
 ## Follow Rifugi
