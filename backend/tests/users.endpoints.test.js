@@ -5,6 +5,7 @@ const { makeQuery, makeDoc } = require('./helpers/chain');
 
 const mockUserModel = {
   findById: jest.fn(),
+  findOne: jest.fn(),
   findByIdAndUpdate: jest.fn(),
   findByIdAndDelete: jest.fn(),
   find: jest.fn()
@@ -208,5 +209,75 @@ describe('users endpoints', () => {
     expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.success).toBe(true);
     expect(mockRemoveAnnouncementCascade).toHaveBeenCalled();
+  });
+
+  test('POST /api/v1/users/me/followed-shelters/:shelterId follows approved shelter', async () => {
+    const shelterId = '507f1f77bcf86cd799439011';
+    const save = jest.fn().mockResolvedValue(undefined);
+    const me = {
+      _id: 'user1',
+      role: 'user',
+      followedShelters: [],
+      save
+    };
+
+    mockUserModel.findById
+      .mockResolvedValueOnce({ _id: 'user1', isActive: true, role: 'user' })
+      .mockReturnValueOnce({
+        select: jest.fn(() => Promise.resolve(me))
+      });
+    mockUserModel.findOne.mockReturnValue({
+      select: jest.fn(() => Promise.resolve(makeDoc({
+        _id: shelterId,
+        username: 'Rifugio Uno',
+        role: 'shelter',
+        rifugioStatus: 'approved',
+        contactVisibility: { showEmail: false, showPhone: true },
+        email: 'rifugio@test.local',
+        phoneNumber: '123',
+        rifugioData: { rifugioName: 'Rifugio Uno' }
+      })))
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/users/me/followed-shelters/${shelterId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ emailEnabled: true });
+
+    expect(res.status).toBe(200);
+    expect(me.followedShelters).toEqual([{ shelterId, emailEnabled: true }]);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(res.body.email).toBeNull();
+    expect(res.body.phoneNumber).toBe('123');
+    expect(res.body.emailEnabled).toBe(true);
+  });
+
+  test('DELETE /api/v1/users/me/followed-shelters/:shelterId removes followed shelter', async () => {
+    const shelterId = '507f1f77bcf86cd799439011';
+    const save = jest.fn().mockResolvedValue(undefined);
+    const user = {
+      _id: 'user1',
+      role: 'user',
+      followedShelters: [
+        { shelterId },
+        { shelterId: '507f1f77bcf86cd799439012' }
+      ],
+      save
+    };
+
+    mockUserModel.findById
+      .mockResolvedValueOnce({ _id: 'user1', isActive: true, role: 'user' })
+      .mockReturnValueOnce({
+        select: jest.fn(() => Promise.resolve(user))
+      });
+
+    const res = await request(app)
+      .delete(`/api/v1/users/me/followed-shelters/${shelterId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(user.followedShelters).toEqual([{ shelterId: '507f1f77bcf86cd799439012' }]);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(res.body.success).toBe(true);
   });
 });

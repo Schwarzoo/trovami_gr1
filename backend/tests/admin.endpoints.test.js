@@ -8,15 +8,31 @@ const mockUserModel = {
   findOneAndUpdate: jest.fn()
 };
 
+const mockAuditLogModel = {
+  find: jest.fn()
+};
+
+const mockReportModel = {
+  findByIdAndUpdate: jest.fn()
+};
+
 const mockNotificationModel = {
   create: jest.fn()
 };
 
 const mockWriteAuditLog = jest.fn().mockResolvedValue(undefined);
+const mockBuildAuditQuery = jest.fn(() => ({
+  filter: { action: 'login' },
+  sort: { createdAt: -1 },
+  limit: 25
+}));
 
 jest.mock('../models/User', () => mockUserModel);
+jest.mock('../models/AuditLog', () => mockAuditLogModel);
+jest.mock('../models/Report', () => mockReportModel);
 jest.mock('../models/Notification', () => mockNotificationModel);
 jest.mock('../services/auditService', () => ({
+  buildAuditQuery: (...args) => mockBuildAuditQuery(...args),
   writeAuditLog: (...args) => mockWriteAuditLog(...args)
 }));
 
@@ -85,6 +101,49 @@ describe('admin endpoints', () => {
     expect(res.status).toBe(400);
     expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/Status utente non valido/);
+  });
+
+  test('GET /api/v1/admin/audit-logs applies normalized audit query', async () => {
+    const query = makeQuery([{ _id: 'audit1', action: 'login' }]);
+    mockAuditLogModel.find.mockReturnValue(query);
+
+    const res = await request(app)
+      .get('/api/v1/admin/audit-logs?action=login&limit=25')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(mockBuildAuditQuery).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'login',
+      limit: '25'
+    }));
+    expect(mockAuditLogModel.find).toHaveBeenCalledWith({ action: 'login' });
+    expect(query.sort).toHaveBeenCalledWith({ createdAt: -1 });
+    expect(query.limit).toHaveBeenCalledWith(25);
+    expect(res.body[0].action).toBe('login');
+  });
+
+  test('PATCH /api/v1/admin/reports/:id dismisses report and writes audit', async () => {
+    mockReportModel.findByIdAndUpdate.mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011',
+      status: 'DISMISSED'
+    });
+
+    const res = await request(app)
+      .patch('/api/v1/admin/reports/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'DISMISSED' });
+
+    expect(res.status).toBe(200);
+    expect(mockReportModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      '507f1f77bcf86cd799439011',
+      { status: 'DISMISSED' },
+      { new: true }
+    );
+    expect(mockWriteAuditLog).toHaveBeenCalledWith({
+      actor: 'admin1',
+      action: 'archiviato report',
+      target: null
+    });
   });
 });
 

@@ -17,4 +17,13 @@ describe('SmartMatchingEngine render simulation', () => {
     expect(result).toHaveLength(512);
     expect(result.every((value) => typeof value === 'number')).toBe(true);
   });
+
+  test('calculateCosineSimilarity returns 1 for identical vectors', () => {
+    expect(smartMatchingEngine.calculateCosineSimilarity([1, 2, 3], [1, 2, 3])).toBeCloseTo(1);
+  });
+
+  test('calculateCosineSimilarity returns 0 for incompatible or zero vectors', () => {
+    expect(smartMatchingEngine.calculateCosineSimilarity([1, 2], [1, 2, 3])).toBe(0);
+    expect(smartMatchingEngine.calculateCosineSimilarity([0, 0], [1, 2])).toBe(0);
+  });
 });

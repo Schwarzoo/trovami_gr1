@@ -137,6 +137,36 @@ describe('announcement endpoints', () => {
     expect(res.body.matches).toHaveLength(1);
   });
 
+  test('GET /api/v1/announcements/count returns requested status count', async () => {
+    mockAnnouncementModel.countDocuments.mockResolvedValue(7);
+
+    const res = await request(app).get('/api/v1/announcements/count?status=archived');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
+    expect(mockAnnouncementModel.countDocuments).toHaveBeenCalledWith({ status: 'ARCHIVED' });
+    expect(res.body).toEqual({ count: 7, resolvedCount: 7 });
+  });
+
+  test('GET /api/v1/announcements/:id/photo returns stored photo bytes', async () => {
+    const photo = Buffer.from('announcement-photo');
+    const select = jest.fn(() => Promise.resolve({
+      _id: '507f1f77bcf86cd799439011',
+      photo: {
+        data: photo,
+        contentType: 'image/png'
+      }
+    }));
+    mockAnnouncementModel.findById.mockReturnValue({ select });
+
+    const res = await request(app).get('/api/v1/announcements/507f1f77bcf86cd799439011/photo');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/image\/png/);
+    expect(res.body).toEqual(photo);
+    expect(select).toHaveBeenCalledWith('photo');
+  });
+
   test('POST /api/v1/announcements with isQuick creates quick announcement', async () => {
     mockAnimalModel.create.mockResolvedValue(makeDoc({ _id: 'animal1' }));
 
@@ -229,6 +259,78 @@ describe('announcement endpoints', () => {
     expect(res.status).toBe(201);
     expect(res.headers['content-type']).toMatch(/json/);
     expect(res.body.message).toMatch(/Segnalazione inviata/);
+  });
+
+  test('POST /api/v1/announcements/:id/comments creates comment and notifies publisher', async () => {
+    const comments = [];
+    const save = jest.fn().mockResolvedValue(undefined);
+    const announcement = {
+      _id: '507f1f77bcf86cd799439011',
+      publisherId: 'publisher1',
+      comments,
+      save
+    };
+
+    mockUserModel.findById
+      .mockResolvedValueOnce({ _id: 'user1', isActive: true, role: 'user' })
+      .mockReturnValueOnce({
+        select: jest.fn(() => Promise.resolve({ _id: 'user1', username: 'mario' }))
+      })
+      .mockReturnValueOnce({
+        select: jest.fn(() => Promise.resolve({
+          _id: 'publisher1',
+          email: 'owner@test.local',
+          username: 'owner',
+          notificationPrefs: { emailOnComment: true }
+        }))
+      });
+    mockAnnouncementModel.findById.mockResolvedValue(announcement);
+
+    const res = await request(app)
+      .post('/api/v1/announcements/507f1f77bcf86cd799439011/comments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: 'Avvistato vicino al parco' });
+
+    expect(res.status).toBe(201);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(comments[0]).toEqual(expect.objectContaining({
+      userId: 'user1',
+      username: 'mario',
+      text: 'Avvistato vicino al parco'
+    }));
+    expect(mockNotificationModel.create).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'publisher1',
+      type: 'comment',
+      announcementId: announcement._id
+    }));
+  });
+
+  test('PATCH /api/v1/announcements/:id rejects invalid status before loading announcement', async () => {
+    mockUserModel.findById.mockResolvedValue({ _id: 'user1', isActive: true, role: 'user' });
+
+    const res = await request(app)
+      .patch('/api/v1/announcements/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ status: 'BROKEN' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Status non valido');
+    expect(mockAnnouncementModel.findById).not.toHaveBeenCalled();
+  });
+
+  test('DELETE /api/v1/announcements/:id rejects non-owner users', async () => {
+    mockUserModel.findById.mockResolvedValue({ _id: 'user1', isActive: true, role: 'user' });
+    mockAnnouncementModel.findById.mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011',
+      publisherId: 'another-user'
+    });
+
+    const res = await request(app)
+      .delete('/api/v1/announcements/507f1f77bcf86cd799439011')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(mockAnnouncementModel.findByIdAndDelete).not.toHaveBeenCalled();
   });
 });
 

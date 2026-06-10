@@ -37,6 +37,16 @@ Piattaforma web community-driven per la segnalazione in tempo reale di animali s
 
 ---
 
+##  Scelte Tecnologiche Frontend
+
+Il frontend del progetto e stato sviluppato volutamente con **HTML, CSS e JavaScript puro**, senza framework come React, Vue o Angular. Questa scelta permette di mantenere il progetto leggero, facilmente eseguibile e comprensibile in ogni sua parte, evitando dipendenze aggiuntive non necessarie per gli obiettivi del corso.
+
+L'utilizzo di tecnologie native del browser consente inoltre di mostrare in modo diretto la struttura dell'applicazione, la gestione degli eventi, le chiamate alle API REST e la manipolazione del DOM. In questo modo il codice rimane trasparente e valutabile, senza che la logica principale venga nascosta dietro astrazioni di framework.
+
+Questa impostazione e coerente con la natura universitaria del progetto: l'obiettivo non e dimostrare l'uso di una libreria specifica, ma progettare e realizzare un sistema completo, mantenibile e funzionante, con una separazione chiara tra frontend, backend, API, persistenza dei dati, autenticazione e test.
+
+---
+
 ##  Struttura del Progetto
 
 ```
@@ -263,6 +273,58 @@ Essendo appunto in stato di sviluppo alcune funzionalità non sono disponibili m
 | Andrea Schwarz | 245024 |
 | Matteo Zambon | 243376 |
 | Alessandro Weber | 244841 |
+
+---
+
+##  Nota sulle Statistiche dei Contributi
+
+Le statistiche mostrate da GitHub nella sezione contributi possono risultare falsate, perche includono anche file generati, file di lock, documentazione API o modifiche automatiche che non rappresentano direttamente righe di codice scritte a mano.
+
+Per ottenere un conteggio piu corretto delle righe di codice prodotte da ciascun componente del gruppo, eseguire i seguenti comandi dal terminale Git posizionato nella cartella principale del progetto:
+
+### Matteo Zambon
+
+```bash
+git log --author="zambonmatteo" --pretty=tformat: --numstat | grep -vE 'package-lock\.json|package\.json|node_modules/|apiary\.apib' | awk '{ add += $1; subs += $2 } END { printf "Righe aggiunte: %s\nRighe rimosse: %s\nTotale netto: %s\n", add, subs, add - subs }'
+```
+
+Risultato:
+
+```text
+Righe aggiunte: 14190
+Righe rimosse: 5662
+Totale netto: 8528
+```
+
+### Andrea Schwarz
+
+```bash
+git log --author="Andrea Schwarz" --pretty=tformat: --numstat | grep -vE 'package-lock\.json|package\.json|node_modules/|apiary\.apib' | awk '{ add += $1; subs += $2 } END { printf "Righe aggiunte: %s\nRighe rimosse: %s\nTotale netto: %s\n", add, subs, add - subs }'
+```
+
+Risultato:
+
+```text
+Righe aggiunte: 15081
+Righe rimosse: 5160
+Totale netto: 9921
+```
+
+### Alessandro Weber
+
+```bash
+git log --author="aleweb04" --pretty=tformat: --numstat | grep -vE 'package-lock\.json|package\.json|node_modules/|apiary\.apib' | awk '{ add += $1; subs += $2 } END { printf "Righe aggiunte: %s\nRighe rimosse: %s\nTotale netto: %s\n", add, subs, add - subs }'
+```
+
+Risultato:
+
+```text
+Righe aggiunte: 12323
+Righe rimosse: 7000
+Totale netto: 5323
+```
+
+Questi comandi escludono dal calcolo i file `package-lock.json`, `package.json`, `node_modules/` e `apiary.apib`, cosi da evitare che le statistiche vengano alterate da dipendenze, file generati o documentazione non rappresentativa del contributo diretto sul codice.
 
 ---
 

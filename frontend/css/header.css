@@ -27,8 +27,14 @@ header {
     flex-wrap: wrap;
 }
 header a { text-decoration: none; color: var(--text); }
-.logo-link { display: inline-flex; align-items: center; }
-.logo { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent); }
+.logo-link { display: inline-flex; align-items: center; flex-shrink: 0; }
+.logo { display: block; }
+.logo-image {
+    width: 148px;
+    height: 46px;
+    object-fit: contain;
+    object-position: left center;
+}
 header nav { margin-left: auto; display: flex; gap: 1.5rem; min-width: 0; }
 header nav { align-items: center; }
 header nav a { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); transition: color .2s; }
@@ -315,8 +321,9 @@ header nav a.active { color: var(--accent); }
         gap: 0.7rem;
     }
 
-    .logo {
-        font-size: 1.35rem;
+    .logo-image {
+        width: 126px;
+        height: 40px;
     }
 
     header nav.site-nav {
