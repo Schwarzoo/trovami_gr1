@@ -127,7 +127,7 @@ Invalida la sessione dell'utente corrente. Richiede autenticazione tramite Beare
             "message": "Logout effettuato"
         }
 
-## Recupero Password [/api/v1/auth/password/forgot]
+## Recupero Password [/api/v1/auth/password-reset-requests]
 ### Richiedi Recupero [POST]
 Invia una email contenente un link per reimpostare la password.
 
@@ -149,7 +149,7 @@ Invia una email contenente un link per reimpostare la password.
             "message": "Email non trovata"
         }
 
-## Reset Password [/api/v1/auth/password/reset]
+## Reset Password [/api/v1/auth/password]
 ### Reimposta Password [POST]
 Reimposta la password tramite token ricevuto via email.
 
@@ -172,7 +172,7 @@ Reimposta la password tramite token ricevuto via email.
             "message": "Token non valido o scaduto"
         }
 
-## Verifica Email [/api/v1/auth/email/verify{?token}]
+## Verifica Email [/api/v1/auth/email-verifications{?token}]
 ### Verifica [GET]
 Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON oppure fare redirect a una pagina frontend.
 
@@ -191,7 +191,7 @@ Conferma la mail dell'utente. In base all'header `Accept` può rispondere JSON o
             "message": "Token non valido o scaduto"
         }
 
-## Reinvia Verifica Email [/api/v1/auth/email/resend]
+## Reinvia Verifica Email [/api/v1/auth/email-verifications]
 ### Reinvia [POST]
 Reinvia la mail di verifica, se non ancora verificata.
 
@@ -1169,11 +1169,11 @@ Restituisce le richieste di adozione relative all'utente autenticato. I rifugi v
             ]
         }
 
-## Dettaglio Richiesta [/api/v1/contact-requests/{id}]
+## Risposta Richiesta [/api/v1/contact-requests/{id}/replies]
 + Parameters
     + id: `665d4e5f6g7h8i9j0k1l2m3n` (string, required) - ID richiesta di adozione.
 
-### Rispondi alla Richiesta [PATCH]
+### Rispondi alla Richiesta [POST]
 Permette a un rifugio approvato di rispondere a una richiesta di adozione. Lo stato viene impostato a `replied`. Richiede autenticazione con ruolo `shelter`.
 
 + Request (application/json)
@@ -1365,7 +1365,7 @@ Blocca, sblocca o ammonisce un utente tramite un solo endpoint basato sull'ID.
             "reviewedReportsCount": 0
         }
 
-## Riammissioni [/api/v1/admin/readmission-requests{?page,limit}]
+## Riammissioni [/api/v1/admin/readmissions{?page,limit}]
 ### Elenco Richieste [GET]
 Restituisce richieste riammissione pendenti.
 
@@ -1397,7 +1397,7 @@ Restituisce richieste riammissione pendenti.
             ]
         }
 
-## Valuta Riammissione [/api/v1/admin/users/{id}/readmission]
+## Valuta Riammissione [/api/v1/admin/readmissions/{id}]
 + Parameters
     + id: `645a1b2c3d4e5f6g7h8i9j0k` (string, required) - ID utente.
 
@@ -1423,7 +1423,7 @@ Restituisce richieste riammissione pendenti.
             }
         }
 
-## Rifugi Pending [/api/v1/admin/rifugi/pending{?page,limit}]
+## Rifugi Pending [/api/v1/admin/rifugi{?status,page,limit}]
 ### Elenco Pending [GET]
 Restituisce rifugi in attesa approvazione.
 
@@ -1522,7 +1522,7 @@ Elimina annuncio e, se presente un publisher, invia notifica. Richiede admin.
             "warnedUser": true
         }
 
-## Gestione Account Admin [/api/v1/admin/users/{id}/actions]
+## Gestione Account Admin [/api/v1/admin/users/{id}]
 ### Blocca, ammonisci o sblocca [PATCH]
 Endpoint unico per l'amministrazione dell'account basato esclusivamente sull'ID.
 

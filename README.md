@@ -39,11 +39,11 @@ Piattaforma web community-driven per la segnalazione in tempo reale di animali s
 
 ##  Scelte Tecnologiche Frontend
 
-Il frontend del progetto e stato sviluppato volutamente con **HTML, CSS e JavaScript puro**, senza framework come React, Vue o Angular. Questa scelta permette di mantenere il progetto leggero, facilmente eseguibile e comprensibile in ogni sua parte, evitando dipendenze aggiuntive non necessarie per gli obiettivi del corso.
+Il frontend del progetto è stato sviluppato volutamente con **HTML, CSS e JavaScript puro**, senza framework come React, Vue o Angular. Questa scelta permette di mantenere il progetto leggero, facilmente eseguibile e comprensibile in ogni sua parte, evitando dipendenze aggiuntive non necessarie per gli obiettivi del corso.
 
 L'utilizzo di tecnologie native del browser consente inoltre di mostrare in modo diretto la struttura dell'applicazione, la gestione degli eventi, le chiamate alle API REST e la manipolazione del DOM. In questo modo il codice rimane trasparente e valutabile, senza che la logica principale venga nascosta dietro astrazioni di framework.
 
-Questa impostazione e coerente con la natura universitaria del progetto: l'obiettivo non e dimostrare l'uso di una libreria specifica, ma progettare e realizzare un sistema completo, mantenibile e funzionante, con una separazione chiara tra frontend, backend, API, persistenza dei dati, autenticazione e test.
+Questa impostazione è coerente con la natura universitaria del progetto: l'obiettivo non è dimostrare l'uso di una libreria specifica, ma progettare e realizzare un sistema completo, mantenibile e funzionante, con una separazione chiara tra frontend, backend, API, persistenza dei dati, autenticazione e test.
 
 ---
 
@@ -163,14 +163,19 @@ trovami_gr1/
 
 | Metodo | Endpoint | Descrizione |
 |--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Registrazione utente |
-| POST | `/api/v1/auth/login` | Login |
+| POST | `/api/v1/auth/users` | Registrazione utente |
+| POST | `/api/v1/auth/sessions` | Login |
+| DELETE | `/api/v1/auth/sessions/current` | Logout |
+| POST | `/api/v1/auth/password-reset-requests` | Richiesta recupero password |
+| PATCH | `/api/v1/auth/password` | Reset password |
 | GET | `/api/v1/animals` | Lista animali |
 | POST | `/api/v1/announcements` | Crea segnalazione |
 | GET | `/api/v1/announcements` | Lista segnalazioni |
+| GET | `/api/v1/announcements/count` | Conteggio segnalazioni per stato |
 | POST | `/api/v1/contact-requests` | Contatta proprietario |
 | GET | `/api/v1/notifications` | Notifiche utente |
 | GET | `/api/v1/admin/audit-logs` | Log di audit (Admin) |
+| GET | `/api/v1/admin/rifugi` | Richieste rifugi (Admin) |
 
 *Per documentazione completa, vedi `apiary.apib`*
 
@@ -192,7 +197,7 @@ cd backend
 npm install
 
 # Crea file .env
-# Configura: DB_URL, PORT, JWT_SECRET, EMAIL credentials, HUGGINGFACE_API_KEY
+# Configura: DB_URL, PORT, JWT_SECRET, SMTP credentials, URL applicativi
 
 #CONFIGURA VENV(solo da local host per i smart matching tra annunci)
 python -m venv venv
@@ -226,10 +231,15 @@ I test coprono:
 DB_URL=mongodb+srv://...
 PORT=3000
 JWT_SECRET=your_secret_key
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
-HUGGINGFACE_API_KEY=your_api_key
-RENDER=false  # Per mock inbox emails in dev
+BACKEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3000
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+SMTP_FROM=your_email@gmail.com
+PYTHON_PATH=python
+RENDER=false  # true abilita mock e simulazioni compatibili con Render
 ```
 
 
@@ -278,9 +288,9 @@ Essendo appunto in stato di sviluppo alcune funzionalità non sono disponibili m
 
 ##  Nota sulle Statistiche dei Contributi
 
-Le statistiche mostrate da GitHub nella sezione contributi possono risultare falsate, perche includono anche file generati, file di lock, documentazione API o modifiche automatiche che non rappresentano direttamente righe di codice scritte a mano.
+Le statistiche mostrate da GitHub nella sezione contributi possono risultare falsate, perché includono anche file generati, file di lock, documentazione API o modifiche automatiche che non rappresentano direttamente righe di codice scritte a mano.
 
-Per ottenere un conteggio piu corretto delle righe di codice prodotte da ciascun componente del gruppo, eseguire i seguenti comandi dal terminale Git posizionato nella cartella principale del progetto:
+Per ottenere un conteggio più corretto delle righe di codice prodotte da ciascun componente del gruppo, eseguire i seguenti comandi dal terminale Git posizionato nella cartella principale del progetto:
 
 ### Matteo Zambon
 
@@ -291,8 +301,6 @@ git log --author="zambonmatteo" --pretty=tformat: --numstat | grep -vE 'package-
 Risultato:
 
 ```text
-Righe aggiunte: 14190
-Righe rimosse: 5662
 Totale netto: 8528
 ```
 
@@ -305,8 +313,6 @@ git log --author="Andrea Schwarz" --pretty=tformat: --numstat | grep -vE 'packag
 Risultato:
 
 ```text
-Righe aggiunte: 15081
-Righe rimosse: 5160
 Totale netto: 9921
 ```
 
@@ -319,12 +325,10 @@ git log --author="aleweb04" --pretty=tformat: --numstat | grep -vE 'package-lock
 Risultato:
 
 ```text
-Righe aggiunte: 12323
-Righe rimosse: 7000
 Totale netto: 5323
 ```
 
-Questi comandi escludono dal calcolo i file `package-lock.json`, `package.json`, `node_modules/` e `apiary.apib`, cosi da evitare che le statistiche vengano alterate da dipendenze, file generati o documentazione non rappresentativa del contributo diretto sul codice.
+Questi comandi escludono dal calcolo i file `package-lock.json`, `package.json`, `node_modules/` e `apiary.apib`, così da evitare che le statistiche vengano alterate da dipendenze, file generati o documentazione non rappresentativa del contributo diretto sul codice.
 
 ---
 

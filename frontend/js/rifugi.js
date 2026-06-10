@@ -21,10 +21,20 @@ const rifugioIcon = L.divIcon({
   popupAnchor: [0, -14]
 });
 
+/**
+ * Builds a readable shelter address from rifugio data.
+ * @param {Object} rifugio - Shelter payload returned by the public shelters API.
+ * @returns {string} Address and city joined for display, or an empty string.
+ */
 function getRifugioAddress(rifugio) {
   return [rifugio?.rifugioData?.address, rifugio?.rifugioData?.city].filter(Boolean).join(', ');
 }
 
+/**
+ * Normalizes raw ids, populated documents, and ObjectId-like values to strings.
+ * @param {*} value - Identifier value to normalize.
+ * @returns {string} Normalized id string, or an empty string for missing values.
+ */
 function normalizeId(value) {
   if (!value) return '';
   if (typeof value === 'string') return value;
@@ -32,24 +42,45 @@ function normalizeId(value) {
   return String(value);
 }
 
+/**
+ * Reads the shelter id requested in the page query string.
+ * @returns {string|null} Highlighted shelter id, or null when not provided.
+ */
 function getHighlightId() {
   return new URLSearchParams(window.location.search).get('rifugioId');
 }
 
+/**
+ * Returns every animal marked as adoptable.
+ * @returns {Array<Object>} Adoptable animal records loaded for public shelters.
+ */
 function getAdoptableAnimals() {
   return state.animals.filter(animal => animal.adoptable === true);
 }
 
+/**
+ * Returns adoptable animals visible under the current shelter filter.
+ * @returns {Array<Object>} Filtered adoptable animal records.
+ */
 function getVisibleAdoptableAnimals() {
   const list = getAdoptableAnimals();
   if (!state.selectedRifugioId) return list;
   return list.filter(animal => normalizeAnimalShelterId(animal) === normalizeId(state.selectedRifugioId));
 }
 
+/**
+ * Counts adoptable animals owned by a specific shelter.
+ * @param {string|Object} rifugioId - Shelter identifier to count animals for.
+ * @returns {number} Number of adoptable animals associated with the shelter.
+ */
 function countAdoptableAnimalsForRifugio(rifugioId) {
   return getAdoptableAnimals().filter(animal => normalizeAnimalShelterId(animal) === normalizeId(rifugioId)).length;
 }
 
+/**
+ * Updates summary counters shown above the shelters and adoption sections.
+ * @returns {void}
+ */
 function updateCounters() {
   const rifugiCount = state.rifugi.length;
   const adoptableCount = getAdoptableAnimals().length;
@@ -59,10 +90,24 @@ function updateCounters() {
   document.getElementById('rifugi-count').textContent = `${formatNumber(rifugiCount)} rifugi trovati`;
 }
 
+/**
+ * Replaces a grid with a reusable empty-state message.
+ * @param {HTMLElement} container - Grid or section element to update.
+ * @param {string} message - Message shown to the user.
+ * @returns {void}
+ */
 function setEmptyState(container, message) {
   container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
 }
 
+/**
+ * Selects a shelter on the map and optionally opens its popup.
+ * @param {string} id - Shelter identifier to select.
+ * @param {Object} [options={}] - Selection behavior options.
+ * @param {boolean} [options.openPopup=true] - Whether to open the map popup.
+ * @param {boolean} [options.panTo=true] - Whether to move the map to the shelter marker.
+ * @returns {void}
+ */
 function selectRifugio(id, options = {}) {
   const { openPopup = true, panTo = true } = options;
   const rifugio = state.rifugi.find((item) => item._id === id) || null;
@@ -76,6 +121,10 @@ function selectRifugio(id, options = {}) {
   }
 }
 
+/**
+ * Renders the public shelter card grid.
+ * @returns {void}
+ */
 function renderRifugiGrid() {
   const grid = document.getElementById('rifugi-grid');
   if (!grid) return;
@@ -127,6 +176,10 @@ function renderRifugiGrid() {
   });
 }
 
+/**
+ * Populates the adoption shelter filter from approved public shelters.
+ * @returns {void}
+ */
 function populateAdoptionsFilter() {
   const select = document.getElementById('adoptions-rifugio-filter');
   if (!select) return;
@@ -146,10 +199,19 @@ function populateAdoptionsFilter() {
   select.classList.toggle('is-placeholder', !select.value);
 }
 
+/**
+ * Finds a shelter in the current state by id.
+ * @param {string|Object} id - Shelter identifier to search for.
+ * @returns {Object|null} Matching shelter payload, or null when absent.
+ */
 function getRifugioById(id) {
   return state.rifugi.find(rifugio => normalizeId(rifugio._id) === normalizeId(id)) || null;
 }
 
+/**
+ * Renders adoptable animal cards for the selected shelter filter.
+ * @returns {void}
+ */
 function renderAdoptions() {
   const grid = document.getElementById('adoptions-grid');
   if (!grid) return;
@@ -191,6 +253,10 @@ function renderAdoptions() {
   });
 }
 
+/**
+ * Binds the adoption shelter filter select to the adoption grid.
+ * @returns {void}
+ */
 function initAdoptionsFilter() {
   const select = document.getElementById('adoptions-rifugio-filter');
   if (!select) return;
@@ -202,6 +268,10 @@ function initAdoptionsFilter() {
   });
 }
 
+/**
+ * Creates the Leaflet map used to display shelter locations.
+ * @returns {Object} Leaflet map instance.
+ */
 function initMap() {
   if (state.map) return state.map;
   state.map = L.map('rifugi-map', {
@@ -219,6 +289,10 @@ function initMap() {
   return state.map;
 }
 
+/**
+ * Renders map markers for every shelter with valid coordinates.
+ * @returns {void}
+ */
 function renderMap() {
   const map = initMap();
 
@@ -267,6 +341,10 @@ function renderMap() {
   }
 }
 
+/**
+ * Opens the requested shelter from the query string, or the first available shelter.
+ * @returns {void}
+ */
 function selectInitialRifugio() {
   const highlightId = getHighlightId();
   const match = highlightId ? state.rifugi.find((rifugio) => rifugio._id === highlightId) : state.rifugi[0];
@@ -275,6 +353,11 @@ function selectInitialRifugio() {
   }
 }
 
+/**
+ * Shows page-level loading errors for shelters and adoptions.
+ * @param {Error} error - Loading error caught during page initialization.
+ * @returns {void}
+ */
 function showLoadError(error) {
   const grid = document.getElementById('rifugi-grid');
   const adoptionsGrid = document.getElementById('adoptions-grid');
@@ -282,6 +365,11 @@ function showLoadError(error) {
   if (adoptionsGrid) setEmptyState(adoptionsGrid, 'Impossibile caricare le adozioni.');
 }
 
+/**
+ * Loads all paginated animals belonging to a shelter.
+ * @param {string} rifugioId - Shelter identifier used by the animals API.
+ * @returns {Promise<Array<Object>>} Animals returned for the shelter.
+ */
 async function fetchAnimalsForRifugio(rifugioId) {
   const animals = [];
   let page = 1;
@@ -298,6 +386,11 @@ async function fetchAnimalsForRifugio(rifugioId) {
   return animals;
 }
 
+/**
+ * Loads animals for every public shelter, isolating per-shelter failures.
+ * @param {Array<Object>} rifugi - Public shelter payloads.
+ * @returns {Promise<Array<Object>>} Flattened animal list for all shelters.
+ */
 async function fetchAllRifugiAnimals(rifugi) {
   const batches = await Promise.all(rifugi.map(async (rifugio) => {
     try {

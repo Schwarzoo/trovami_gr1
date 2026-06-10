@@ -6,10 +6,22 @@ const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+/**
+ * Interprets common boolean-like request values as true for quick announcement creation.
+ * @param {*} value - Request value to evaluate.
+ * @returns {boolean} True when the value represents an enabled flag.
+ */
 function isTruthyFlag(value) {
 	return value === true || value === 'true' || value === 1 || value === '1';
 }
 
+/**
+ * Allows anonymous quick announcements while requiring JWT authentication for regular announcements.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware callback.
+ * @returns {void|Promise<void>} Middleware result.
+ */
 function requireAuthUnlessQuick(req, res, next) {
 	if (isTruthyFlag(req.body?.isQuick)) return next();
 	return authMiddleware(req, res, next);

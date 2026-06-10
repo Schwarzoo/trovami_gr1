@@ -23,7 +23,7 @@ function duplicateAccountMessage(err) {
 /**
  * Normalizes an account role value to the format stored in the database.
  * @param {string} role - Role value received from a user document or token payload.
- * @returns {string} Lowercase role when the input is a string; otherwise the original value.
+ * @returns {*} Lowercase role when the input is a string; otherwise the original value.
  */
 function normalizeAccountRole(role) {
   return typeof role === 'string' ? role.toLowerCase() : role;

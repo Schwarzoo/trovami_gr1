@@ -36,7 +36,7 @@ class SmartMatchingEngine {
   async generateImageEmbedding(photoBuffer) {
     if (isRenderSimulationEnabled()) {
         console.log("[SMART MATCHING] Ambiente Cloud Render rilevato.");
-        console.log("[SMART MATCHING] Generazione di un finto vettore IA a 512 dimensioni per bypassare i limiti di RAM.");
+        console.log("[SMART MATCHING] Generazione di un vettore simulato a 512 dimensioni per rispettare i limiti di RAM.");
         
         // Il modello clip-ViT-B-32 genera vettori lunghi esattamente 512 elementi.
         // Generiamo un array di 512 numeri casuali per simulare il modello senza bloccare il server di Render.

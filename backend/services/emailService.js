@@ -3,10 +3,21 @@ const User = require('../models/User');
 
 let transporter;
 
+/**
+ * Checks whether the app should store outgoing emails in the in-memory mock inbox.
+ * @returns {boolean} True when Render-compatible mock delivery is enabled.
+ */
 function isRenderMockInboxEnabled() {
   return String(process.env.RENDER).toLowerCase() === 'true';
 }
 
+/**
+ * Stores an outgoing email payload in a bounded in-memory inbox for development and Render demos.
+ * @param {string} to - Recipient email address.
+ * @param {string} subject - Email subject.
+ * @param {string} message - HTML message body.
+ * @returns {void}
+ */
 function pushMockEmail(to, subject, message) {
   global.mockInbox = global.mockInbox || [];
   global.mockInbox.push({
@@ -281,6 +292,14 @@ async function sendAccountBlockedEmail(user, reason) {
   });
 }
 
+/**
+ * Sends an adoption-request reply notification to the requester when email delivery is enabled.
+ * @param {Object} recipient - User that submitted the adoption request.
+ * @param {Object} shelter - Shelter replying to the request.
+ * @param {string} animalName - Name of the animal referenced by the request.
+ * @param {string} replyMessage - Reply text written by the shelter.
+ * @returns {Promise<void>} Promise resolving when the email is sent or skipped.
+ */
 async function sendAdoptionReplyEmail(recipient, shelter, animalName, replyMessage) {
   if (!recipient?.notificationPrefs?.emailOnComment || !recipient?.email) return;
 
