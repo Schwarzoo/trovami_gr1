@@ -184,7 +184,7 @@ trovami_gr1/
 ##  Installazione e Setup
 
 ### Prerequisiti
-- Node.js 16+
+- Node.js 18+
 - MongoDB
 - npm o yarn
 
@@ -241,6 +241,35 @@ SMTP_FROM=your_email@gmail.com
 PYTHON_PATH=python
 RENDER=false  # true abilita mock e simulazioni compatibili con Render
 ```
+
+### Deploy su Render
+
+Il progetto Node si trova nella cartella `backend`, mentre il frontend viene servito dal server Express con i file presenti in `frontend`. Per evitare errori di avvio su Render, configurare il servizio web in uno di questi due modi:
+
+```txt
+Root Directory: backend
+Build Command: npm install
+Start Command: npm start
+```
+
+In alternativa, se il servizio viene lasciato sulla root del repository:
+
+```txt
+Build Command: cd backend && npm install
+Start Command: cd backend && npm start
+```
+
+Variabili da impostare su Render:
+
+```env
+DB_URL=mongodb+srv://...
+JWT_SECRET=your_secret_key
+BACKEND_URL=https://trovami-app.onrender.com
+FRONTEND_URL=https://trovami-app.onrender.com
+RENDER=true
+```
+
+`PORT` non deve essere forzata: Render la assegna automaticamente e il server usa `process.env.PORT`.
 
 
 

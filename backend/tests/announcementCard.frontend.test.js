@@ -24,11 +24,22 @@ describe('shared announcement card frontend', () => {
 
   test('shelter announcements do not render resolve actions', () => {
     const includes = fs.readFileSync(path.join(__dirname, '../../frontend/js/includes.js'), 'utf8');
-    const profile = fs.readFileSync(path.join(__dirname, '../../frontend/js/profile.js'), 'utf8');
+    const profileAnnouncementForm = fs.readFileSync(path.join(__dirname, '../../frontend/js/profile-announcement-form.js'), 'utf8');
+    const profileShelter = fs.readFileSync(path.join(__dirname, '../../frontend/js/profile-shelter.js'), 'utf8');
 
     expect(includes).toContain('function isShelterAnnouncement');
     expect(includes).toContain("currentRole === 'admin' && !isShelterAnnouncement(data)");
-    expect(profile).toContain('function isShelterAnnouncement');
-    expect(profile).toContain("a.status !== 'RESOLVED' && !isShelterAnnouncement(a)");
+    expect(profileAnnouncementForm).toContain('function isShelterAnnouncement');
+    expect(profileShelter).toContain("a.status !== 'RESOLVED' && !isShelterAnnouncement(a)");
+  });
+
+  test('profile split exposes shelter position editor to the main profile script', () => {
+    const profile = fs.readFileSync(path.join(__dirname, '../../frontend/js/profile.js'), 'utf8');
+    const profileShelter = fs.readFileSync(path.join(__dirname, '../../frontend/js/profile-shelter.js'), 'utf8');
+
+    expect(profile).toContain('let openRifugioPositionEditor = () => {}');
+    expect(profile).toContain('openRifugioPositionEditor = shelterModule.openRifugioPositionEditor');
+    expect(profileShelter).toContain('function openRifugioPositionEditor()');
+    expect(profileShelter).toContain('openRifugioPositionEditor,');
   });
 });

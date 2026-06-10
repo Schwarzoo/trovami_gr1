@@ -1,5 +1,12 @@
+/**
+ * Initializes shelter profile widgets, animal management, and shelter announcement flows.
+ * @param {Object} context - Shared profile dependencies and helper functions.
+ * @param {string} context.myUserId - Current authenticated user identifier.
+ * @returns {void}
+ */
 function initProfileShelter(context) {
   const {
+    myUserId,
     token,
     authHeader,
     fetchAnnouncementById,
@@ -8,6 +15,11 @@ function initProfileShelter(context) {
     syncMyAnnouncementsVisibility
   } = context;
 
+  /**
+   * Renders the current shelter approval status in the profile page.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
+   */
   function renderRifugioStatus(me) {
     const box = document.getElementById('rifugio-status-box');
     if (!box) return;
@@ -887,6 +899,10 @@ function initProfileShelter(context) {
     });
   }
 
+  /**
+   * Binds shelter profile controls, animal forms, and shelter announcement actions.
+   * @returns {void}
+   */
   function bindShelterEvents() {
   document.getElementById('editRifugioPosition')?.addEventListener('click', openRifugioPositionEditor);
   document.getElementById('saveRifugioPosition')?.addEventListener('click', saveRifugioPosition);
@@ -958,6 +974,7 @@ function initProfileShelter(context) {
     renderRifugioStatus,
     renderRifugioPosition,
     setRifugioPositionEditingState,
+    openRifugioPositionEditor,
     loadMyAnnouncements,
     loadMyAnimals
   };

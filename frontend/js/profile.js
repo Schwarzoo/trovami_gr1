@@ -124,18 +124,65 @@ document.addEventListener('DOMContentLoaded', async () => {
    * @returns {void}
    */
   let refreshNotifications = async () => {};
+
+  /**
+   * Loads the current user's contact requests into the profile page.
+   * @returns {Promise<void>} Promise resolving after the list is refreshed.
+   */
   let loadContactRequests = async () => {};
+
+  /**
+   * Loads followed shelters for the current user.
+   * @returns {Promise<void>} Promise resolving after followed shelters are rendered.
+   */
   let loadFollowedShelters = async () => {};
 
+  /**
+   * Renders the shelter approval status placeholder until the shelter module is initialized.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
+   */
   let renderRifugioStatus = () => {};
+
+  /**
+   * Renders the shelter map position placeholder until the shelter module is initialized.
+   * @param {Object} me - Current authenticated user profile.
+   * @returns {void}
+   */
   let renderRifugioPosition = () => {};
+
+  /**
+   * Toggles the shelter position editor placeholder until the shelter module is initialized.
+   * @param {boolean} isEditing - Whether position editing should be enabled.
+   * @returns {void}
+   */
   let setRifugioPositionEditingState = () => {};
+
+  /**
+   * Opens the shelter position editor once the shelter module is initialized.
+   * @returns {void}
+   */
+  let openRifugioPositionEditor = () => {};
+
+  /**
+   * Loads personal announcements for the current account.
+   * @returns {Promise<void>} Promise resolving after announcements are rendered.
+   */
   let loadMyAnnouncements = async () => {};
+
+  /**
+   * Loads animals managed by the current shelter account.
+   * @returns {Promise<void>} Promise resolving after animals are rendered.
+   */
   let loadMyAnimals = async () => {};
 
+  /**
+   * Loads admin dashboard data once the admin module is initialized.
+   * @returns {Promise<void>} Promise resolving after admin data is rendered.
+   */
   let loadAdminData = async () => {};
 
-/**
+  /**
    * Returns whether the current account can manage personal announcements from profile.
    * @returns {boolean} True for user and shelter roles.
    */
@@ -219,6 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadFollowedShelters = userModule.loadFollowedShelters;
 
   const shelterModule = initProfileShelter({
+    myUserId,
     token,
     authHeader,
     fetchAnnouncementById,
@@ -229,6 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderRifugioStatus = shelterModule.renderRifugioStatus;
   renderRifugioPosition = shelterModule.renderRifugioPosition;
   setRifugioPositionEditingState = shelterModule.setRifugioPositionEditingState;
+  openRifugioPositionEditor = shelterModule.openRifugioPositionEditor;
   loadMyAnnouncements = shelterModule.loadMyAnnouncements;
   loadMyAnimals = shelterModule.loadMyAnimals;
 

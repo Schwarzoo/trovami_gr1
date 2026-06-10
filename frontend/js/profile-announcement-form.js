@@ -632,25 +632,45 @@ let wizStep = 1;
     } catch (e) {}
 	}
 
+  /**
+   * Advances the announcement wizard after validating the current step.
+   * @returns {Promise<void>} Promise resolving after the wizard UI is updated.
+   */
 	async function wizNextStep() {
     if (wizStep >= maxSteps) return;
     if (!(await validateAnnouncementWizardStep(wizStep))) return;
     wizStep++;
     wizUpdateUI();
   }
+  /**
+   * Moves the announcement wizard to the previous step.
+   * @returns {void}
+   */
 	function wizPrevStep() { if(wizStep > 1) { wizStep--; wizUpdateUI(); } }
 
 	// Tasto "Tipo Annuncio" (Smarrito / Avvistamento)
+  /**
+   * Selects the announcement type and notifies dependent form logic.
+   * @param {string} val - Announcement type value.
+   * @param {HTMLElement} el - Type tab selected by the user.
+   * @returns {void}
+   */
 	function wizSelectType(val, el) {
 		document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
 		el.classList.add('active');
 		const select = document.getElementById('modal-type');
 		select.value = val;
-		// Lancia l'evento "change" manuale così il tuo profile.js originale se ne accorge
 		select.dispatchEvent(new Event('change'));
 	}
 
 	// Tasti "Chips" generici (Cane/Gatto, Pelo, Genere)
+  /**
+   * Applies a wizard chip selection to a hidden input and emits its change event.
+   * @param {string} hiddenId - Hidden input id controlled by the chip group.
+   * @param {string} val - Value selected by the chip.
+   * @param {HTMLElement} el - Chip selected by the user.
+   * @returns {void}
+   */
 	function wizSetChip(hiddenId, val, el) {
 		const group = el.closest('.chip-group');
 		group.querySelectorAll('.wiz-chip').forEach(c => c.classList.remove('active'));
@@ -661,6 +681,12 @@ let wizStep = 1;
 		hiddenInput.dispatchEvent(new Event('change'));
 	}
 
+  /**
+   * Synchronizes hidden chip input state from a value already stored in the form.
+   * @param {string} hiddenId - Hidden input id controlled by the chip group.
+   * @param {string} value - Value that should appear selected.
+   * @returns {void}
+   */
   function wizApplyChipValue(hiddenId, value) {
     const hiddenInput = document.getElementById(hiddenId);
     if (!hiddenInput) return;
@@ -693,7 +719,7 @@ let wizStep = 1;
     if (hidden) hidden.dispatchEvent(new Event('change'));
 	}
 
-	// Intercetta l'apertura del pop-up originale per resettare il Wizard al passo 1
+	// Resetta il wizard quando si apre il form annuncio.
 	const originalOpen = window.openModalForCreate;
 	if(originalOpen) {
 		window.openModalForCreate = function() {

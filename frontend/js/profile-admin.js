@@ -1,3 +1,8 @@
+/**
+ * Initializes admin-only profile panels, data loaders, and moderation actions.
+ * @param {Object} context - Shared profile dependencies and helper functions.
+ * @returns {void}
+ */
 function initProfileAdmin(context) {
   const {
     token,
@@ -8,6 +13,10 @@ function initProfileAdmin(context) {
     loadMyAnnouncements
   } = context;
 
+  /**
+   * Fetches moderation reports visible to the current admin.
+   * @returns {Promise<Array<Object>>} Report records returned by the admin API.
+   */
   async function fetchAdminReports() {
     const res = await fetch('/api/v1/admin/reports', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
@@ -513,6 +522,10 @@ function initProfileAdmin(context) {
     renderAuditLogs(auditLogs);
   }
 
+  /**
+   * Binds admin dashboard controls, modal actions, and moderation buttons.
+   * @returns {void}
+   */
   function bindAdminEvents() {
   document.getElementById('adminRefresh')?.addEventListener('click', loadAdminData);
   document.getElementById('admin-announcement-close')?.addEventListener('click', closeAdminAnnouncementModal);

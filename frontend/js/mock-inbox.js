@@ -7,6 +7,10 @@
   let refreshTimer = null;
   let lastRenderedSignature = '';
 
+  /**
+   * Creates and inserts the mock inbox widget markup.
+   * @returns {HTMLElement} Root element for the mock inbox widget.
+   */
   function createMarkup() {
     const root = document.createElement('div');
     root.id = ROOT_ID;
@@ -30,6 +34,11 @@
     return root;
   }
 
+  /**
+   * Formats an email timestamp for display.
+   * @param {*} value - Timestamp value stored on the mock email.
+   * @returns {string} Localized timestamp, original value, or an empty string.
+   */
   function formatTime(value) {
     if (!value) return '';
     const date = new Date(value);
@@ -40,18 +49,34 @@
     }).format(date);
   }
 
+  /**
+   * Opens the mock inbox modal.
+   * @param {HTMLElement} root - Root element that contains the mock inbox widget.
+   * @returns {void}
+   */
   function openInbox(root) {
     root.classList.add('is-open');
     const trigger = root.querySelector('.mock-inbox-trigger');
     if (trigger) trigger.setAttribute('aria-expanded', 'true');
   }
 
+  /**
+   * Closes the mock inbox modal.
+   * @param {HTMLElement} root - Root element that contains the mock inbox widget.
+   * @returns {void}
+   */
   function closeInbox(root) {
     root.classList.remove('is-open');
     const trigger = root.querySelector('.mock-inbox-trigger');
     if (trigger) trigger.setAttribute('aria-expanded', 'false');
   }
 
+  /**
+   * Renders mock email entries inside the inbox modal.
+   * @param {HTMLElement} root - Root element that contains the mock inbox widget.
+   * @param {Array<Object>} emails - Email entries returned by the mock inbox endpoint.
+   * @returns {void}
+   */
   function renderItems(root, emails) {
     const body = root.querySelector('.mock-inbox-body');
     if (!body) return;

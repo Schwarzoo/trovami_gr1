@@ -1,3 +1,8 @@
+/**
+ * Initializes user profile controls, notifications, contact requests, and followed shelters.
+ * @param {Object} context - Shared profile dependencies and helper functions.
+ * @returns {void}
+ */
 function initProfileUser(context) {
   const {
     token,
@@ -7,6 +12,10 @@ function initProfileUser(context) {
     setProfileEditing
   } = context;
 
+  /**
+   * Logs out the current user and clears local session state.
+   * @returns {Promise<void>} Promise resolving after logout navigation is triggered.
+   */
   async function handleLogout() {
     try {
       await fetch('/api/v1/auth/sessions/current', {
@@ -22,6 +31,10 @@ function initProfileUser(context) {
     window.location.href = '/pages/login.html';
   }
 
+  /**
+   * Fetches notifications for the current authenticated user.
+   * @returns {Promise<Array<Object>>} Notification records returned by the API.
+   */
   async function fetchNotifications() {
     const res = await fetch('/api/v1/notifications', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!res.ok) return [];
@@ -97,6 +110,11 @@ function initProfileUser(context) {
     return data;
   }
 
+  /**
+   * Marks a single notification as read and updates shared notification UI.
+   * @param {string} id - Notification identifier to update.
+   * @returns {Promise<void>} Promise resolving after the update request is sent.
+   */
   async function markNotificationRead(id) {
     await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`, {
       method: 'PATCH',
