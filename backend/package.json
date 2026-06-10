@@ -5,7 +5,6 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "migrate:remove-inStallo": "node scripts/remove_inStallo_migration.js",
     "test": "jest"
   },
   "keywords": [],
@@ -24,8 +23,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.2.0",
     "mongoose": "^9.6.1",
-    "multer": "^1.4.4",
-    "nodemailer": "^6.10.1",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.11",
     "pdfkit": "^0.13.0",
     "sharp": "^0.32.0"
   },
