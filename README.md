@@ -2,6 +2,23 @@
 
 Piattaforma web community-driven per la segnalazione in tempo reale di animali smarriti, matching intelligente e gestione di rifugi.
 
+## Applicazione online
+
+La versione pubblica del progetto è disponibile su Render:
+
+**[Apri Trovami](https://trovami-app.onrender.com)**
+
+Il primo caricamento può richiedere alcuni secondi a causa della sospensione automatica prevista dal piano gratuito di Render.
+
+### Account di prova
+
+| Ruolo | Email | Password |
+|------|-------|----------|
+| Utente | `user1@gmail.com` | `12345678` |
+| Utente | `user2@gmail.com` | `12345678` |
+| Rifugio | `rifugio1@gmail.com` | `12345678` |
+| Admin | `admin1@gmail.com` | `12345678` |
+
 ## Descrizione del Progetto
 
 **Trovami** è un'applicazione web che facilita la ricerca e il ritrovamento di animali smarriti creando una comunità collaborativa. La piattaforma connette proprietari di animali smarriti con rifugi, soccorritori e altri utenti della community al fine di massimizzare le possibilità di ritrovamento.
@@ -152,7 +169,7 @@ trovami_gr1/
 ##  Come Funziona il Matching Intelligente
 
 1. **Acquisizione Dati**: Il sistema raccoglie foto
-2. **Embedding IA**: Converte le foto in vettori numerici usando modelli Hugging Face
+2. **Embedding IA**: Converte le foto in vettori numerici usando modelli pre-addestrati
 3. **Confronto Semantico**: Confronta embedding di segnalazioni diverse
 4. **Ranking**: Combina score semantico e geografico
 5. **Notifica**: Suggerisce i migliori match agli utenti interessati
@@ -297,6 +314,23 @@ RENDER=true
 
 ---
 
+## Miglioramenti futuri
+
+Il progetto può essere ulteriormente evoluto attraverso una modularizzazione progressiva, soprattutto lato frontend. La suddivisione delle funzionalità in moduli più piccoli e indipendenti permetterebbe di ridurre le dipendenze globali, separare meglio le responsabilità e rendere il codice più semplice da mantenere, testare ed estendere.
+
+Tra i possibili sviluppi futuri:
+
+- definizione di interfacce più esplicite tra i moduli frontend;
+- ulteriore separazione della logica di presentazione, delle chiamate API e della gestione dello stato;
+- introduzione di test end-to-end per i principali flussi utente;
+- ampliamento della coverage dei rami di errore e dei casi limite;
+- introduzione di una pipeline di integrazione continua per eseguire automaticamente test e controlli statici;
+- maggiore isolamento dei servizi esterni, come email, geolocalizzazione e smart matching.
+
+Questi interventi renderebbero la struttura più robusta e scalabile, mantenendo invariati i flussi e le funzionalità già realizzate.
+
+---
+
 ##  Stato Sviluppo
 
 Questo è un progetto attualmente universitario in sviluppo attivo per il corso di **Ingegneria del Software** presso l'Università di Trento.
@@ -342,7 +376,7 @@ git log --author="Andrea Schwarz" --pretty=tformat: --numstat | grep -vE 'packag
 Risultato:
 
 ```text
-Totale netto: 10361
+Totale netto: 10651
 ```
 
 ### Alessandro Weber
