@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  const profileDetails = document.getElementById('profile-section');
+  if (profileDetails && window.matchMedia('(max-width: 720px)').matches) {
+    profileDetails.open = false;
+  }
+
   const token = localStorage.getItem('token');
   if (!token) {
     window.location.href = '/pages/login.html';

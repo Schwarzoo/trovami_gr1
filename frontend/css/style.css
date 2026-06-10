@@ -316,12 +316,18 @@ button {
 
 @media (max-width: 640px) {
   #mock-inbox-root {
-    right: 14px;
-    bottom: 14px;
+    position: fixed;
+    top: 22px;
+    right: auto;
+    bottom: auto;
+    left: 55%;
+    transform: translateX(-50%);
   }
 
   #mock-inbox-root .mock-inbox-trigger {
-    padding: 12px 16px;
+    padding: 9px 14px;
+    font-size: 0.86rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
   }
 
   #mock-inbox-root .mock-inbox-modal {
