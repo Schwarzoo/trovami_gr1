@@ -150,7 +150,7 @@ Invia una email contenente un link per reimpostare la password.
         }
 
 ## Reset Password [/api/v1/auth/password]
-### Reimposta Password [POST]
+### Reimposta Password [PATCH]
 Reimposta la password tramite token ricevuto via email.
 
 + Request (application/json)
@@ -345,39 +345,51 @@ Elimina l'account autenticato e cascata sugli annunci pubblicati.
 # Group Utenti Pubblici
 Risorse pubbliche/mascherate per contatti e rifugi.
 
-## Rifugi Pubblici [/api/v1/users/rifugi/public{?page,limit}]
+## Rifugi Pubblici [/api/v1/users/rifugi]
 ### Elenco Rifugi [GET]
 Restituisce rifugi approvati con coordinate, rispettando le preferenze di visibilità contatti.
 
-+ Parameters
-    + page (number, optional) - Pagina richiesta, default 1.
-    + limit (number, optional) - Elementi per pagina, default 20.
++ Response 200 (application/json)
+
+        [
+            {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "rifugio_arco",
+                "email": "rifugio@example.com",
+                "phoneNumber": null,
+                "rifugioData": {
+                    "rifugioName": "Rifugio Arco",
+                    "city": "Trento",
+                    "location": {
+                        "type": "Point",
+                        "coordinates": [11.12108, 46.06787]
+                    }
+                }
+            }
+        ]
+
+## Rifugi Pubblici Alias Inglese [/api/v1/users/shelters]
+### Elenco Shelters [GET]
+Alias inglese di `/api/v1/users/rifugi`, esposto dal backend per gli stessi dati pubblici dei rifugi approvati.
 
 + Response 200 (application/json)
 
-        {
-            "meta": {
-                "totalItems": 1,
-                "totalPages": 1,
-                "currentPage": 1
-            },
-            "data": [
-                {
-                    "_id": "645a1b2c3d4e5f6g7h8i9j0k",
-                    "username": "rifugio_arco",
-                    "email": "rifugio@example.com",
-                    "phoneNumber": null,
-                    "rifugioData": {
-                        "rifugioName": "Rifugio Arco",
-                        "city": "Trento",
-                        "location": {
-                            "type": "Point",
-                            "coordinates": [11.12108, 46.06787]
-                        }
+        [
+            {
+                "_id": "645a1b2c3d4e5f6g7h8i9j0k",
+                "username": "rifugio_arco",
+                "email": "rifugio@example.com",
+                "phoneNumber": null,
+                "rifugioData": {
+                    "rifugioName": "Rifugio Arco",
+                    "city": "Trento",
+                    "location": {
+                        "type": "Point",
+                        "coordinates": [11.12108, 46.06787]
                     }
                 }
-            ]
-        }
+            }
+        ]
 
 ## Utente Pubblico [/api/v1/users/{id}/public]
 + Parameters
@@ -1042,7 +1054,7 @@ Restituisce notifiche dell'utente. Di default solo non lette (`unread=1`). Richi
             "isRead": true
         }
 
-## Lettura Tutte [/api/v1/notifications/read-all]
+## Lettura Tutte [/api/v1/notifications]
 ### Segna Tutte Come Lette [PATCH]
 
 + Request

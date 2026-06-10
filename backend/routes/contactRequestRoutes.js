@@ -9,20 +9,6 @@ const {
 } = require('../controllers/contactRequestController');
 
 router.get('/', authMiddleware, getContactRequests);
-/**
- * @openapi
- * /api/v1/contact-requests:
- *   post:
- *     summary: Crea una richiesta di contatto
- *     responses:
- *       '201':
- *         description: Richiesta di contatto creata.
- *         headers:
- *           Location:
- *             schema:
- *               type: string
- *             description: URI della risorsa creata
- */
 router.post('/', authMiddleware, createContactRequest);
 // Support PATCH / to clear replied requests (tests expect PATCH on base path)
 router.patch('/', authMiddleware, clearRepliedContactRequests);
